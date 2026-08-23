@@ -32,16 +32,8 @@ interface
 
 uses
   ToolsApi,
-{$IFDEF USE_NS}
   VCL.Graphics,
-{$ELSE}
-  Graphics,
-{$ENDIF}
-{$IFDEF DELPHI_XE103_UP}
   PlatformConst
-{$ELSE}
-  PlatformAPI
-{$ENDIF}
   ;
 
 type
@@ -102,12 +94,7 @@ begin
       begin
         Result := LoadIcon(HInstance, 'DUnitXNewUnitIcon');
       end,
-{$IFDEF DELPHI_XE103_UP}
       GetAllPlatforms,
-{$ELSE}
-      TArray<string>.Create(cWin32Platform, cWin64Platform, cOSX32Platform, cAndroidPlatform, ciOSSimulatorPlatform, ciOSDevice32Platform,
-        ciOSDevice64Platform),
-{$ENDIF}
       nil));
 end;
 
