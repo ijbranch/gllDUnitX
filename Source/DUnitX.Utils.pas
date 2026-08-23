@@ -2969,7 +2969,8 @@ function TValueHelper.IsUInt64 : Boolean;
 begin
   Result := TypeInfo = System.TypeInfo(UInt64);
 {$IFDEF CPUX64}
-  Result := Result or (TypeInfo = System.TypeInfo(NativeInt));
+  // NativeUInt, not NativeInt: this is the unsigned test, and NativeInt is what IsInt64 uses.
+  Result := Result or (TypeInfo = System.TypeInfo(NativeUInt));
 {$ENDIF}
 end;
 
@@ -3234,6 +3235,11 @@ var
   LClass : TClass;
   LPointer : Pointer;
 begin
+  //Destroy the instances first. FRegister owns them, and each one dispatches through a
+  //patched VMT, so releasing that memory beforehand meant destroying them through freed
+  //memory.
+  FRegister.Free;
+
   for LClass in FPatchedClasses.Values do
   begin
     LPointer := PByte(LClass) + vmtSelfPtr;
@@ -3241,7 +3247,6 @@ begin
   end;
 
   FPatchedClasses.Free;
-  FRegister.Free;
 end;
 
 constructor TRttiPropertyExtension.Create(Parent : PTypeInfo; const Name : string; PropertyType : PTypeInfo);
@@ -3375,6 +3380,14 @@ begin
   Result := GetPropInfo;
 end;
 
+/// <remarks>
+///   WARNING: the slot indices below were derived from an older System.Rtti. Delphi 13
+///   inserted TRttiPlaceMember and TRttiDataMember into the TRttiMember hierarchy, so the
+///   map has NOT been re-verified against 37.0 and is very likely wrong. Nothing in DUnitX
+///   constructs a TRttiPropertyExtension, so no patched instance is ever produced and the
+///   stale map is currently unreachable. Re-verify every index against System.Rtti before
+///   using this extension, or it will overwrite unrelated virtual methods.
+/// </remarks>
 class procedure TRttiPropertyExtension.InitVirtualMethodTable;
 const
   MaxIndex          = 17;               // TRttiInstanceProperty.GetPropInfo

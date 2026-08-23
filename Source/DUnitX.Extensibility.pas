@@ -228,7 +228,7 @@ procedure TTestFixtureList.Sort;
 var
   AFixture : ITestFixture;
 
-  Comparer : TDelegatedComparer<ITestFixture>;
+  Comparer : IComparer<ITestFixture>;
 
 begin
   Comparer := TDelegatedComparer<ITestFixture>.Create(
@@ -238,8 +238,6 @@ begin
     end);
 
   inherited Sort(Comparer);
-
-  Comparer.Free;
 
   for AFixture in (Self as ITestFixtureList) do
     AFixture.Children.Sort;

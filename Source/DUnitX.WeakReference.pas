@@ -214,20 +214,29 @@ end;
 destructor TWeakReference<T>.Destroy;
 var
   target : IWeakReferenceableObject;
+  data : TObject;
 begin
-  if FData <> nil then
+  //Take a stable reference: FData is cleared below, and by the target if it is being
+  //destroyed concurrently, so it cannot be used as the monitor object throughout.
+  data := FData;
+  if data <> nil then
   begin
-    if SafeMonitorTryEnter(FData) then  //FData could become nil
-    begin
+    //Block rather than try. Giving up on the lock skipped RemoveWeakRef but still nilled
+    //FData, which left the target holding a pointer to a field that was about to be freed
+    //- it would then write through that pointer during its own destruction. RemoveWeakRef
+    //itself blocks on this same monitor, so waiting here matches the unit's discipline.
+    MonitorEnter(data);
+    try
       //get a strong reference to the target
-      if Supports(FData, IWeakReferenceableObject, target) then
+      if (FData <> nil) and Supports(FData, IWeakReferenceableObject, target) then
       begin
         target.RemoveWeakRef(@FData);
         target := nil;                  //release the reference asap.
       end;
-      MonitorExit(FData);
+      FData := nil;
+    finally
+      MonitorExit(data);
     end;
-    FData := nil;
   end;
   inherited;
 end;

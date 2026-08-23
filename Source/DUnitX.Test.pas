@@ -208,6 +208,15 @@ begin
       timeout := InitialiseTimeOut(FMaxTime);
 {$ENDIF}
     FMethod();
+{$IFDEF MSWINDOWS}
+    //Stop the watchdog before anything else runs, so that an expiry landing after the
+    //test body finished cannot be attributed to whatever executes next, then report it.
+    if timeout <> nil then
+    begin
+      timeout.Stop;
+      timeout.RaiseIfTimedOut;
+    end;
+{$ENDIF}
   finally
     FEndTime := Now();
 

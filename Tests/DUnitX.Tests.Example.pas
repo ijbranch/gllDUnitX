@@ -272,24 +272,21 @@ var
   elapsedTime : Int64;
   stopwatch : TStopWatch;
 begin
+  //[MaxTime] is checked once the test method returns, so it can no longer be observed
+  //from inside the test the way this example used to do. Exceeding the limit fails the
+  //test with ETimedOut; staying inside it, as here, simply passes.
   stopwatch := TStopWatch.Create;
   stopwatch.Reset;
   stopwatch.Start;
-  try
-    repeat
-      //Give some time back to the system to process the test.
-      Sleep(20);
 
-      elapsedTime := stopwatch.ElapsedMilliseconds;
-    until (elapsedTime >= 2000);
-    Assert.Fail('Timeout did not work');
-  except
-    on e : ETimedOut do
-    begin
-      Assert.Pass('timed out as expected');
+  repeat
+    //Give some time back to the system to process the test.
+    Sleep(20);
 
-    end;
-  end;
+    elapsedTime := stopwatch.ElapsedMilliseconds;
+  until (elapsedTime >= 100);
+
+  Assert.Pass('completed within the permitted time');
 end;
 
 procedure TMyExampleTests.TestMeAnyway;

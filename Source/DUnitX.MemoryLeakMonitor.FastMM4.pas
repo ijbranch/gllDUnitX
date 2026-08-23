@@ -81,7 +81,8 @@ begin
 
   for sb in st.SmallBlockTypeStates do
   begin
-    Result := Result + Int64(sb.UseableBlockSize * sb.AllocatedBlockCount);
+    // Cast a operand first: casting the product widened an already-overflowed 32 bit multiply.
+    Result := Result + (Int64(sb.UseableBlockSize) * Int64(sb.AllocatedBlockCount));
   end;
 end;
 

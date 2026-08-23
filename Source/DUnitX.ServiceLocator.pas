@@ -163,8 +163,13 @@ begin
             obj : TObject;
           begin
             obj := ctor(AClass);
-            if not Supports(obj, guid, Result) and raiseOnError then
-              raise EServiceLocatorResolutionException.CreateFmt(SRegisteredImplementationError, [AClass.ClassName, typeInfo.Name]);
+            if not Supports(obj, guid, Result) then
+            begin
+              // Supports failed, so nothing took ownership of obj - free it rather than leak.
+              obj.Free;
+              if raiseOnError then
+                raise EServiceLocatorResolutionException.CreateFmt(SRegisteredImplementationError, [AClass.ClassName, typeInfo.Name]);
+            end;
           end;
         Exit;
       end;

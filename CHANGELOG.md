@@ -29,6 +29,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `[MaxTime]` crashed the test thread instead of failing the test (2026-08-24) - `Source/DUnitX.Timeout.pas`, `Source/DUnitX.Test.pas`, `Tests/DUnitX.Tests.Example.pas`
+  **Why:** the watchdog suspended the test thread and rewrote its instruction pointer to jump into a raise, via `Ctx.Rip := Cardinal(@RaiseTimeOutException)`. That truncates a 64 bit code address, and Delphi 13 links with a preferred base above 4GB, so the pointer was always unmapped and the thread faulted on resume. Correcting the cast would not have been enough: an injected frame pushes no return address and has no unwind-table entry, and x64 SEH is table driven, so the raise could not have unwound either. `[MaxTime]` is an assertion about elapsed time, so it is now observed and reported once the test method returns - correct on every platform, though it cannot interrupt a test that never returns. The watchdog is also stopped before the duration is computed, so a late expiry can no longer be blamed on the next test.
+- `TTestFixtureList.Sort` freed a `TDelegatedComparer` that had been implicitly converted to a refcounted `IComparer`; it is now held as the interface and not freed (2026-08-24) - `Source/DUnitX.Extensibility.pas`
+  **Why:** it survived only because `const` interface parameters skip reference counting - accidental safety that breaks the moment the callee stores the reference.
+- `TWeakReference<T>.Destroy` abandoned `RemoveWeakRef` when it could not take the lock but nilled its field anyway, leaving the target holding a pointer into memory about to be freed, which it wrote through during its own destruction. It now blocks, matching `RemoveWeakRef` itself (2026-08-24) - `Source/DUnitX.WeakReference.pas`
+- `TRttiPropertyExtension` freed its patched virtual method tables before the instances that dispatch through them (2026-08-24) - `Source/DUnitX.Utils.pas`
+- The service locator leaked the constructed object whenever `Supports` failed, which is silent by default (2026-08-24) - `Source/DUnitX.ServiceLocator.pas`
+- `TValueHelper.IsUInt64` tested `NativeInt`, the signed type already used by `IsInt64` (2026-08-24) - `Source/DUnitX.Utils.pas`
+- The FastMM4 leak monitor multiplied in 32 bits and cast the overflowed product to `Int64` afterwards (2026-08-24) - `Source/DUnitX.MemoryLeakMonitor.FastMM4.pas`
+
 - Removed machine-specific unit search paths from `Examples/DUnitXExamples_D13.dproj`: a personal absolute `C:\delphi\DelphiMocks`, an undefined `$(DPMSearch)`, and upstream's `..\..\Delphi-Mocks` folder name (2026-08-24)
 - `Tests/DUnitXTestProject.dpr` still declared `program DUnitXTest_D12;` (2026-08-24)
 - `VSoft.DUnitX.dspec` shipped `./source/*.pas` without `*.dfm`, so a consumer using `DUnitX.Loggers.GUI.VCL` would fail on its `{$R *.dfm}` (2026-08-24)
@@ -57,4 +67,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Known Issues
 
-- `[MaxTime]` timeouts terminate the test thread with an access violation rather than a clean failure on Win64, seen in `TestMaxTime` and the examples' `TooLong`. Inherited from upstream.
+
+### Known Issues
+
+- `TRttiPropertyExtension` hard-codes virtual method table slot indices derived from an older `System.Rtti`. Delphi 13 inserted `TRttiPlaceMember` and `TRttiDataMember` into the hierarchy, so the map is very likely wrong. Nothing in DUnitX constructs one, so it is unreachable today; the code now carries a warning to re-verify every index before using it.
+- Public members such as `ITestFixture.TestCount` still return `Integer` while the underlying `TList<T>.Count` is `NativeInt` in Delphi 13. The implicit narrowing is harmless at realistic test counts and widening the public API would be a breaking change. Note that an `Assert.AreEqual` overload taking `NativeInt` cannot be added on Win64, where `NativeInt` and `Int64` are the same type - use `Assert.AreEqual<NativeInt>` for collection counts.

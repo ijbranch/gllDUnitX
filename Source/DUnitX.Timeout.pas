@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -37,117 +37,113 @@ uses
   Classes;
 {$ENDIF}
 
-//TODO : This is currently only supported on Windows, need to investigate osx etc.
-
 type
+  /// <summary>
+  ///   Watches how long a test takes and records whether it ran past its
+  ///   [MaxTime]. The verdict is reported once the test method returns.
+  /// </summary>
+  /// <remarks>
+  ///   <para>
+  ///     This previously suspended the test thread and rewrote its instruction
+  ///     pointer so that it jumped into a raise. That cannot work on Win64.
+  ///     The address was truncated to 32 bits, and Delphi 13 links binaries
+  ///     with a preferred base above 4GB, so the rewritten instruction pointer
+  ///     was always unmapped and the test thread faulted the moment it
+  ///     resumed.
+  ///   </para>
+  ///   <para>
+  ///     Correcting the truncation would not have been enough. An injected
+  ///     frame pushes no return address and has no entry in the unwind tables
+  ///     that x64 structured exception handling is driven from, so the raise
+  ///     could not have unwound either. The x86 build only worked because its
+  ///     exception chain lives on the stack.
+  ///   </para>
+  ///   <para>
+  ///     [MaxTime] is an assertion about elapsed time, so it is now observed
+  ///     and reported rather than injected. This is correct on every platform
+  ///     and needs no operating system support. The one behavioural difference
+  ///     is that it cannot interrupt a test that never returns.
+  ///   </para>
+  /// </remarks>
   ITimeout = interface(IUnknown)
     ['{0A380F7B-9CEE-4FD7-9D86-60CE05B97C1A}']
+    /// <summary>Stops the watchdog. Safe to call more than once.</summary>
     procedure Stop;
+    /// <summary>True when the allowed time elapsed before the watchdog was stopped.</summary>
+    function TimedOut : boolean;
+    /// <summary>Raises ETimedOut when the allowed time elapsed, otherwise does nothing.</summary>
+    procedure RaiseIfTimedOut;
   end;
 
+/// <summary>Starts a watchdog allowing ATime milliseconds.</summary>
+/// <param name="ATime">The permitted duration, in milliseconds.</param>
+/// <returns>The watchdog. Releasing it stops the underlying thread.</returns>
 function InitialiseTimeout(const ATime : cardinal) : ITimeout;
 
 implementation
 
 uses
 {$IFDEF USE_NS}
-  WinAPI.Windows,
-  System.Diagnostics,
   System.SysUtils,
+  System.SyncObjs,
+  System.Diagnostics,
 {$ELSE}
-  Windows,
-  Diagnostics,
   SysUtils,
+  SyncObjs,
+  Diagnostics,
 {$ENDIF}
   DUnitX.ResStrs,
   DUnitX.TestFramework,
   DUnitX.Exceptions;
 
-// The following TimeOut code is based on the code found at
-// https://code.google.com/p/delphitimeouts/
-// DelphiTimeouts version 1.1
-// Copyright (c) 2007-2008 Szymon Jachim
-
 type
   TTimeoutThread = class(TThread)
   private
-    procedure TimeoutThread;
-  public
-    ThreadHandle : Cardinal;
-    Timeout : Cardinal;
+    FTimeout  : Cardinal;
+    FTimedOut : Integer;
+    function GetTimedOut : boolean;
+  protected
     procedure Execute; override;
+  public
+    constructor Create(const ATimeout : Cardinal);
+    property TimedOut : boolean read GetTimedOut;
   end;
 
   TTimeout = class(TInterfacedObject, ITimeout)
   private
     FTimeoutThread : TTimeoutThread;
   public
-    constructor Create(const ATimeout : Cardinal; AThreadHandle : THandle);
+    constructor Create(const ATimeout : Cardinal);
     destructor Destroy; override;
 
     procedure Stop;
+    function TimedOut : boolean;
+    procedure RaiseIfTimedOut;
   end;
 
 function InitialiseTimeout(const ATime : cardinal) : ITimeout;
-var
-  ThisThreadHandle : THandle;
 begin
-  DuplicateHandle(GetCurrentProcess, GetCurrentThread, GetCurrentProcess, @ThisThreadHandle, 0, True, DUPLICATE_SAME_ACCESS);
-  Result := TTimeout.Create(ATime, ThisThreadHandle);
-end;
-
-procedure RaiseTimeOutException;
-begin
-  raise ETimedOut.Create(SOperationTimedOut);
-end;
-
-procedure TTimeoutThread.TimeoutThread;
-var
-  Ctx : _CONTEXT;
-begin
-  SuspendThread(ThreadHandle);
-  Ctx.ContextFlags := CONTEXT_FULL;
-  GetThreadContext(ThreadHandle, Ctx);
-
-{$IFDEF CPUX86}
-  Ctx.Eip := Cardinal(@RaiseTimeOutException);
-{$ELSE}
-  Ctx.Rip := Cardinal(@RaiseTimeOutException);
-{$ENDIF}
-  SetThreadContext(ThreadHandle, Ctx);
-  ResumeThread(ThreadHandle);
-end;
-
-{ TTimeout }
-
-procedure TTimeout.Stop;
-begin
-  FTimeoutThread.Terminate;
-end;
-
-constructor TTimeout.Create(const ATimeout : Cardinal; AThreadHandle : THandle);
-begin
-  FTimeoutThread := TTimeoutThread.Create(true);
-  FTimeoutThread.FreeOnTerminate := false;
-  FTimeoutThread.ThreadHandle := AThreadHandle;
-  FTimeoutThread.Timeout := ATimeout;
-  FTimeoutThread.Start;
-end;
-
-destructor TTimeout.Destroy;
-begin
-  //Unwinding and we need to stop the thread, as it may still raise an exception
-  Stop;
-  FTimeoutThread.WaitFor;
-  FTimeoutThread.Free;
-  inherited;
+  Result := TTimeout.Create(ATime);
 end;
 
 { TTimeoutThread }
 
+constructor TTimeoutThread.Create(const ATimeout : Cardinal);
+begin
+  inherited Create(true);
+  FreeOnTerminate := false;
+  FTimeout := ATimeout;
+  FTimedOut := 0;
+end;
+
+function TTimeoutThread.GetTimedOut : boolean;
+begin
+  //Read through an interlocked compare so the test thread sees the flag reliably.
+  Result := TInterlocked.CompareExchange(FTimedOut, 0, 0) <> 0;
+end;
+
 procedure TTimeoutThread.Execute;
 var
-  elapsedTime : Int64;
   stopwatch : TStopWatch;
 begin
   inherited;
@@ -155,27 +151,50 @@ begin
   stopwatch.Reset;
   stopwatch.Start;
 
-{$IFNDEF DELPHI_XE101_UP}               // <- H2077 Value assigned to 'elapsedTime' never used 10.1 Berlin and up
-  elapsedTime := 0;
-{$ENDIF}
+  while not Terminated do
+  begin
+    if stopwatch.ElapsedMilliseconds >= FTimeout then
+    begin
+      TInterlocked.Exchange(FTimedOut, 1);
+      Break;
+    end;
 
-  if Terminated then
-    exit;
-  repeat
     //Give some time back to the system to process the test.
     Sleep(20);
+  end;
+end;
 
-    if Terminated then
-      Break;
+{ TTimeout }
 
-    elapsedTime := stopwatch.ElapsedMilliseconds;
-  until (elapsedTime >= Timeout);
+constructor TTimeout.Create(const ATimeout : Cardinal);
+begin
+  inherited Create;
+  FTimeoutThread := TTimeoutThread.Create(ATimeout);
+  FTimeoutThread.Start;
+end;
 
-  //If we haven't been terminated then we have timed out.
-  if not Terminated then
-    TimeoutThread;
-  CloseHandle(ThreadHandle);
+destructor TTimeout.Destroy;
+begin
+  Stop;
+  FTimeoutThread.WaitFor;
+  FTimeoutThread.Free;
+  inherited;
+end;
+
+procedure TTimeout.Stop;
+begin
+  FTimeoutThread.Terminate;
+end;
+
+function TTimeout.TimedOut : boolean;
+begin
+  Result := FTimeoutThread.TimedOut;
+end;
+
+procedure TTimeout.RaiseIfTimedOut;
+begin
+  if TimedOut then
+    raise ETimedOut.Create(SOperationTimedOut);
 end;
 
 end.
-
