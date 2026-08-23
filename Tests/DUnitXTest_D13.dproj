@@ -1022,4 +1022,8 @@
     </ProjectExtensions>
     <Import Condition="Exists('$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj')" Project="$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj"/>
     <Import Project="$(MSBuildProjectName).deployproj" Condition="Exists('$(MSBuildProjectName).deployproj')"/>
+    <Target Name="CheckDelphiMocks" BeforeTargets="Build">
+        <Error Condition="!Exists('$(DelphiMocks)\Delphi.Mocks.pas')"
+               Text="Delphi.Mocks was not found at &apos;$(DelphiMocks)&apos;. Clone https://codeberg.org/GITLAK/glldelphi-mocks as a sibling of this repository, or set the DelphiMocks property or environment variable to its Source folder." />
+    </Target>
 </Project>

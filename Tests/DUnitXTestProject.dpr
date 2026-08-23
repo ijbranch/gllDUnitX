@@ -1,4 +1,4 @@
-program DUnitXTest_D12;
+program DUnitXTest_D13;
 
 {$IFNDEF TESTINSIGHT}
 {$APPTYPE CONSOLE}

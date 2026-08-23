@@ -20,7 +20,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `Tests/DUnitXTest_D13.dproj`, derived from the former D12 test project (2026-08-24)
   **Why:** the tree had no Delphi 13 test project at all - the newest was D12.
 
+### Removed
+
+- Dead weight surfaced by a full audit: `Build/TestAndBuild.fbp7` (a 1 MB FinalBuilder project referencing only deleted XE-era artefacts), the orphaned `Examples/DUnitX.Examples.UITest.*`, `Examples/DUnitX.Examples.AssertFailureCompare.pas`, `Examples/DUnitXExamples.rc/.rsb`, `Tests/DUnitX.Options.pas`, `Tests/DUnitXTest.mes`, `Source/DUNitX.Loggers.GUIX.vlb`, and the `*Ex`-superseded `Expert/DUnitX.Expert.NewUnitWizard.pas` and `Expert/DUnitX.Expert.ProjectWizard.pas` (2026-08-24)
+- `Tests/DUnitX.Stacktrace.inc`, a divergent stale copy of the `Source` include missing the `USE_MADEXCEPT*` and `USE_EUREKALOG7` defines (2026-08-24)
+  **Why:** only `Source/DUnitX.inc` includes it, so the Source copy always won - but the duplicate was a trap if include order ever changed.
+- `docs/.gitattributes`, which forced `eol=lf` on a directory left empty (2026-08-24)
+
 ### Fixed
+
+- Removed machine-specific unit search paths from `Examples/DUnitXExamples_D13.dproj`: a personal absolute `C:\delphi\DelphiMocks`, an undefined `$(DPMSearch)`, and upstream's `..\..\Delphi-Mocks` folder name (2026-08-24)
+- `Tests/DUnitXTestProject.dpr` still declared `program DUnitXTest_D12;` (2026-08-24)
+- `VSoft.DUnitX.dspec` shipped `./source/*.pas` without `*.dfm`, so a consumer using `DUnitX.Loggers.GUI.VCL` would fail on its `{$R *.dfm}` (2026-08-24)
+- `.gitignore` did not cover `Expert/Win64/` or `packages/RAD Studio 13.0/Win64/`; they were masked only by this machine's global ignore file, so build output would appear untracked elsewhere (2026-08-24)
+- `CONTRIBUTING.md` and `Build/Dependencies.txt` still pointed at the upstream GitHub repository (2026-08-24)
+
+### Added
+
+- A `CheckDelphiMocks` MSBuild target in `Tests/DUnitXTest_D13.dproj` that fails with an actionable message naming the required sibling clone, instead of a bare `F2613 Unit 'Delphi.Mocks' not found` (2026-08-24)
 
 - The test project now resolves Delphi.Mocks from a sibling `glldelphi-mocks` source checkout via the existing `DelphiMocks` property, replacing the DPM package reference (2026-08-24) - `Tests/DUnitXTest_D13.dproj`
   **Why:** there is no DPM cache on the build machine, and the pinned `VSoft.DelphiMocks 0.2.2` had no verified `delphi13.0`/`win64` binding.

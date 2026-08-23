@@ -28,6 +28,7 @@ templates:
       - src: ./LICENSE.txt
       - src: ./source/*.pas
       - src: ./source/*.inc
+      - src: ./source/*.dfm
       - src: ./packages/$packageSource$/*.dpk
       - src: ./packages/$packageSource$/*.dproj
     build:

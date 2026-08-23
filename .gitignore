@@ -38,6 +38,9 @@
 /Test/__history
 Expert/__history
 Expert/Win32/
+Expert/Win64/
+packages/RAD Studio 13.0/Win32/
+packages/RAD Studio 13.0/Win64/
 
 
 # Testing Output  #
