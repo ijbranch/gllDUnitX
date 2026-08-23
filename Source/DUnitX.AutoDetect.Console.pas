@@ -46,8 +46,6 @@
 ///   </para>
 /// </remarks>
 /// <seealso cref="DUnitX.Windows.Console" />
-/// <seealso cref="DUnitX.MacOS.Console" />
-/// <seealso_ cref="DUnitX.Linux.Console" />
 /// <seealso cref="DUnitX.Loggers.Console" />
 
 unit DUnitX.AutoDetect.Console;
@@ -57,15 +55,8 @@ interface
 uses
 {$IF Defined(MSWINDOWS)}
   DUnitX.Windows.Console;
-{$ELSEIF Defined(MACOS) or Defined(OSX32)}
-  // Simplification as MacOS console supports Ansi, and other terminals
-  // on platforms other than windows typically support some form of
-  // ANSI colors.
-  DUnitX.MacOS.Console;
-{$ELSEIF Defined(LINUX) or Defined(ANDROID)}
-  DUnitX.Linux.Console;
 {$ELSE}
-{$MESSAGE ERROR 'Unknown Platform for Console Writer'}
+{$MESSAGE ERROR 'This fork of DUnitX targets 64 bit Windows only'}
 {$IFEND}
 
 implementation

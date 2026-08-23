@@ -1,7 +1,11 @@
 DUnitX Overview
 ===============
 
-DUnitX is a new test framework, taking ideas from DUnit, NUnit and other test frameworks. It is designed to work with Delphi XE2 or later, it makes use of language/RTL features that are not available in older versions of Delphi.
+> **GITLAK fork.** This fork targets **Delphi 13 (Florence) or later, 64 bit Windows only**.
+> Support for earlier RAD Studio versions, Win32, OSX, Linux, Android and iOS has been removed;
+> use [upstream DUnitX](https://github.com/VSoftTechnologies/DUnitX) if you need those.
+
+DUnitX is a new test framework, taking ideas from DUnit, NUnit and other test frameworks. This fork is designed to work with Delphi 13 (Florence) or later, and makes use of language/RTL features that are not available in older versions of Delphi.
 
 
 DUnitX Features
@@ -16,8 +20,7 @@ DUnitX Features
  * XML Logging
    * produces output compatible with NUnit (compatible with CI servers like [ContinuaCI](https://www.finalbuilder.com/continua-ci))
    * produces output compatible with JUnit (compatible with [Gitlab CI](https://docs.gitlab.com/ee/ci/unit_test_reports.html))
- * Cross platform currently supporting:
-    * Win32,Win64 and OSX Compilers.
+ * Targets the 64 bit Windows compiler.
  * Limited backwards compatibility with DUnit test classes. 
  * [Wizard](https://www.finalbuilder.com/Resources/Blogs/dunitx-has-a-wizard) for creating new tests.
 
@@ -34,11 +37,9 @@ This is far from a complete list, but a few planned features are listed here to 
 
 Tips and Tricks
 ===========
-* FMX / mobile: there is no console app on Android/iOS. Use `DUnitX.Loggers.Console.FMX` (`DUnitX.Loggers.Console.FMX.Run`) as a console stand-in that streams results to an in-app memo. This is **not** a GUI test explorer; for IDE workflows use [TestInsight](https://bitbucket.org/sglienke/testinsight/wiki/Home). See [Docs/FMX-Pseudo-Console.md](Docs/FMX-Pseudo-Console.md).
-* In order to workaround the [Delphi XE3 Bug](https://github.com/VSoftTechnologies/DUnitX/issues/117), you need to add the unit DUnitX.Init to your test projects.
 * To use this GitHub version of DUnitX in place of the bundled version included with RAD Studio, it’s pretty simple by following these steps (as the bundled version is quite a few commits behind this repo):
   - Remove the Embarcadero Unit test package (DUnitXIDEExpertXXX.bpl) from the installed packages list.
-  - In the cloned repo, open DUnitX_IDE_Expert_XXXX.dproj (matching your Delphi version), compile and install the package.
+  - In the cloned repo, open Expert\DUnitX_IDE_Expert_D13Florence.dproj, compile and install the package.
   - In your unit test projects, adjust your search paths to point to the repo\Source folder.
 
 

@@ -1,29 +1,23 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{8B735605-DC55-491C-9C13-C871E326E254}</ProjectGuid>
-        <ProjectVersion>20.3</ProjectVersion>
+        <ProjectVersion>20.5</ProjectVersion>
         <MainSource>DUnitXExamples_D13.dpr</MainSource>
         <Config Condition="'$(Config)'==''">Debug</Config>
-        <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
+        <DCC_DCCCompiler>DCC64</DCC_DCCCompiler>
         <FrameworkType>VCL</FrameworkType>
         <Base>True</Base>
-        <Platform Condition="'$(Platform)'==''">Win32</Platform>
-        <TargetedPlatforms>3</TargetedPlatforms>
+        <Platform Condition="'$(Platform)'==''">Win64</Platform>
+        <TargetedPlatforms>2</TargetedPlatforms>
         <AppType>Console</AppType>
         <ProjectName Condition="'$(ProjectName)'==''">DUnitXExamples_D13</ProjectName>
     </PropertyGroup>
     <PropertyGroup>
-        <DPMCompiler>12.0</DPMCompiler>
+        <DPMCompiler>13.0</DPMCompiler>
         <DPMCache Condition="'$(DPMCache)' == ''">$(APPDATA)\.dpm\packages</DPMCache>
         <DPM>$(DPMCache)\$(DPMCompiler)\$(Platform)</DPM>
-        <DPMSearch Condition="'$(Platform)'=='Win32'">$(DPM)\Indy.System\10.6.39\lib;$(DPM)\Indy.Core\10.6.39\lib;$(DPM)\Indy.Protocols\10.6.39\lib;</DPMSearch>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
-        <Base>true</Base>
-    </PropertyGroup>
-    <PropertyGroup Condition="('$(Platform)'=='Win32' and '$(Base)'=='true') or '$(Base_Win32)'!=''">
-        <Base_Win32>true</Base_Win32>
-        <CfgParent>Base</CfgParent>
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="('$(Platform)'=='Win64' and '$(Base)'=='true') or '$(Base_Win64)'!=''">
@@ -36,12 +30,6 @@
         <CfgParent>Base</CfgParent>
         <Base>true</Base>
     </PropertyGroup>
-    <PropertyGroup Condition="('$(Platform)'=='Win32' and '$(Cfg_1)'=='true') or '$(Cfg_1_Win32)'!=''">
-        <Cfg_1_Win32>true</Cfg_1_Win32>
-        <CfgParent>Cfg_1</CfgParent>
-        <Cfg_1>true</Cfg_1>
-        <Base>true</Base>
-    </PropertyGroup>
     <PropertyGroup Condition="('$(Platform)'=='Win64' and '$(Cfg_1)'=='true') or '$(Cfg_1_Win64)'!=''">
         <Cfg_1_Win64>true</Cfg_1_Win64>
         <CfgParent>Cfg_1</CfgParent>
@@ -51,12 +39,6 @@
     <PropertyGroup Condition="'$(Config)'=='Debug' or '$(Cfg_2)'!=''">
         <Cfg_2>true</Cfg_2>
         <CfgParent>Base</CfgParent>
-        <Base>true</Base>
-    </PropertyGroup>
-    <PropertyGroup Condition="('$(Platform)'=='Win32' and '$(Cfg_2)'=='true') or '$(Cfg_2_Win32)'!=''">
-        <Cfg_2_Win32>true</Cfg_2_Win32>
-        <CfgParent>Cfg_2</CfgParent>
-        <Cfg_2>true</Cfg_2>
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="('$(Platform)'=='Win64' and '$(Cfg_2)'=='true') or '$(Cfg_2_Win64)'!=''">
@@ -80,15 +62,6 @@
         <DCC_ImageBase>00400000</DCC_ImageBase>
         <DCC_Platform>x86</DCC_Platform>
     </PropertyGroup>
-    <PropertyGroup Condition="'$(Base_Win32)'!=''">
-        <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
-        <VerInfo_Locale>1033</VerInfo_Locale>
-        <DCC_ExeOutput>$(BDSCOMMONDIR)\bin\$(Platform)\$(Config)</DCC_ExeOutput>
-        <DCC_DcuOutput>$(BDSCOMMONDIR)\dcu\$(Platform)\$(Config)</DCC_DcuOutput>
-        <DCC_DcpOutput>$(BDSCOMMONDIR)\dcp\$(Platform)\$(Config)</DCC_DcpOutput>
-        <DCC_BplOutput>$(BDSCOMMONDIR)\dcp\$(Platform)\$(Config)</DCC_BplOutput>
-        <DCC_UnitSearchPath>C:\delphi\DelphiMocks;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-    </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win64)'!=''">
         <VerInfo_Locale>1033</VerInfo_Locale>
         <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;$(DCC_Namespace)</DCC_Namespace>
@@ -104,21 +77,11 @@
         <DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
         <DCC_DebugInformation>0</DCC_DebugInformation>
     </PropertyGroup>
-    <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
-        <VerInfo_Locale>1033</VerInfo_Locale>
-    </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
         <VerInfo_Locale>1033</VerInfo_Locale>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
-        <DCC_DebugInformation>1</DCC_DebugInformation>
-        <DCC_Define>DUNITXDEBUG;$(DCC_Define)</DCC_Define>
-        <DCC_MapFile>3</DCC_MapFile>
-        <VerInfo_Locale>1033</VerInfo_Locale>
-        <AppDPIAwarenessMode>none</AppDPIAwarenessMode>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win64)'!=''">
         <DCC_DebugDCUs>true</DCC_DebugDCUs>
@@ -138,7 +101,6 @@
         <DCCReference Include="..\Source\DUnitX.Loggers.Text.pas"/>
         <DCCReference Include="..\Source\DUnitX.Loggers.XML.NUnit.pas"/>
         <DCCReference Include="..\Source\DUnitX.Loggers.XML.xUnit.pas"/>
-        <DCCReference Include="..\Source\DUnitX.MacOS.Console.pas"/>
         <DCCReference Include="..\Source\DUnitX.Test.pas"/>
         <DCCReference Include="..\Source\DUnitX.TestFixture.pas"/>
         <DCCReference Include="..\Source\DUnitX.TestFramework.pas"/>
@@ -162,7 +124,6 @@
         <DCCReference Include="..\Source\DUnitX.FixtureProvider.pas"/>
         <DCCReference Include="..\Source\DUnitX.Timeout.pas"/>
         <DCCReference Include="..\Source\DUnitX.Attributes.pas"/>
-        <DCCReference Include="..\Source\DUnitX.Linux.Console.pas"/>
         <DCCReference Include="ProviderExample.pas"/>
         <DCCReference Include="..\Source\DUnitX.FixtureBuilder.pas"/>
         <DCCReference Include="..\Source\DUnitX.FilterBuilder.pas"/>
@@ -230,7 +191,6 @@
                 </Excluded_Packages>
             </Delphi.Personality>
             <Platforms>
-                <Platform value="Win32">True</Platform>
                 <Platform value="Win64">True</Platform>
             </Platforms>
             <Deployment Version="5">

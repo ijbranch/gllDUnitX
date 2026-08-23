@@ -29,7 +29,7 @@ Changes are welcome from all members of the Delphi Community.
 The following both are required to run the Unit Tests on DUnitX itself.   
 
 * [Delphi-Mocks](https://github.com/VSoftTechnologies/Delphi-Mocks).
-* Delphi XE2 or later (Required by Delphi-Mocks)
+* Delphi 13 (Florence) or later, 64 bit Windows (Delphi-Mocks is required for the test project)
 
 ## New to GIT ##
 
