@@ -96,7 +96,9 @@ begin
           WizardForm.Free;
         end;
       end,
-      function : Cardinal
+      // Delphi 13 declares the glyph callback as TFunc<UInt64>, matching the
+      // 64 bit HICON returned by LoadIcon. Cardinal no longer matches.
+      function : UInt64
       begin
         Result := LoadIcon(HInstance, 'DUnitXNewUnitIcon');
       end,

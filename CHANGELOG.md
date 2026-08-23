@@ -18,6 +18,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `Tests/DUnitXTest_D13.dproj`, derived from the former D12 test project (2026-08-24)
   **Why:** the tree had no Delphi 13 test project at all - the newest was D12.
 
+### Fixed
+
+- The Delphi 13 IDE expert failed to compile with E2250 at `DUnitX.Expert.ProjectWizardEx.pas:132`. Delphi 13 declares the wizard glyph callback as `TFunc<UInt64>` rather than `TFunc<Cardinal>`, matching the 64 bit `HICON` that `LoadIcon` returns, so the `function : Cardinal` literals no longer matched any `Create` overload. Both anonymous glyph functions now return `UInt64` (2026-08-24) - `Expert/DUnitX.Expert.ProjectWizardEx.pas`, `Expert/DUnitX.Expert.NewUnitWizardEx.pas`
+  **Why:** inherited from upstream - the D13 expert project had never been compiled against the Delphi 13 ToolsAPI.
+
 ### Removed
 
 - The fourteen pre-D13 package folders under `packages/` (2026-08-24)
@@ -30,5 +35,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Known Issues
 
-- `Expert/DUnitX_IDE_Expert_D13Florence.dproj` does not compile: `DUnitX.Expert.ProjectWizardEx.pas:132` fails with E2250 because `TExpertsRepositoryProjectWizardWithProc.Create` changed signature in Delphi 13. Inherited from upstream, not introduced by the Win64 scoping.
 - `Tests/DUnitXTest_D13.dproj` needs the `VSoft.DelphiMocks` DPM package restored before it will build.
