@@ -85,7 +85,7 @@ begin
   filter := TCategoryExpression.CreateFilter('One|Two|Three');
   orFilter := filter as IOrFilter;
   Assert.IsNotNull(orFilter);
-  Assert.AreEqual(orFilter.Filters.Count, 3);
+  Assert.AreEqual<NativeInt>(orFilter.Filters.Count, 3);
 
   catFilter := orFilter.Filters[0] as ICategoryFilter;
   Assert.IsNotNull(catFilter);
@@ -109,7 +109,7 @@ begin
   filter := TCategoryExpression.CreateFilter('One + Two+Three');
   andFilter := filter as IAndFilter;
   Assert.IsNotNull(andFilter);
-  Assert.AreEqual(andFilter.Filters.Count, 3);
+  Assert.AreEqual<NativeInt>(andFilter.Filters.Count, 3);
   catFilter := andFilter.Filters[0] as ICategoryFilter;
   Assert.IsNotNull(catFilter);
   Assert.AreEqual(catFilter.Categories[0], 'One');
@@ -151,10 +151,10 @@ begin
   filter := TCategoryExpression.CreateFilter('A|B-C-D|E');
   orFilter := filter as IOrFilter;
   Assert.IsNotNull(orFilter);
-  Assert.AreEqual(orFilter.Filters.Count, 3);
+  Assert.AreEqual<NativeInt>(orFilter.Filters.Count, 3);
   andFilter := orFilter.Filters[1] as IAndFilter;
   Assert.IsNotNull(andFilter);
-  Assert.AreEqual(andFilter.Filters.Count, 3);
+  Assert.AreEqual<NativeInt>(andFilter.Filters.Count, 3);
   Assert.Implements<ICategoryFilter>(andFilter.Filters[0]);
   Assert.Implements<INotFilter>(andFilter.Filters[1]);
   Assert.Implements<INotFilter>(andFilter.Filters[2]);
@@ -168,7 +168,7 @@ begin
   filter := TCategoryExpression.CreateFilter('A+B-C-D+E');
   andFilter := filter as IAndFilter;
   Assert.IsNotNull(andFilter);
-  Assert.AreEqual(andFilter.Filters.Count, 5);
+  Assert.AreEqual<NativeInt>(andFilter.Filters.Count, 5);
   Assert.Implements<ICategoryFilter>(andFilter.Filters[0]);
   Assert.Implements<ICategoryFilter>(andFilter.Filters[1]);
   Assert.Implements<INotFilter>(andFilter.Filters[2]);
@@ -220,7 +220,7 @@ begin
   filter := TCategoryExpression.CreateFilter('A + (B | C) - D,E,F');
   andFilter := filter as IAndFilter;
   Assert.IsNotNull(andFilter);
-  Assert.AreEqual(andFilter.Filters.Count, 3);
+  Assert.AreEqual<NativeInt>(andFilter.Filters.Count, 3);
 
   catFilter := andFilter.Filters[0] as ICategoryFilter;
   Assert.AreEqual(catFilter.Categories[0], 'A');
