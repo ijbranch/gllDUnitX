@@ -29,6 +29,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Debug and Release package artefacts no longer overwrite each other (2026-08-24) - `Expert/DUnitX_IDE_Expert_D13Florence.dproj`, `packages/RAD Studio 13.0/VSoft.DUnitXWinR.dproj`
+  **Why:** RAD Studio defaults `DCC_BplOutput` to `$(BDSCOMMONDIR)\Bpl\$(Platform)` and `DCC_DcpOutput` to `\Dcp\$(Platform)`, neither carrying `$(Config)`, so a Debug build silently replaced the installed Release package while `.dcu` output was already separated. Both now include `$(Config)`. The IDE registration was repointed at `Bpl\Win64\Release` accordingly.
 - `.rc`, `.res` and `.dres` are no longer ignored, and the six project resource files are now committed (2026-08-24) - `.gitignore`, `Expert/DUnitX_IDE_Expert_D13Florence.res`, `Expert/DUnitX_IDE_Expert_D13Florence.dres`, `Expert/DUnitX_IDE_Expert_D13FlorenceResource.rc`, `packages/RAD Studio 13.0/VSoft.DUnitXWinR.res`, `Tests/DUnitXTest_D13.res`, `Examples/DUnitXExamples_D13.res`
   **Why:** two `.dpk` files pull these in with `{$R *.res}` and `{$R *.dres}`, so a clean clone depended on the IDE recreating them. GITLAK policy is to commit `.res` as project metadata. Build output copies remain excluded by the output-folder rules.
 - `[MaxTime]` crashed the test thread instead of failing the test (2026-08-24) - `Source/DUnitX.Timeout.pas`, `Source/DUnitX.Test.pas`, `Tests/DUnitX.Tests.Example.pas`

@@ -33,6 +33,12 @@
         <SanitizedProjectName>DUnitX_IDE_Expert_D13Florence</SanitizedProjectName>
         <DCC_CBuilderOutput>All</DCC_CBuilderOutput>
         <DCC_DcuOutput>.\$(Platform)\$(Config)</DCC_DcuOutput>
+        <!-- Keep Debug and Release artefacts apart. The RAD Studio defaults are
+             $(BDSCOMMONDIR)\Bpl\$(Platform) and \Dcp\$(Platform)
+             with no $(Config), so a Debug build silently overwrote the installed
+             Release package. -->
+        <DCC_BplOutput>$(BDSCOMMONDIR)\Bpl\$(Platform)\$(Config)</DCC_BplOutput>
+        <DCC_DcpOutput>$(BDSCOMMONDIR)\Dcp\$(Platform)\$(Config)</DCC_DcpOutput>
         <DCC_Description>DUnitX - IDE Expert</DCC_Description>
         <DCC_ExeOutput>.\$(Platform)\$(Config)</DCC_ExeOutput>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;$(DCC_Namespace)</DCC_Namespace>
