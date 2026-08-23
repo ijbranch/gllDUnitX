@@ -23,9 +23,10 @@
 *.tvsconfig
 *.otares
 *.drc
-*.rc
-*.res
-*.dres
+# .rc, .res and .dres are NOT ignored. The .rc is resource source, and the .res/.dres
+# carry version info and the compiled wizard icons that the .dpk files pull in with
+# {$R *.res} / {$R *.dres}. GITLAK policy is to commit them as project metadata.
+# Build output copies are excluded by the output-folder rules below.
 
 # Output Folders  #
 ###################
