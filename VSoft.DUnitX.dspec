@@ -1,11 +1,12 @@
 # DPM package spec file
 min dpm client version: 1.0.0
 metadata:
-  id: VSoft.DUnitX
+  id: GITLAK.DUnitX
   version: 0.5.1
-  description: Delphi Unit Testing Framework
+  description: GITLAK fork of DUnitX, baselined on VSoft.DUnitX 0.5.1 and scoped to Delphi 13 (Florence), 64 bit Windows only
   authors:
     - Vincent Parrett
+    - GITLAK Software
   projectUrl: https://codeberg.org/GITLAK/gllDUnitX
   repositoryUrl: https://codeberg.org/GITLAK/gllDUnitX
   repositoryCommit: #HASH#

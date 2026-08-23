@@ -4,6 +4,12 @@ DUnitX Overview
 > **GITLAK fork.** This fork targets **Delphi 13 (Florence) or later, 64 bit Windows only**.
 > Support for earlier RAD Studio versions, Win32, OSX, Linux, Android and iOS has been removed;
 > use [upstream DUnitX](https://github.com/VSoftTechnologies/DUnitX) if you need those.
+>
+> The DPM package id is **`GITLAK.DUnitX`**, not `VSoft.DUnitX`, so it cannot shadow upstream
+> in a package feed. Building the **test project** additionally needs a sibling checkout of
+> [glldelphi-mocks](https://codeberg.org/GITLAK/glldelphi-mocks) at the commit pinned in
+> [DEPENDENCIES.md](DEPENDENCIES.md); the runtime library, IDE expert and examples need nothing
+> beyond RAD Studio.
 
 DUnitX is a new test framework, taking ideas from DUnit, NUnit and other test frameworks. This fork is designed to work with Delphi 13 (Florence) or later, and makes use of language/RTL features that are not available in older versions of Delphi.
 

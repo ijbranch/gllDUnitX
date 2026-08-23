@@ -4,6 +4,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [In-Service]
 
+### Changed
+
+- The DPM package id is now `GITLAK.DUnitX`, not `VSoft.DUnitX`, so this fork cannot shadow upstream in a package feed. Description records the upstream baseline (0.5.1) and the Delphi 13 / Win64 scope; GITLAK Software added to `authors`, with Vincent Parrett's authorship and copyright retained as Apache-2.0 requires (2026-08-24) - `VSoft.DUnitX.dspec`
+
+### Added
+
+- `DEPENDENCIES.md`, pinning the exact Delphi.Mocks commit the test suite is verified against (`19ff97e`), with instructions to verify and move a checkout to it (2026-08-24)
+  **Why:** upstream pinned `VSoft.DelphiMocks 0.2.2` through DPM; that pin was dropped when this fork switched to a sibling source checkout, leaving the coupling by path with no recorded version. Drift shows up as a *compile* failure in the two logger test units, which is easy to misread.
+  `Build/Dependencies.txt` and the `CheckDelphiMocks` build guard now point at the fork and at `DEPENDENCIES.md` respectively - the dependency list still named upstream's GitHub repo.
+
 > Libraries and packages are continuously deployed: changes below are live as soon as the package is rebuilt and installed - there is no separate release step, so no `[Unreleased]` backlog. Tagged version snapshots are listed beneath.
 
 ### Fixed
