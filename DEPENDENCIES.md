@@ -14,10 +14,10 @@ examples.
 |---|---|
 | Repository | `https://codeberg.org/GITLAK/glldelphi-mocks` |
 | Branch | `master` |
-| **Commit** | **`19ff97e818b575cfba2669dcd845110a85369cff`** |
-| Short | `19ff97e` |
+| **Commit** | **`2c3a51f54029ebcfabbcf71561812e84a30cf176`** |
+| Short | `2c3a51f` |
 | Dated | 2026-08-24 |
-| Subject | Docs: correct the package output paths |
+| Subject | Give the fork its own DPM package id |
 
 This is the commit the suite was last verified green against: **287 tests found, 278 passed,
 9 ignored, 0 failed, 0 errored, 0 leaked**.
@@ -57,7 +57,7 @@ Compare against the commit above. To move to that exact commit:
 
 ```
 git -C ..\glldelphi-mocks fetch origin
-git -C ..\glldelphi-mocks checkout 19ff97e818b575cfba2669dcd845110a85369cff
+git -C ..\glldelphi-mocks checkout 2c3a51f54029ebcfabbcf71561812e84a30cf176
 ```
 
 ### When the pin should change
