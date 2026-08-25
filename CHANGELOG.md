@@ -18,6 +18,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Leak accounting read the wrong memory manager when the FastMM4 leak monitor was enabled (2026-08-26) - `Source\DUnitX.MemoryLeakMonitor.FastMM4.pas`, `Source\DUnitX.MemoryLeaks.inc`
+  **Why:** `System.GetMemoryManagerState` walks the RTL's bundled FastMM, not a `FastMM4.pas` installed as the first unit - which is exactly the setup the leak monitor requires - so the small-block loop reported 0 or nonsense (upstream measured an RTL delta of 0 against a FastMM4 delta of 4140 for a 4096-byte allocation). Under `USE_FASTMM4_LEAK_MONITOR` the monitor now calls `FastMM4.GetMemoryManagerUsageSummary`, which reads FastMM4's own block lists; the RTL path is kept for the undefined case so the unit still compiles without FastMM4 on the search path. The define stays off by default. Cherry-picked from upstream `a69a10b` (Olaf Monien, #395); this fork's own `Int64` cast fix in the RTL branch is preserved inside the new `{$ELSE}`.
+  **Note:** GITLAK code uses FastMM5 (`gllFastMM5`), so this affects only the opt-in FastMM4 monitor, not the default leak accounting.
+
 - Corrected the Debug/Release package output split (2026-08-24)
   **Why:** the first attempt diverted both configurations to a `$(Config)` subfolder, which broke package loading - `$(BDSCOMMONDIR)\Bpl\$(Platform)` is on the machine `PATH` and is where a design package resolves the runtime packages it requires. Release now stays in the shared `Bpl`/`Dcp` folders and only Debug is diverted, which still stops a Debug build replacing the installed Release package.
 
