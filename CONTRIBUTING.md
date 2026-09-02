@@ -9,7 +9,7 @@ Changes are welcome from all members of the Delphi Community.
 2. Fork the DUnitX Repository and setup your local Repository.
      * Each of of the steps below are detailed [How to Fork](https://help.github.com/articles/fork-a-repo) article!
      * Clone your Fork to your local machine.
-     * Configure "upstream" remote to the [master DUnitX repository](https://codeberg.org/GITLAK/gllDUnitX).
+     * Configure "upstream" remote to the [master DUnitX repository](https://codeberg.org/GITLAK-forks/gllDUnitX).
 3. For each change you want to make:       
      * Create a new branch for your change. 
      * Make your change in your new branch. 

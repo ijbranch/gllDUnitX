@@ -1,8 +1,8 @@
 #, :: or rem comment; for documentation, see Dependencies.md in <https://bitbucket.org/jeroenp/besharp.net/src>
 
-::git gllDUnitX https://codeberg.org/GITLAK/gllDUnitX.git
+::git gllDUnitX https://codeberg.org/GITLAK-forks/gllDUnitX.git
 ::svn FastMM svn://svn.code.sf.net/p/fastmm/code/
 ::svn Spring http://delphi-spring-framework.googlecode.com/svn/trunk/
 # Delphi.Mocks is consumed from the GITLAK fork as a sibling checkout, pinned in
 # DEPENDENCIES.md. Only the test project needs it.
-git glldelphi-mocks https://codeberg.org/GITLAK/glldelphi-mocks.git
+git glldelphi-mocks https://codeberg.org/GITLAK-forks/glldelphi-mocks.git

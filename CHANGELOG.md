@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- Repository moved to the `GITLAK-forks` Codeberg organisation: `origin` is now `https://codeberg.org/GITLAK-forks/gllDUnitX.git`, and the documentation references were updated to match. **Why:** the `GITLAK` account had reached Codeberg's hard limit of 100 repositories, and an organisation carries its own allowance (2026-09-03) — `Build/Dependencies.txt`, `CONTRIBUTING.md`, `DEPENDENCIES.md`, `README.md`, `Tests/DUnitXTest_D13.dproj`, `VSoft.DUnitX.dspec`
+
 ## [In-Service]
 
 ### Changed

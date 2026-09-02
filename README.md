@@ -7,7 +7,7 @@ DUnitX Overview
 >
 > The DPM package id is **`GITLAK.DUnitX`**, not `VSoft.DUnitX`, so it cannot shadow upstream
 > in a package feed. Building the **test project** additionally needs a sibling checkout of
-> [glldelphi-mocks](https://codeberg.org/GITLAK/glldelphi-mocks) at the commit pinned in
+> [glldelphi-mocks](https://codeberg.org/GITLAK-forks/glldelphi-mocks) at the commit pinned in
 > [DEPENDENCIES.md](DEPENDENCIES.md); the runtime library, IDE expert and examples need nothing
 > beyond RAD Studio.
 
