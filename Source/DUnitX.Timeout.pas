@@ -3,6 +3,8 @@
 {           DUnitX                                                          }
 {                                                                           }
 {           Copyright (C) 2017 Vincent Parrett & Contributors               }
+{           Copyright (c) 2026 Ian Branch (GITLAK Software)                 }
+{           CO-DEVELOPED: substantially reworked in the GITLAK fork.               }
 {                                                                           }
 {           vincent@finalbuilder.com                                        }
 {           http://www.finalbuilder.com                                     }
