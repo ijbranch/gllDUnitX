@@ -7,7 +7,7 @@ DUnitX Overview
 >
 > The DPM package id is **`GITLAK.DUnitX`**, not `VSoft.DUnitX`, so it cannot shadow upstream
 > in a package feed. Building the **test project** additionally needs a sibling checkout of
-> [glldelphi-mocks](https://codeberg.org/GITLAK-forks/glldelphi-mocks) at the commit pinned in
+> [glldelphi-mocks](https://github.com/ijbranch/glldelphi-mocks) at the commit pinned in
 > [DEPENDENCIES.md](DEPENDENCIES.md); the runtime library, IDE expert and examples need nothing
 > beyond RAD Studio.
 
@@ -47,6 +47,16 @@ Tips and Tricks
   - Remove the Embarcadero Unit test package (DUnitXIDEExpertXXX.bpl) from the installed packages list.
   - In the cloned repo, open Expert\DUnitX_IDE_Expert_D13Florence.dproj, compile and install the package.
   - In your unit test projects, adjust your search paths to point to the repo\Source folder.
+  - **Give that project a DCU output directory that varies by platform and configuration**, for example
+    `<DCC_DcuOutput>.\$(Platform)\$(Config)</DCC_DcuOutput>`. This is not optional housekeeping. With no
+    DCU output set, the compiler writes each `.dcu` next to the `.pas` it compiled, so one build drops the
+    whole DUnitX set into `Source\` — and the next build for a different platform reads them and dies with
+    `F2048 Bad unit format: ... Expected version: 37.0, Windows Unicode(x86) Found version: 37.0, Windows
+    Unicode(x64)`. A project that sets a DCU output directory is immune, because the compiler then prefers
+    its own output folder and rebuilds from source.
+  - It follows that **`Source\` must never contain `.dcu` files**. If it does, delete them: they are build
+    output that escaped a misconfigured consumer, nothing should ever link against them, and they are
+    already covered by `.gitignore`.
 
 
 Support

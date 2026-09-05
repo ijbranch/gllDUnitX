@@ -4,9 +4,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Cleared 44 stale Win64 `.dcu` files that were sitting beside their sources in `Source\` (2026-09-05) — `Source\`
+  **Why:** `Source\` is on the Win64 library search path as `$(DUNITX)` **and** is the unit search path every consumer uses (`..\Source` within this repository, `..\..\gllDUnitX\Source` from `gllAutoGetIt`). Compiled output in that folder is live ammunition for `F2048 Bad unit format`. Reproduced against a copy of the folder: a Win32 consumer compiled with no DCU output directory dies on `Expected version: 37.0, Windows Unicode(x86) Found version: 37.0, Windows Unicode(x64)`; the same consumer given a `-NU` output directory compiles clean, because the compiler then prefers its own output folder and rebuilds from source.
+  **Scope, stated precisely:** this was latent, not live. All four projects here already set a platform-split `DCC_DcuOutput`, so none of them produced those files and none of them consumed them — a consumer-style build with no DCU output did, and every correctly configured project is immune. The files were untracked and `.gitignore`d, so no tracked content changes; the exposure was to whoever next built a non-Win64 target with `Source` on the path.
+  **How to apply:** never let compiled output accumulate beside `.pas` files in a folder that is on a library or unit search path. `D:\Tools\Check-DcuCollisions.ps1` does **not** catch this shape — it flags folders shared between the Win32 and Win64 library paths, and `Source` is on the Win64 path only, so it reported this repository clean.
+  **Verified afterwards:** the runtime package (Debug and Release), the IDE expert and the test project all rebuild clean; the suite runs 287 tests, 278 passed / 9 ignored / 0 failed / 0 leaked; a cold rebuild of the `gllAutoGetIt` consumer passes 33/33; and `Source\` stayed free of `.dcu` throughout.
+  **Note:** Win32 is not merely unbuilt for `VSoft.DUnitXWinR.dproj` — `TargetedPlatforms` is `2` and the project carries no Win32 property groups at all, so the four-mode package rule reduces to two modes here.
+
+- The `Delphi-Mocks` dependency in `CONTRIBUTING.md` pointed at upstream `VSoftTechnologies/Delphi-Mocks` (2026-09-05) — `CONTRIBUTING.md`
+  **Why:** the test suite has consumed our own `glldelphi-mocks` fork from a sibling source checkout since 2026-08-24, pinned by commit in `DEPENDENCIES.md`. `CONTRIBUTING.md` still sent a contributor to upstream, which is the wrong repository and carries no pinned commit.
+
+### Added
+
+- **Tips and Tricks** in `README.md` now requires a platform-varying DCU output directory on any project built against `Source\`, and states that `Source\` must never contain `.dcu` files (2026-09-05) — `README.md`, `CONTRIBUTING.md`
+  **Why:** the surrounding instruction — "adjust your search paths to point to the repo\\Source folder" — is exactly what leads a consumer into the `F2048` failure recorded above, and it said nothing about DCU output. Documenting the requirement next to the instruction that creates the hazard is the durable half of that fix; deleting the files was only the immediate half.
+
 ### Changed
 
-- Repository moved to the `GITLAK-forks` Codeberg organisation: `origin` is now `https://codeberg.org/GITLAK-forks/gllDUnitX.git`, and the documentation references were updated to match. **Why:** the `GITLAK` account had reached Codeberg's hard limit of 100 repositories, and an organisation carries its own allowance (2026-09-03) — `Build/Dependencies.txt`, `CONTRIBUTING.md`, `DEPENDENCIES.md`, `README.md`, `Tests/DUnitXTest_D13.dproj`, `VSoft.DUnitX.dspec`
+- Codeberg is no longer used: every repository URL points at GitHub again (2026-09-05) — `Build/Dependencies.txt`, `CONTRIBUTING.md`, `DEPENDENCIES.md`, `README.md`, `Tests/DUnitXTest_D13.dproj`, `VSoft.DUnitX.dspec`
+  **Why:** hosting consolidated back on GitHub, so `https://codeberg.org/GITLAK-forks/gllDUnitX` becomes `https://github.com/ijbranch/gllDUnitX` and `https://codeberg.org/GITLAK-forks/glldelphi-mocks` becomes `https://github.com/ijbranch/glldelphi-mocks`. That includes the `CheckDelphiMocks` build-guard message in `Tests/DUnitXTest_D13.dproj`, which tells the reader where to clone from. The stale `codeberg` git remote was removed from the working checkout; `origin` is the GitHub URL and is the only remote to push to.
+
+- Repository moved to the `GITLAK-forks` Codeberg organisation: the documentation references were updated to match. **Why:** the `GITLAK` account had reached Codeberg's hard limit of 100 repositories, and an organisation carries its own allowance (2026-09-03) — `Build/Dependencies.txt`, `CONTRIBUTING.md`, `DEPENDENCIES.md`, `README.md`, `Tests/DUnitXTest_D13.dproj`, `VSoft.DUnitX.dspec`
+  **Superseded 2026-09-05** by the entry above; Codeberg is no longer used at all. This entry also claimed that "`origin` is now `https://codeberg.org/GITLAK-forks/gllDUnitX.git`", which was never true of the working checkout — `origin` remained the GitHub URL throughout and Codeberg was only ever a second remote named `codeberg`. The documentation was updated; the remote was not.
 
 ## [In-Service]
 
