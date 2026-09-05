@@ -12,7 +12,7 @@ examples.
 
 | | |
 |---|---|
-| Repository | `https://codeberg.org/GITLAK-forks/glldelphi-mocks` |
+| Repository | `https://github.com/ijbranch/glldelphi-mocks` |
 | Branch | `master` |
 | **Commit** | **`2c3a51f54029ebcfabbcf71561812e84a30cf176`** |
 | Short | `2c3a51f` |

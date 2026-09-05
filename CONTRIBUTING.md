@@ -9,7 +9,7 @@ Changes are welcome from all members of the Delphi Community.
 2. Fork the DUnitX Repository and setup your local Repository.
      * Each of of the steps below are detailed [How to Fork](https://help.github.com/articles/fork-a-repo) article!
      * Clone your Fork to your local machine.
-     * Configure "upstream" remote to the [master DUnitX repository](https://codeberg.org/GITLAK-forks/gllDUnitX).
+     * Configure "upstream" remote to the [master DUnitX repository](https://github.com/ijbranch/gllDUnitX).
 3. For each change you want to make:       
      * Create a new branch for your change. 
      * Make your change in your new branch. 
@@ -28,8 +28,14 @@ Changes are welcome from all members of the Delphi Community.
 
 The following both are required to run the Unit Tests on DUnitX itself.   
 
-* [Delphi-Mocks](https://github.com/VSoftTechnologies/Delphi-Mocks).
+* [glldelphi-mocks](https://github.com/ijbranch/glldelphi-mocks), checked out as a sibling of this
+  repository at the commit pinned in [DEPENDENCIES.md](DEPENDENCIES.md). This fork consumes our own
+  Delphi-Mocks fork from source — not upstream
+  [VSoftTechnologies/Delphi-Mocks](https://github.com/VSoftTechnologies/Delphi-Mocks), and not the DPM
+  package that upstream pinned.
 * Delphi 13 (Florence) or later, 64 bit Windows (Delphi-Mocks is required for the test project)
+* Any project you build against `Source\` needs its own platform-varying DCU output directory — see
+  **Tips and Tricks** in [README.md](README.md) for why.
 
 ## New to GIT ##
 

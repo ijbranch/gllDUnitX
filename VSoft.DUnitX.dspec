@@ -7,8 +7,8 @@ metadata:
   authors:
     - Vincent Parrett
     - GITLAK Software
-  projectUrl: https://codeberg.org/GITLAK-forks/gllDUnitX
-  repositoryUrl: https://codeberg.org/GITLAK-forks/gllDUnitX
+  projectUrl: https://github.com/ijbranch/gllDUnitX
+  repositoryUrl: https://github.com/ijbranch/gllDUnitX
   repositoryCommit: #HASH#
   license: Apache-2.0
   copyright: Vincent Parrett and contributors
