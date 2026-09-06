@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- The GUI logger would not compile: `System.Actions` was listed twice in its `uses` clause (2026-09-07) — `Source\DUnitX.Loggers.GUI.VCL.pas`
+  **Why:** the unit appears inside the `{$IFDEF}`'d block AND again on the trailing line, so a build that takes that branch dies with `E2004 Identifier redeclared: 'System.Actions'` and every consumer that links the GUI logger fails with it — `F2063 Could not compile used unit`. Found because it blocked the `gllSpell` integration suite outright.
+  **This is a known, self-inflicted hazard and the file says so:** the comment beside the `{$IFDEF}`'d entry reads *"IDE keeps adding this at the end even if it's in the ifdef'd section. make sure it's not there when committing!"*. The IDE had re-added it and the addition was committed. The fix is exactly what that comment prescribes — remove the trailing `System.Actions`; `System.ImageList` beside it is listed only once and stays.
+  **How to apply:** check that trailing line before committing this unit, whatever else the change was.
+
 - Cleared 44 stale Win64 `.dcu` files that were sitting beside their sources in `Source\` (2026-09-05) — `Source\`
   **Why:** `Source\` is on the Win64 library search path as `$(DUNITX)` **and** is the unit search path every consumer uses (`..\Source` within this repository, `..\..\gllDUnitX\Source` from `gllAutoGetIt`). Compiled output in that folder is live ammunition for `F2048 Bad unit format`. Reproduced against a copy of the folder: a Win32 consumer compiled with no DCU output directory dies on `Expected version: 37.0, Windows Unicode(x86) Found version: 37.0, Windows Unicode(x64)`; the same consumer given a `-NU` output directory compiles clean, because the compiler then prefers its own output folder and rebuilds from source.
   **Scope, stated precisely:** this was latent, not live. All four projects here already set a platform-split `DCC_DcuOutput`, so none of them produced those files and none of them consumed them — a consumer-style build with no DCU output did, and every correctly configured project is immune. The files were untracked and `.gitignore`d, so no tracked content changes; the exposure was to whoever next built a non-Win64 target with `Source` on the path.

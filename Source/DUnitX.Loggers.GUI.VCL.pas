@@ -98,7 +98,7 @@ uses
   DUnitX.ComparableFormat,
   DUnitX.ComparableFormat.Xml,
   DUnitX.ComparableFormat.Csv,
-  DUnitX.Loggers.GUI.VCL.RichEdit, System.ImageList, System.Actions;
+  DUnitX.Loggers.GUI.VCL.RichEdit, System.ImageList;
 
 const
   WM_LOAD_TESTS     = WM_USER + 123;
