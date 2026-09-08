@@ -55,6 +55,7 @@ type
     class var fOnAssert : TProc;
     class var fTestFailure : ExceptClass;
     class var fTestPass : ExceptClass;
+    class var fTestIgnored : ExceptClass;
     class procedure CheckExceptionClass(E : Exception; const exceptionClass : ExceptClass);
     class procedure CheckExceptionClassDescendant(E : Exception; const exceptionClass : ExceptClass);
   protected
@@ -63,6 +64,22 @@ type
     class procedure DoAssert; inline;
   public
     class procedure Pass(const message : string = '');
+    ///  <summary>
+    ///    Stops the test and reports it as IGNORED - neither passed nor
+    ///    failed - carrying message as the reason.
+    ///  </summary>
+    ///  <remarks>
+    ///    For a test whose PRECONDITION is absent at run time: an external
+    ///    tool, a source tree, a database. Prefer the [Ignore] attribute
+    ///    when the condition is known at compile time; this is for when it
+    ///    can only be discovered by looking.
+    ///
+    ///    Do NOT reach for Pass() to skip a test. A skipped test that
+    ///    reports PASS is indistinguishable from one that verified
+    ///    something, so the gap it leaves is invisible on every later run.
+    ///    That is the whole reason this exists.
+    ///  </remarks>
+    class procedure Ignore(const message : string = '');
     class procedure Fail(const message : string = ''; const errorAddrs : pointer = nil);
     class procedure FailFmt(const message : string; const args : array of const; const errorAddrs : pointer = nil);
 
@@ -289,6 +306,7 @@ type
     class property OnAssert : TProc read fOnAssert write fOnAssert;
     class property TestFailure : ExceptClass read fTestFailure write fTestFailure;
     class property TestPass : ExceptClass read fTestPass write fTestPass;
+    class property TestIgnored : ExceptClass read fTestIgnored write fTestIgnored;
     class property IgnoreCaseDefault : boolean read fIgnoreCaseDefault write fIgnoreCaseDefault;
 
     class constructor Create;
@@ -765,6 +783,14 @@ end;
 class procedure Assert.Pass(const message : string);
 begin
   raise fTestPass.Create(message);
+end;
+
+class procedure Assert.Ignore(const message : string);
+begin
+  //  Deliberately does NOT call DoAssert. Being skipped is not an
+  //  assertion, and counting it as one would let a test satisfy
+  //  FailsOnNoAsserts by doing nothing but skipping itself.
+  raise fTestIgnored.Create(message);
 end;
 
 class procedure Assert.StartsWith(const subString, theString, message : string);

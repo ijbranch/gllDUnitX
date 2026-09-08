@@ -45,6 +45,12 @@ type
     procedure Pass_Throws_ETestPass_Exception_With_Message;
 
     [Test]
+    procedure Ignore_Throws_ETestIgnored_Exception;
+
+    [Test]
+    procedure Ignore_Throws_ETestIgnored_Exception_With_Message;
+
+    [Test]
     procedure Fail_Throws_ETestFailure_Exception;
 
     [Test]
@@ -550,6 +556,33 @@ begin
     begin
       Assert.Pass(EXPECTED_EXCEPTION_MSG);
     end, ETestPass, EXPECTED_EXCEPTION_MSG);
+end;
+
+//  Assert.Ignore is the runtime counterpart of the [Ignore] attribute: it
+//  stops a test whose PRECONDITION turned out to be absent and reports it
+//  as ignored rather than passed. Without it the only ways to skip are
+//  Assert.Pass, which lies, and doing nothing, which lies more quietly.
+procedure TTestsAssert.Ignore_Throws_ETestIgnored_Exception;
+begin
+  Assert.WillRaise(
+    procedure
+    begin
+      Assert.Ignore;
+    end, ETestIgnored);
+end;
+
+//  The message is the REASON the test was skipped, and it must survive to
+//  the runner - a skip whose reason is dropped is nearly as unhelpful as
+//  no skip at all.
+procedure TTestsAssert.Ignore_Throws_ETestIgnored_Exception_With_Message;
+const
+  EXPECTED_EXCEPTION_MSG = 'Ignoring Message';
+begin
+  Assert.WillRaise(
+    procedure
+    begin
+      Assert.Ignore(EXPECTED_EXCEPTION_MSG);
+    end, ETestIgnored, EXPECTED_EXCEPTION_MSG);
 end;
 
 procedure TTestsAssert.Test_Implements_Will_Fail_If_Not_Implemented;

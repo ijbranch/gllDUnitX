@@ -4,6 +4,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- `Assert.Ignore` — a RUNTIME test skip, reported as ignored rather than passed (2026-09-09) — `Source\DUnitX.Assert.pas`, `Source\DUnitX.Init.pas`, `Source\DUnitX.TestFramework.pas`, `Source\DUnitX.TestRunner.pas`, `Tests\DUnitX.Tests.Assert.pas`
+  **Why:** DUnitX could only skip a test at COMPILE time, via the `[Ignore]` attribute. A test whose precondition can only be discovered by looking — an external tool, a source tree, a database — had no honest option. `Assert.Pass` reports PASS, which is indistinguishable from a test that verified something and hides the gap on every later run; doing nothing hides it more quietly still. This closes that.
+  **Almost all of the machinery was already upstream and unused:** `ETestIgnored` was declared in `DUnitX.Exceptions.pas`, `TDUnitXTestRunner.ExecuteTest` already caught it, and `TTestResultType.Ignored`, `IgnoredCount` and `OnTestIgnored` were fully plumbed through every logger. Nothing anywhere raised it. The addition is the missing trigger — `Assert.Ignore`, with `fTestIgnored`/`TestIgnored` mirroring the existing `fTestPass`/`TestPass` injection so the exception class stays replaceable.
+  **One real fix went with it, and it is load-bearing rather than cosmetic:** the runner passed `test.IgnoreReason` — the ATTRIBUTE's reason, which is empty for a runtime skip — into `ExecuteIgnoredResult`, so `Assert.Ignore('because X')` recorded the skip and silently dropped the reason. It now prefers `e.Message` and falls back to `IgnoreReason`. Mutation-checked: with that one branch reverted the test is still reported `result="Ignored"` but the reason is absent from the NUnit XML entirely.
+  `Assert.Ignore` deliberately does NOT call `DoAssert` — being skipped is not an assertion, and counting it as one would let a test satisfy `FailsOnNoAsserts` by doing nothing but skipping itself. Verified: an ignored test reports `executed="False"`, `asserts="0"`.
+  **Divergence note.** Absent from upstream `master` AND `dev` as of 2026-09-09, so this is fork-local and will conflict on a future merge that touches these four units. `upstream/dev` additionally DELETES the `on e : ETestIgnored do` handler this stands on — but dev's tip is 2025-05-05, some sixteen months older than master's, and it has never been merged into master, so the risk is remote. Worth offering upstream: it is small, it uses their own dormant plumbing, and taking it back would remove the divergence.
+  Covered by `Ignore_Throws_ETestIgnored_Exception` and `Ignore_Throws_ETestIgnored_Exception_With_Message`. Suite: 289 found, 280 passed, 9 ignored, 0 failed.
+
 ### Fixed
 
 - The GUI logger would not compile: `System.Actions` was listed twice in its `uses` clause (2026-09-07) — `Source\DUnitX.Loggers.GUI.VCL.pas`

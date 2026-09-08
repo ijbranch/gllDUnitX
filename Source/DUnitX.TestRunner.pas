@@ -849,7 +849,14 @@ begin
       except
         //Handle the results which are raised in the test.
         on e : ETestIgnored do
-          testResult := ExecuteIgnoredResult(context, threadId, test, test.IgnoreReason);
+          //  A RUNTIME ignore carries its own reason; the attribute's
+          //  IgnoreReason is empty for it. Preferring e.Message is what
+          //  makes Assert.Ignore('...') report anything at all - without
+          //  this the skip is recorded but the reason is silently dropped.
+          if e.Message <> '' then
+            testResult := ExecuteIgnoredResult(context, threadId, test, e.Message)
+          else
+            testResult := ExecuteIgnoredResult(context, threadId, test, test.IgnoreReason);
         on e : ETestPass do
           testResult := ExecuteSuccessfulResult(context, threadId, test, e.Message, FLogMessagesEx);
         on e : ETestFailure do
