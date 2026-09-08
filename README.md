@@ -10,6 +10,12 @@ DUnitX Overview
 > [glldelphi-mocks](https://github.com/ijbranch/glldelphi-mocks) at the commit pinned in
 > [DEPENDENCIES.md](DEPENDENCIES.md); the runtime library, IDE expert and examples need nothing
 > beyond RAD Studio.
+>
+> **Fork-local API:** `Assert.Ignore(reason)` skips a test at RUN time and reports it as
+> *ignored* rather than passed - for a precondition that can only be discovered by looking
+> (an external tool, a source tree, a database). Upstream has only the compile-time
+> `[Ignore]` attribute, and neither its `master` nor its `dev` branch has this, so code
+> using it will not build against upstream DUnitX. See [CHANGELOG.md](CHANGELOG.md).
 
 DUnitX is a new test framework, taking ideas from DUnit, NUnit and other test frameworks. This fork is designed to work with Delphi 13 (Florence) or later, and makes use of language/RTL features that are not available in older versions of Delphi.
 
