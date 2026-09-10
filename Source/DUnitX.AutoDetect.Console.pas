@@ -53,11 +53,7 @@ unit DUnitX.AutoDetect.Console;
 interface
 
 uses
-{$IF Defined(MSWINDOWS)}
   DUnitX.Windows.Console;
-{$ELSE}
-{$MESSAGE ERROR 'This fork of DUnitX targets 64 bit Windows only'}
-{$IFEND}
 
 implementation
 

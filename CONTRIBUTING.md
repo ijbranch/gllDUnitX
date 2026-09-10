@@ -33,7 +33,7 @@ The following both are required to run the Unit Tests on DUnitX itself.
   Delphi-Mocks fork from source — not upstream
   [VSoftTechnologies/Delphi-Mocks](https://github.com/VSoftTechnologies/Delphi-Mocks), and not the DPM
   package that upstream pinned.
-* Delphi 13 (Florence) or later, 64 bit Windows (Delphi-Mocks is required for the test project)
+* Delphi 13 (Florence) or later, Windows only - Win32 and Win64 (Delphi-Mocks is required for the test project)
 * Any project you build against `Source\` needs its own platform-varying DCU output directory — see
   **Tips and Tricks** in [README.md](README.md) for why.
 

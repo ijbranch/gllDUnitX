@@ -16,6 +16,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+IDE expert now compiles on Win32 as well as Win64 (2026-09-10) — `DUnitX.Expert.ProjectWizardEx.pas`, `DUnitX.Expert.NewUnitWizardEx.pas`, `DUnitX_IDE_Expert_D13Florence.dproj`
+  The glyph callback was hard-typed `TFunc<UInt64>`, which matches the 64 bit `HICON` on
+  Win64 but not the 32 bit one on Win32, so the Win32 build failed `E2250`; it is now
+  `NativeUInt`, a plain alias for both. The project also declared `Win32` in `<Platforms>`
+  while carrying only `Base_Win64` property groups, so `Windows` would not resolve
+  (`F2613`) — a matching `Base_Win32` group was added.
+  **Why:** the gll* estate is Win32 + Win64 on Delphi 13; a package that builds on only one
+  of the two cannot complete the four-mode sweep.
+
 - The GUI logger would not compile: `System.Actions` was listed twice in its `uses` clause (2026-09-07) — `Source\DUnitX.Loggers.GUI.VCL.pas`
   **Why:** the unit appears inside the `{$IFDEF}`'d block AND again on the trailing line, so a build that takes that branch dies with `E2004 Identifier redeclared: 'System.Actions'` and every consumer that links the GUI logger fails with it — `F2063 Could not compile used unit`. Found because it blocked the `gllSpell` integration suite outright.
   **This is a known, self-inflicted hazard and the file says so:** the comment beside the `{$IFDEF}`'d entry reads *"IDE keeps adding this at the end even if it's in the ifdef'd section. make sure it's not there when committing!"*. The IDE had re-added it and the addition was committed. The fix is exactly what that comment prescribes — remove the trailing `System.Actions`; `System.ImageList` beside it is listed only once and stays.
@@ -38,6 +47,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Documentation brought level with the D13 / Win32+Win64 / no-C++Builder / no-non-Windows
+  state (2026-09-10) — `CONTRIBUTING.md`, `README.md`, `UPSTREAM-PROPOSAL-Assert-Ignore.md`
+  Stale supported-version ranges, per-IDE folder paths, C++Builder offers, non-Windows
+  platform claims and Win64-only/Win32-only statements corrected against the current tree.
+  Dated reports and upstream-authored prose were left as history.
+
+- Non-Windows conditional compilation resolved away in 4 source files — 11 constructs (2026-09-10)
+  `{$IFDEF POSIX|LINUX|ANDROID|IOS|MACOS|OSX|UNIX}` blocks were dropped and
+  `{$IFDEF MSWINDOWS|WINDOWS}` blocks collapsed to their Windows branch, keeping exactly
+  what a Win32/Win64 compile keeps. Conditions that are not constant across both our
+  platforms (`WIN32`, `WIN64`, `CPUX64`, compound `{$IF}`) were left untouched, as were
+  files whose directive nesting is unbalanced by design (JEDI-style includes).
+  **Why:** the dead branches could never be reached here and only misled the reader.
+
+- Project platforms normalised to Win32 + Win64 only in 4 `.dproj` files (2026-09-10)
+  Non-Windows targets (`Android`, `Android64`, `iOS*`, `OSX*`, `Linux64`) and the
+  `Win64x` / `WinARM64EC` variants were removed together with their `Base_<Plat>` and
+  `Cfg_N_<Plat>` property groups, `<Deployment>` platform nodes and `<ProjectRoot>`
+  entries; a deactivated `Win32` or `Win64` was switched on.
+  **Why:** standing suite rule — every gll* project is Delphi 13, Win32 + Win64, nothing
+  else, so the four-mode package sweep is always possible.
+
 - Codeberg is no longer used: every repository URL points at GitHub again (2026-09-05) — `Build/Dependencies.txt`, `CONTRIBUTING.md`, `DEPENDENCIES.md`, `README.md`, `Tests/DUnitXTest_D13.dproj`, `VSoft.DUnitX.dspec`
   **Why:** hosting consolidated back on GitHub, so `https://codeberg.org/GITLAK-forks/gllDUnitX` becomes `https://github.com/ijbranch/gllDUnitX` and `https://codeberg.org/GITLAK-forks/glldelphi-mocks` becomes `https://github.com/ijbranch/glldelphi-mocks`. That includes the `CheckDelphiMocks` build-guard message in `Tests/DUnitXTest_D13.dproj`, which tells the reader where to clone from. The stale `codeberg` git remote was removed from the working checkout; `origin` is the GitHub URL and is the only remote to push to.
 
@@ -51,8 +82,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `upstream/master` is merged as far as `a69a10b` (2026-08-27). The commit had already been cherry-picked on 2026-08-26 (see Fixed), so the merge changes no file - it exists so the fork's position can be measured with `git merge-base` instead of by patch comparison, which does not recognise an adapted cherry-pick.
 
 - **C++Builder output turned off** (2026-08-26). `DCC_CBuilderOutput` was `All`, so every build emitted `.hpp` / `.bpi` / `.a` / `.obj` files for a compiler that is **never in scope here** (standing rule: "I dont use C++ at all"). Across the estate that was 616 files and 90 MB of output nobody consumes, regenerated on every build; `gllSynEdit` alone accounted for 560. Now `None`. The `DCC_HppOutput` / `DCC_BpiOutput` / `DCC_ObjOutput` properties are left in place deliberately - they only say *where* such files would go, so with generation off they are inert, and removing them would enlarge the diff without changing behaviour. Verified: the affected packages rebuilt clean in every enabled mode, emitted no C++ artefacts, and rebuilt clean again after the existing ones were deleted (so nothing was load-bearing).
-
-
 
 - The DPM package id is now `GITLAK.DUnitX`, not `VSoft.DUnitX`, so this fork cannot shadow upstream in a package feed. Description records the upstream baseline (0.5.1) and the Delphi 13 / Win64 scope; GITLAK Software added to `authors`, with Vincent Parrett's authorship and copyright retained as Apache-2.0 requires (2026-08-24) - `VSoft.DUnitX.dspec`
 
@@ -139,7 +168,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The legacy `Build/Run-Dependend-Delphi-*.bat` launcher scripts (2026-08-24)
 
 ### Known Issues
-
 
 ### Known Issues
 

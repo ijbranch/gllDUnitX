@@ -273,9 +273,7 @@ var
   testEnabled : boolean;
   isTestMethod : boolean;
   repeatAttrib : RepeatTestAttribute;
-{$IFDEF MSWINDOWS}
   maxTimeAttrib : MaxTimeAttribute;
-{$ENDIF}
   tstProviderAttribs : TArray<TestCaseProviderAttribute>;
   tstProviderAttrib : TestCaseProviderAttribute;
   iProvider : ITestDataProvider;
@@ -335,9 +333,7 @@ begin
     willRaiseAttrib := nil;
     isTestMethod := false;
     repeatCount := 1;
-{$IFDEF MSWINDOWS}
     maxTimeAttrib := nil;
-{$ENDIF}
     maxTime := 0;
     willRaise := nil;
     willRaiseInherit := exExact;
@@ -434,10 +430,8 @@ begin
       isTestMethod := true;
     end;
 
-{$IFDEF MSWINDOWS}
     if method.TryGetAttributeOfType<MaxTimeAttribute>(maxTimeAttrib) then
       maxTime := maxTimeAttrib.MaxTime;
-{$ENDIF}
     if method.IsDestructor or method.IsConstructor then
       continue;
 

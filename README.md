@@ -1,9 +1,11 @@
 DUnitX Overview
 ===============
 
-> **GITLAK fork.** This fork targets **Delphi 13 (Florence) or later, 64 bit Windows only**.
-> Support for earlier RAD Studio versions, Win32, OSX, Linux, Android and iOS has been removed;
+> **GITLAK fork.** This fork targets **Delphi 13 (Florence), Windows only — Win32 and Win64**.
+> Support for earlier RAD Studio versions, OSX, Linux, Android and iOS has been removed;
 > use [upstream DUnitX](https://github.com/VSoftTechnologies/DUnitX) if you need those.
+> (Win32 was re-added to every `.dproj` on 2026-09-10, so packages can be built in all four
+> modes; before that date this fork was Win64-only.)
 >
 > The DPM package id is **`GITLAK.DUnitX`**, not `VSoft.DUnitX`, so it cannot shadow upstream
 > in a package feed. Building the **test project** additionally needs a sibling checkout of
@@ -32,7 +34,7 @@ DUnitX Features
  * XML Logging
    * produces output compatible with NUnit (compatible with CI servers like [ContinuaCI](https://www.finalbuilder.com/continua-ci))
    * produces output compatible with JUnit (compatible with [Gitlab CI](https://docs.gitlab.com/ee/ci/unit_test_reports.html))
- * Targets the 64 bit Windows compiler.
+ * Targets the Windows compilers, 32 bit and 64 bit.
  * Limited backwards compatibility with DUnit test classes. 
  * [Wizard](https://www.finalbuilder.com/Resources/Blogs/dunitx-has-a-wizard) for creating new tests.
 

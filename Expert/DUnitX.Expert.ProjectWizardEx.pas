@@ -104,9 +104,11 @@ begin
           WizardForm.Free;
         end;
       end,
-      // Delphi 13 declares the glyph callback as TFunc<UInt64>, matching the
-      // 64 bit HICON returned by LoadIcon. Cardinal no longer matches.
-      function : UInt64
+      // Delphi 13 declares the glyph callback with the HICON returned by
+      // LoadIcon: UInt64 on Win64, Cardinal on Win32. NativeUInt is a plain
+      // alias for both, so it satisfies the generic on either platform - a
+      // fixed UInt64 breaks the Win32 build with E2250.
+      function : NativeUInt
       begin
         Result := LoadIcon(HInstance, 'DUnitXNewProjectIcon');
       end,

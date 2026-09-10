@@ -141,7 +141,7 @@ is not an ancestor of `master`.)
 ## 8. Disclosure
 
 This comes from a fork that has diverged from upstream in ways you would not want: it targets
-Delphi 13 and Win64 only, with support for earlier RAD Studio versions and non-Windows platforms
+Delphi 13 and Windows only (Win32/Win64), with support for earlier RAD Studio versions and non-Windows platforms
 removed, and it renames the DPM package id so it cannot shadow yours in a feed.
 
 **None of that is entangled with this patch.** The change below touches only `DUnitX.Assert.pas`,
