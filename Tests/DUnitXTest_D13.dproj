@@ -9,7 +9,7 @@
         <Platform Condition="'$(Platform)'==''">Win64</Platform>
         <ProjectGuid>{78AC97F9-EC37-4A68-8525-9C5EC2F94223}</ProjectGuid>
         <ProjectVersion>20.5</ProjectVersion>
-        <TargetedPlatforms>2</TargetedPlatforms>
+        <TargetedPlatforms>3</TargetedPlatforms>
         <ProjectName Condition="'$(ProjectName)'==''">DUnitXTest_D13</ProjectName>
     </PropertyGroup>
     <PropertyGroup>

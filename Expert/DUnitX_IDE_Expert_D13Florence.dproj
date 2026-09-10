@@ -9,7 +9,7 @@
         <ProjectGuid>{94D4F91E-98B7-4D8B-A7BD-7416FFB24DC2}</ProjectGuid>
         <ProjectName Condition="'$(ProjectName)'==''">DUnitX_IDE_Expert_D13Florence</ProjectName>
         <ProjectVersion>20.5</ProjectVersion>
-        <TargetedPlatforms>2</TargetedPlatforms>
+        <TargetedPlatforms>3</TargetedPlatforms>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
         <Base>true</Base>

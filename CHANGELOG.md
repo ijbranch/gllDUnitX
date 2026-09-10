@@ -16,6 +16,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `TargetedPlatforms` brought into line with the `<Platforms>` block in 6 `.dproj` (2026-09-10)
+  The earlier platform sweep removed the non-Windows `<Platform>` entries but left the
+  `<TargetedPlatforms>` bitmask untouched, so projects still advertised targets they no
+  longer declared — values such as `1048579` and `135171` encode Android/Linux/iOS, and
+  several Win32+Win64 projects still read `2` (Win64 only) or `1` (Win32 only).
+  Now `3` for Win32+Win64, `2` where only Win64 is declared.
+  **Why:** the mask is what the IDE reads for the Project Manager's platform list, so a
+  stale one puts dead platforms back in front of the reader.
+
 IDE expert now compiles on Win32 as well as Win64 (2026-09-10) — `DUnitX.Expert.ProjectWizardEx.pas`, `DUnitX.Expert.NewUnitWizardEx.pas`, `DUnitX_IDE_Expert_D13Florence.dproj`
   The glyph callback was hard-typed `TFunc<UInt64>`, which matches the 64 bit `HICON` on
   Win64 but not the 32 bit one on Win32, so the Win32 build failed `E2250`; it is now
