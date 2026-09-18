@@ -87,3 +87,8 @@ http://www.finalbuilder.com
 See license.txt for details.
 
 
+
+## Documentation
+
+- [Help.md](Help.md) — reference: fork scope, API/symptoms, building, troubleshooting
+- [Users Guide.md](Users%20Guide.md) — task-oriented walkthroughs with worked examples

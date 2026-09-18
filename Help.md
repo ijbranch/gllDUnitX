@@ -1,0 +1,275 @@
+# gllDUnitX — Help & Reference
+
+Reference documentation for gllDUnitX, GITLAK's fork of the DUnitX test framework (Delphi 13 / RAD Studio 37.0, VCL, Win32 + Win64). Every unit-test suite in this estate runs on DUnitX, so what this file records about assertion defaults and fixture discovery decides whether those suites can fail at all. Task-oriented walkthroughs are in [Users Guide](Users%20Guide.md); installation, upstream tracking and the Delphi.Mocks pin in `README.md` and `DEPENDENCIES.md`; the change record — including what was refused from upstream and why — in `CHANGELOG.md`.
+
+---
+
+## 1. Scope of this fork
+
+Upstream is [VSoftTechnologies/DUnitX](https://github.com/VSoftTechnologies/DUnitX), wired up as the `upstream` remote and genuinely merged, so `git merge-base` works here.
+
+**Taken away, permanently.** These are not disabled, they are deleted, and a merge that reinstates them is a regression:
+
+| Removed | Detail |
+|---|---|
+| Every RAD Studio before Delphi 13 | Fourteen package folders under `packages\`, and all non-D13 test, example and IDE-expert projects |
+| Non-Windows platforms | `DUnitX.Linux.Console.pas`, `DUnitX.MacOS.Console.pas`, `DUnitX.Loggers.Console.FMX.pas`, `DUNitX.Loggers.MobileGUI.*`; `DUnitX.AutoDetect.Console` now resolves only `DUnitX.Windows.Console` and raises a compile-time error on anything else |
+| FireMonkey | `DUNitX.Loggers.GUIX.pas` and its `.fmx`, whose only consumers were the deleted FMX GUI projects |
+| C++Builder output | `DCC_CBuilderOutput` is `None` on every project |
+
+**Added here and nowhere upstream.** `Assert.Ignore( reason )` — a **run-time** test skip, reported as *ignored* rather than passed. Upstream has only the compile-time `[Ignore]` attribute. Almost all the plumbing was already upstream and dormant (`ETestIgnored`, `TTestResultType.Ignored`, `IgnoredCount`, `OnTestIgnored`, and the runner's own `on e : ETestIgnored` handler); what was missing was anything that raised it. A proposal carrying the diff and the mutation evidence went to the maintainers on 2026-09-09.
+
+This is **fork-local divergence that will conflict** on any future merge touching `DUnitX.Assert.pas`, `DUnitX.Init.pas`, `DUnitX.TestFramework.pas` or `DUnitX.TestRunner.pas`. It is also the sharpest tell for §3 below: code calling `Assert.Ignore` does not compile against any other DUnitX.
+
+**Fixed here, against upstream.** Each of these is a behaviour difference a merge must not undo:
+
+| Fix | What it was |
+|---|---|
+| `[MaxTime]` | The watchdog suspended the test thread and rewrote its instruction pointer (`Ctx.Rip := Cardinal(@RaiseTimeOutException)`) — a 32-bit truncation of a 64-bit code address, always unmapped on Delphi 13, so the thread faulted on resume. Elapsed time is now **observed and reported after the test method returns** |
+| `TWeakReference<T>.Destroy` | Abandoned `RemoveWeakRef` when it could not take the lock but nilled its field anyway, leaving the target writing through a pointer into memory about to be freed |
+| `TTestFixtureList.Sort` | Freed a `TDelegatedComparer` that had been implicitly converted to a ref-counted `IComparer` |
+| `TRttiPropertyExtension` | Freed its patched virtual method tables before the instances dispatching through them |
+| `TDUnitXServiceLocator` | Leaked the constructed object whenever `Supports` failed — silent by default |
+| `TValueHelper.IsUInt64` | Tested `NativeInt`, the signed type `IsInt64` already used |
+| FastMM4 leak monitor | Multiplied in 32 bits and cast the overflowed product to `Int64` afterwards; also read the RTL's bundled FastMM rather than an installed `FastMM4.pas` |
+| `DUnitX.Loggers.GUI.VCL.pas` | `System.Actions` listed twice — `E2004 Identifier redeclared`. The file's own comment warns that the IDE re-adds it; check that trailing line before committing this unit |
+
+**Deliberately NOT taken from upstream.** `upstream/dev` has never been merged into `master` and its tip is fifteen months *older*. All four of its commits are refused; one is dangerous rather than merely unwanted:
+
+- `01b2dc5` removes the first parameter of `TestCaseAttribute.Create`. Every `[TestCase('Name','a,b')]` in the estate would still **compile** and silently mean something else — the name becomes the value and the values become the separator. It also rewrites `GenerateTests` in `DUnitX.FixtureProvider.pas`, including the `FFixtureClasses.ContainsKey` de-duplication that lets RTTI discovery and explicit registration coexist (§3).
+- `055e7a8`, `7350c5d`, `f40670c` — parallel fixture running and its riders, against runner and logger units `master` has since changed.
+
+**Deliberately NOT changed.** The assertion defaults in §3 are upstream's, not ours, and they are left alone. `fIgnoreCaseDefault := True` dates from upstream's 2020 repo re-org, and `WillNotRaise`'s exact-class test is upstream's too. They are not "fixed" here because a suite opts out of them in one line in its own runner, and changing them globally would turn currently-green suites across the estate red in a single commit — a decision to take on purpose, not a side effect of a documentation pass.
+
+**Other fork facts.** The DPM package id is `GITLAK.DUnitX`, not `VSoft.DUnitX`, so this fork cannot shadow upstream in a package feed. The test project consumes Delphi.Mocks from a sibling `glldelphi-mocks` source checkout pinned by commit in `DEPENDENCIES.md`, not from DPM.
+
+---
+
+## 2. Which DUnitX are you actually compiling against?
+
+RAD Studio 13 ships its own DUnitX, as compiled DCUs in `lib\win64\release` (59 of them), and the two differ:
+
+- **`Assert.Ignore` does not exist in the bundled copy.** Compiling against it alone gives `E2003 Undeclared identifier: 'Ignore'`. The symbols `TestIgnored`/`fTestIgnored` appear in this fork's compiled `DUnitX.Assert.dcu` and in the bundled one they do not — which makes them a reliable way to tell the two apart.
+- None of §1's fixes are in the bundled copy, `[MaxTime]` included.
+
+**The library path looks as though the bundled copy should win, and it does not.** On this machine `$(BDSLIB)\$(Platform)\release` sits at index 4 of the Win64 library path while `$(DUNITX)` (`D:\gllDUnitX\Source`) sits at index 14 — so path order alone predicts Embarcadero's copy. **Measured on 2026-09-18, that prediction is wrong.** Test executables built by the normal pipeline all carry the fork-only symbol:
+
+| test executable | links |
+|---|---|
+| `gllStaticCodeAnalyser` `TestProject.exe` | this fork |
+| `gllDelphiRefactoringLight` tests | this fork |
+| `gllMarkDown4D` tests | this fork |
+
+The last of those was rebuilt from scratch with no stray `.dcu` anywhere in `Source`, and still linked this fork. **The mechanism was not established** — unit resolution is evidently not a plain first-directory-wins over a prebuilt DCU — so treat the ordering as something that does not decide the outcome rather than something you can reason from.
+
+**How to check any binary rather than assume:** `grep -a TestIgnored <test>.exe`. A hit means this fork; nothing means the bundled copy.
+
+**To make it certain rather than merely true today**, name `<repo>\Source` in the consuming project's own `DCC_UnitSearchPath` — and read §7 first, because that folder has a rule of its own. `gllStaticCodeAnalyser`'s test project does this; `GITLAKLib`'s and `gllSpell`'s do not, and rely on the behaviour above.
+
+---
+
+## 3. Behaviours that will surprise you
+
+Every one of these makes a test *pass* when you expected it to fail, or removes a test without saying so. They are the reason this file exists.
+
+### `Assert.AreEqual( string, string )` ignores case
+
+`Assert.Create` sets `fIgnoreCaseDefault := True`, and the two-argument string overload forwards it. `StartsWith`, `EndsWith`, `Contains`, `DoesNotContain`, `NoDiff` and `AreNotEqual` take the same default. Nothing at the call site says so, so **a test whose subject is the casing cannot fail** — `ProperCase`, `Initials`, identifier casing in generated SQL, month-name lookups.
+
+```pascal
+Assert.AreEqual( 'McDonald', ProperCase( 'mcdonald' ) );          // passes against 'Mcdonald'
+Assert.AreEqual( 'McDonald', ProperCase( 'mcdonald' ), False );   // the third argument is ignoreCase
+```
+
+Or make the whole suite strict, once, in the runner mainline — `Assert.IgnoreCaseDefault := False` — after which a test that genuinely does not care must pass `True` explicitly.
+
+### `Assert.WillNotRaise( proc, SomeClass )` swallows a descendant
+
+The body tests `if e.ClassType = exceptionClass then Fail` — an `=` on `ClassType`, not `is`. So `Assert.WillNotRaise( proc, Exception, 'msg' )` catches an `EAccessViolation` in its own `except` and then does **nothing**: the test passes while the fault it was written to detect happens on every run.
+
+```pascal
+Assert.WillNotRaiseAny( procedure begin DoTheThing; end, 'must not blow up' );
+```
+
+`WillNotRaiseAny` is almost always what was meant. Passing **no** class is also safe — that takes the `else` branch and fails on anything. `WillNotRaiseDescendant` exists for the narrower case.
+
+### Turning RTTI discovery off deletes tests
+
+Fixtures reach the runner two ways: `[TestFixture]` found by RTTI, and `TDUnitX.RegisterTestFixture` called by hand. **Keep both.** They do not double up — `TDUnitXFixtureProvider.GenerateTests` merges the registered fixtures with `if not FFixtureClasses.ContainsKey( pair.Key )`, so a fixture that arrives by both routes is added once.
+
+Setting `Runner.UseRTTI := False` therefore does not prevent a double run; it silently drops every fixture that carries `[TestFixture]` but has no registration call. The run still reports success. The ratio of registration calls to fixtures is the tell — count the test *names* on both sides before touching the flag.
+
+Note the matching requirement on the `.dpr`: `{$STRONGLINKTYPES ON}`, or RTTI discovery cannot see classes nothing references.
+
+### A `published` method with no attributes is a test
+
+After the attribute checks, `GenerateTests` adds any `mvPublished` method as a test. Useful for DUnit compatibility; surprising if you made a helper published.
+
+### Overriding an attributed `[Setup]` method silently does not run it
+
+An `override` does not inherit the attribute. The provider walks up the hierarchy, finds the *ancestor's* attributed method, and binds it with `meth.Code := method.CodeAddress` — a static code address, not a virtual dispatch. Your override never executes. Either re-apply the attribute to the override, or give the override a new name and call the inherited method from it. Same for `[TearDown]`, `[SetupFixture]`, `[TearDownFixture]`.
+
+### Descending one fixture from another re-runs the ancestor's tests
+
+`GetMethods` returns inherited methods, so the descendant runs every ancestor `[Test]` again under its own name — inflating the count and reporting one failure twice. Share *helpers*, not fixture ancestry.
+
+### Collection counts need `Assert.AreEqual<NativeInt>`
+
+Delphi 13 made `TList<T>.Count` a `NativeInt`, so generic inference against an integer literal is ambiguous (`E2532`). An `Assert.AreEqual` overload taking `NativeInt` cannot be added, because on Win64 `NativeInt` and `Int64` are the same type. Write `Assert.AreEqual<NativeInt>( 3, List.Count )`.
+
+### `[MaxTime]` cannot interrupt a test that never returns
+
+By design here (see §1): it is an assertion about elapsed time, checked once the method returns.
+
+---
+
+## 4. Public surface
+
+The runtime package is `packages\RAD Studio 13.0\VSoft.DUnitXWinR.dpk` (`requires rtl` only). The units a consumer names:
+
+| Unit | What you take from it |
+|---|---|
+| `DUnitX.TestFramework` | The one to `use`. Re-exports `Assert`, and declares `TDUnitX`, `ITestRunner`, `IRunResults`, `ITestLogger`, `TDUnitXOptions`, `EXIT_ERRORS`, and re-exports `DUnitX.Attributes` |
+| `DUnitX.Init` | **Must be in the `.dpr` uses clause.** Its `initialization` wires `Assert.TestFailure`/`TestPass`/`TestIgnored` to the real exception classes and registers the fixture provider |
+| `DUnitX.Loggers.Console` | `TDUnitXConsoleLogger.Create( quietMode : boolean = False )` |
+| `DUnitX.Loggers.XML.NUnit` | `TDUnitXXMLNUnitFileLogger.Create( AFilename : string = '' )` — empty means `dunitx-results.xml` beside the exe. `TDUnitXXMLNUnitLogger` takes a stream |
+| `DUnitX.Loggers.XML.JUnit` | `TDUnitXXMLJUnitFileLogger` / `TDUnitXXMLJUnitLogger`, same shape |
+| `DUnitX.Loggers.XML.xUnit` | xUnit-flavoured XML |
+| `DUnitX.Loggers.Text` | `TDunitXTextFileLogger.Create( fileName, overwrite, encoding )` |
+| `DUnitX.Loggers.Null` | `TDUnitXNullLogger` — the base every logger descends from; use it to implement your own |
+| `DUnitX.DUnitCompatibility` | `TTestCase` with the whole `Check*` family (all marked `deprecated`) — see the guide's conversion section |
+| `DUnitX.Assert.Ex` | `Assert.AreEqual( expected, actual, compformat )` for CSV/XML comparable formats; raises `ETestFailureStrCompare` |
+| `DUnitX.TestDataProvider` | `TTestDataProviderBase` + `TestDataProviderManager.RegisterProvider` for `[TestCaseProvider]` (see `TestCaseProvider.md`) |
+| `DUnitX.MemoryLeakMonitor.FastMM5` | FastMM5 leak monitor. **Not in the package's `contains` clause** — add the unit to the project, with `FastMM5` first in the `.dpr` |
+| `DUnitX.MemoryLeakMonitor.FastMM4` | The FastMM4 monitor, off unless `USE_FASTMM4_LEAK_MONITOR` is defined in `DUnitX.MemoryLeaks.inc` |
+| `DUnitX.StackTrace.EurekaLog7` / `.JCL` / `.MadExcept3..5` | Optional stack-trace providers, selected in `DUnitX.Stacktrace.inc` |
+
+`DUnitX.Loggers.GUI.VCL` (`TGUIVCLTestRunner`, with a `Run` procedure) and the FastMM5/stack-trace units are **not** in the package `contains` clause and are compiled into the consuming project.
+
+---
+
+## 5. The `Assert` class
+
+`Assert` as seen through `DUnitX.TestFramework` is `class( DUnitX.Assert.Ex.Assert )`, itself descended from `DUnitX.Assert.Assert`. Every member is a `class procedure`, so there is nothing to create. The trailing `message : string = ''` is omitted below.
+
+| Group | Members |
+|---|---|
+| Outcome | `Pass`, **`Ignore`** (fork-local, §1), `Fail( msg, errorAddrs )`, `FailFmt`, `NotImplemented` |
+| Equality | `AreEqual` for `string` (with optional `ignoreCase`), `Double`/`Extended` (with optional `tolerance`), `Currency`, `Integer`, `Int64`, `Cardinal`, `word`, `boolean`, `TGUID`, `TClass`, `TStream`, `TStrings` (with an `ignoreLines` array), `TArray<T>`, and generic `AreEqual<T>`; `AreEqualMemory`; the whole `AreNotEqual` mirror set |
+| Identity | `AreSame` / `AreNotSame` for `TObject` and `IInterface` |
+| Nil and emptiness | `IsNull` / `IsNotNull` (`TObject`, `Pointer`, `IInterface`, `Variant`); `IsEmpty` / `IsNotEmpty` (`string`, `Variant`, `TStrings`, `TList`, `IInterfaceList`, `IEnumerable<T>`) |
+| Truth | `IsTrue`, `IsFalse` |
+| Membership | `Contains<T>` / `DoesNotContain<T>` over `IEnumerable<T>` and open arrays; `Contains` / `DoesNotContain` over a `string` or a `TStrings`; `StartsWith`, `EndsWith`, `IsMatch( regexPattern, theString )`, `NoDiff` |
+| Types | `InheritsFrom( descendant, parent )`, `Implements<T>( value ) : T`, `IsType<T>` (*deprecated — "istype is useless"*) |
+| Dates | `IsSameDate`, `IsSameTime`, `IsSameDateTime` |
+| Exceptions | `WillRaise`, `WillRaiseDescendant`, `WillRaiseAny`, `WillRaiseWithMessage`, `WillRaiseWithMessageRegex`; `WillNotRaise`, `WillNotRaiseDescendant`, **`WillNotRaiseAny`**, `WillNotRaiseWithMessage`. Each takes either a `TTestLocalMethod` (an anonymous `procedure`) or a `TTestMethod` |
+| Class properties | `IgnoreCaseDefault` (§3), `OnAssert`, `TestFailure`, `TestPass`, `TestIgnored` — the last three are the exception classes `DUnitX.Init` injects, and are replaceable |
+
+`Assert.Ignore` deliberately does **not** count as an assertion, so a test cannot satisfy `FailsOnNoAsserts` by skipping itself; an ignored test reports `executed="False"`, `asserts="0"`.
+
+---
+
+## 6. Attributes
+
+Declared in `DUnitX.Attributes`, re-exported by `DUnitX.TestFramework`.
+
+| Attribute | Signature and meaning |
+|---|---|
+| `[TestFixture]` | `Create`, `Create( AName )`, `Create( AName, ADescription )` |
+| `[Test]` | `Create`, or `Create( AEnabled : boolean )` to disable one without deleting it |
+| `[TestCase]` | `Create( ACaseName, AValues : string; ASeparator : string = ','; ATrimValues : boolean = False )` — **the case name is the first parameter**; see §1 on why that matters |
+| `[AutoNameTestCase]` | `Create( AValues; ASeparator = ','; ATrimValues = False )` — name derived from the values |
+| `[TestCaseProvider]` | `Create( providerName : string )` or `Create( AClass : TTestDataProviderClass )` |
+| `[Setup]` / `[TearDown]` | Per test method |
+| `[SetupFixture]` / `[TearDownFixture]` | Per fixture. Only the first method found is used |
+| `[Category]` | `Create( ACategory : string )` — drives `-i:` / `-e:` filtering |
+| `[Ignore]` | `Create( AReason : string = '' )` — compile-time skip. For a run-time one see `Assert.Ignore` |
+| `[MaxTime]` | `Create( AMaxTime : Cardinal )` milliseconds; §3 |
+| `[RepeatTest]` | `Create( ACount : Cardinal )` |
+| `[WillRaise]` | `Create( AExpectedException : ExceptClass; AInheritance : TExceptionInheritance = exExact )` |
+| `[TestInOwnThread]` | **Declared but not implemented** — upstream's own note |
+
+---
+
+## 7. Building
+
+Four projects, all `ProjectVersion` 20.5, all declaring `Win32` and `Win64` with `TargetedPlatforms` 3:
+
+| Project | What it is |
+|---|---|
+| `packages\RAD Studio 13.0\VSoft.DUnitXWinR.dproj` | The runtime package. `{$RUNONLY}`, `{$LIBSUFFIX AUTO}` |
+| `Expert\DUnitX_IDE_Expert_D13Florence.dproj` | The IDE expert: New Test Project and New Test Unit wizards. `{$DESIGNONLY}`, `requires rtl, designide, ExpertsCreators` |
+| `Tests\DUnitXTest_D13.dproj` | The framework's own suite. Needs the sibling `glldelphi-mocks` checkout |
+| `Examples\DUnitXExamples_D13.dproj` | Compiles the `Source` units directly rather than linking the package |
+
+**Packages build in all four modes** — Win32 + Win64 × Debug + Release. Both package projects carry the estate output standard:
+
+```xml
+<DCC_BplOutput Condition="'$(Config)'=='Release'">$(BDSCOMMONDIR)\Bpl\$(Platform)</DCC_BplOutput>
+<DCC_BplOutput Condition="'$(Config)'!='Release'">$(BDSCOMMONDIR)\Bpl\$(Platform)\$(Config)</DCC_BplOutput>
+<DCC_DcpOutput Condition="'$(Config)'=='Release'">$(BDSCOMMONDIR)\Dcp\$(Platform)</DCC_DcpOutput>
+<DCC_DcpOutput Condition="'$(Config)'!='Release'">$(BDSCOMMONDIR)\Dcp\$(Platform)\$(Config)</DCC_DcpOutput>
+```
+
+Release stays in the shared platform folder, because that is what is on `PATH` and where dependent packages resolve their `requires`; only Debug is diverted. Build Debug first and Release last. All four projects set `<DCC_DcuOutput>.\$(Platform)\$(Config)</DCC_DcuOutput>`.
+
+### `Source\` must never contain `.dcu` files
+
+`Source` is on the Win64 library path as `$(DUNITX)` **and** is the unit search path every consumer uses. A project built against it with **no** `DCC_DcuOutput` drops its DCUs beside the `.pas` files, and the next build for the other platform reads them and dies with `F2048 Bad unit format ... Expected version: 37.0, Windows Unicode(x86) Found version: 37.0, Windows Unicode(x64)`. A project that sets a DCU output directory is immune, because the compiler then prefers its own output folder and rebuilds from source.
+
+Forty-four such strays were cleared on 2026-09-05; the folder had forty-four again on 2026-09-18. They are untracked and `.gitignore`d, so nothing tracked changes — delete them and give whatever produced them a platform-varying `DCC_DcuOutput`. `D:\Tools\Check-DcuCollisions.ps1` does **not** catch this shape: it looks for folders shared between the Win32 and Win64 library paths, and `Source` is on the Win64 path only.
+
+---
+
+## 8. Command-line switches
+
+Parsed by `TDUnitX.CheckCommandLine`, which exits on an invalid option. A switch may start `-`, `--`, `/` or `@`, and takes its value after a `:`.
+
+| Long | Short | Effect |
+|---|---|---|
+| `options` | `opt` | Read further options from a file |
+| `xmlfile` | `xml` | XML output path. Default `dunitx-results.xml` beside the exe |
+| `run` | `r` | Tests to run, comma separated; may be repeated |
+| `runlist` | `rl` | File listing the tests to run |
+| `include` | `i` | Categories to include |
+| `exclude` | `e` | Categories to exclude |
+| `dontshowignored` | `dsi` | Suppress ignored tests in the output |
+| `loglevel` | `l` | `Information`, `Warning`, `Error` |
+| `consolemode` | `cm` | `Off`, `Quiet`, `Verbose` (default) |
+| `exitbehavior` | `exit` | `Continue` (default) or `Pause` |
+| `hidebanner` | `b` | Hide the licence banner |
+| `h` | `?` | Usage |
+
+**The estate's `test_run` tool reads `<exeBase>-results.xml`**, so pass `-xml:MyTests-results.xml` (or set `TDUnitX.Options.XMLOutputFile`) or the run reports ERROR with an all-zero summary.
+
+---
+
+## 9. Troubleshooting
+
+| Symptom | Cause / fix |
+|---|---|
+| `E2003 Undeclared identifier: 'Ignore'` on `Assert.Ignore` | You are compiling against RAD Studio's bundled DUnitX, not this fork. Put `<repo>\Source` on the project's own unit search path — §2 |
+| `F2048 Bad unit format ... Windows Unicode(x86) / (x64)` | `.dcu` files in `Source\`. Delete them and set `<DCC_DcuOutput>.\$(Platform)\$(Config)</DCC_DcuOutput>` on the consuming project — §7 |
+| `E2004 Identifier redeclared: 'System.Actions'` then `F2063 Could not compile used unit` | The IDE re-added `System.Actions` on the trailing line of `DUnitX.Loggers.GUI.VCL.pas`, exactly as the comment beside it warns. Remove it; `System.ImageList` beside it is listed once and stays |
+| `E2532` on `Assert.AreEqual( 3, List.Count )` | `TList<T>.Count` is `NativeInt` on Delphi 13. Use `Assert.AreEqual<NativeInt>` — §3 |
+| `F2613 Unit 'Delphi.Mocks' not found`, or the `CheckDelphiMocks` build message | The test project only. Clone `glldelphi-mocks` as a sibling at the commit pinned in `DEPENDENCIES.md`, or set the `DelphiMocks` property |
+| Fewer tests run than you wrote, exit code 0 | `Runner.UseRTTI := False` dropped the `[TestFixture]`-only fixtures — §3 |
+| A test that should crash reports green | `Assert.WillNotRaise( proc, SomeClass )` swallowed a descendant. Use `WillNotRaiseAny` — §3 |
+| A casing test cannot be made to fail | `Assert.IgnoreCaseDefault` is `True` — §3 |
+| The runner prints its summary then waits forever | Something asked for `Pause`. The default is `Continue`, but this repo's own `Tests\DUnitXTestProject.dpr` assigns `TDUnitX.Options.ExitBehavior := Pause` inside its `{$IFNDEF CI}` block and then calls `System.Readln`. Build with `CI` defined, or do not copy that assignment into your own mainline — the wizard template only *honours* `-exit:Pause`, it does not set it |
+| `H2675 Directory not found: ...\Source\DUnit\src` | Residue in a DUnit-era project. That folder does not exist; remove the entry. It is not a sign that DUnit needs restoring |
+| Your `[Setup]` override never runs | The attribute is not inherited — §3 |
+
+---
+
+## 10. Known issues
+
+- `TRttiPropertyExtension` hard-codes virtual method table slot indices derived from an older `System.Rtti`. Delphi 13 inserted `TRttiPlaceMember` and `TRttiDataMember` into the hierarchy, so the map is very likely wrong. Nothing in DUnitX constructs one, so it is unreachable today; the code carries a warning to re-verify every index before using it.
+- Public members such as `ITestFixture.TestCount` return `Integer` while the underlying `TList<T>.Count` is `NativeInt`. The narrowing is harmless at realistic test counts and widening the public API would be breaking.
+- `DUnitX.inc` still carries the compiler-version ladder back to Delphi 2010. It is inert on Delphi 13 and has not been resolved away.
+
+---
+
+## 11. Licence
+
+Apache 2.0, Copyright (C) 2012+ Vincent Parrett — see `LICENSE.txt`. Upstream authorship and copyright are retained throughout; GITLAK's changes are recorded in `CHANGELOG.md`.
