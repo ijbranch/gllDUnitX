@@ -4,6 +4,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Reviewed and deliberately NOT taken from upstream, so they are not re-derived later
+
+- **Upstream swept 2026-09-18: `upstream/dev` reviewed, nothing taken.** This fork is **0 commits
+  behind `upstream/master`** (tip `a69a10b`, 2026-08-24). `dev`'s tip `f40670c` is **2025-05-05** -
+  fifteen months OLDER than master and 45 commits behind it, never merged.
+  - `01b2dc5` "BREAKING Changes" - **REFUSED, and this is the dangerous one.** It removes the
+    first parameter of `TestCaseAttribute.Create`. Every one of the estate's **143
+    `[TestCase('Name','a,b')]` sites would still COMPILE** and silently mean something else - the
+    name becomes the value and the values become the separator. A silent-miscompile migration,
+    not a drop-in. It also rewrites 167 lines of `DUnitX.FixtureProvider.pas` including
+    `GenerateTests`, which carries the `FFixtureClasses.ContainsKey` dedupe that lets RTTI
+    discovery and explicit `RegisterTestFixture` coexist - the very mechanism the estate rule
+    "keep BOTH discovery mechanisms" depends on.
+  - `055e7a8` (parallel fixture running), `7350c5d` (no-asserts across threads) and `f40670c`
+    (tail-end tidy) - REFUSED. A 2025 feature on a branch 45 commits behind master, rewriting
+    runner and logger units that master has since changed; `7350c5d` only has an effect GIVEN
+    `055e7a8`, and `f40670c` touches `TParallel` code that does not exist here.
+  - **Assertion semantics and exit codes are untouched by all four** - nothing goes near
+    `DUnitX.Assert.pas`, and `git diff HEAD...upstream/dev -- Source/` has zero `ExitCode` hits.
+  - **Correction to an earlier note in this file:** it said `dev` DELETES the `ETestIgnored`
+    handler. `dev` never had it - `24c353b` ("Allow the test to be ignored at runtime") is
+    master-only. The outcome of taking `dev`'s runner would be the same (no handler, so
+    `Assert.Ignore` loses its footing) but the wording implied a deliberate removal.
+  **Condition to reopen:** upstream merges `dev` into `master`. Re-triage against the merged
+  result, and budget a mechanical sweep of all 143 `[TestCase(` sites FIRST.
+
 ### Added
 
 - `Assert.Ignore` — a RUNTIME test skip, reported as ignored rather than passed (2026-09-09) — `Source\DUnitX.Assert.pas`, `Source\DUnitX.Init.pas`, `Source\DUnitX.TestFramework.pas`, `Source\DUnitX.TestRunner.pas`, `Tests\DUnitX.Tests.Assert.pas`
