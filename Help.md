@@ -132,7 +132,7 @@ The runtime package is `packages\RAD Studio 13.0\VSoft.DUnitXWinR.dpk` (`require
 | `DUnitX.TestFramework` | The one to `use`. Re-exports `Assert`, and declares `TDUnitX`, `ITestRunner`, `IRunResults`, `ITestLogger`, `TDUnitXOptions`, `EXIT_ERRORS`, and re-exports `DUnitX.Attributes` |
 | `DUnitX.Init` | **Must be in the `.dpr` uses clause.** Its `initialization` wires `Assert.TestFailure`/`TestPass`/`TestIgnored` to the real exception classes and registers the fixture provider |
 | `DUnitX.Loggers.Console` | `TDUnitXConsoleLogger.Create( quietMode : boolean = False )` |
-| `DUnitX.Loggers.XML.NUnit` | `TDUnitXXMLNUnitFileLogger.Create( AFilename : string = '' )` — empty means `dunitx-results.xml` beside the exe. `TDUnitXXMLNUnitLogger` takes a stream |
+| `DUnitX.Loggers.XML.NUnit` | `TDUnitXXMLNUnitFileLogger.Create( AFilename : string = '' )` — empty means `dunitx-results.xml` beside the exe; a bare file name means the current folder (it raised `EInOutError` before this fork's 2026-09-29 fix, and still does upstream). `TDUnitXXMLNUnitLogger` takes a stream |
 | `DUnitX.Loggers.XML.JUnit` | `TDUnitXXMLJUnitFileLogger` / `TDUnitXXMLJUnitLogger`, same shape |
 | `DUnitX.Loggers.XML.xUnit` | xUnit-flavoured XML |
 | `DUnitX.Loggers.Text` | `TDunitXTextFileLogger.Create( fileName, overwrite, encoding )` |

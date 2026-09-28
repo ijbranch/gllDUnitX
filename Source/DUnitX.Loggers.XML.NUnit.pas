@@ -436,7 +436,11 @@ begin
     sXmlFilename := ExtractFilePath(ParamStr(0)) + DEFAULT_NUNIT_FILE_NAME;
 
   lXmlDirectory := ExtractFilePath(sXmlFilename);
-  ForceDirectories(lXmlDirectory);
+  //A bare file name has no folder: ForceDirectories('') raises EInOutError
+  //("Unable to create directory") before a single test runs. It means the
+  //current folder, which needs no creating.
+  if lXmlDirectory <> '' then
+    ForceDirectories(lXmlDirectory);
 
   fileStream := TFileStream.Create(sXmlFilename, fmCreate);
 

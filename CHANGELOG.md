@@ -4,6 +4,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The NUnit and JUnit XML loggers raised `EInOutError: Unable to create directory []` when given a bare
+  file name** (2026-09-29) - `Source/DUnitX.Loggers.XML.NUnit.pas`, `Source/DUnitX.Loggers.XML.JUnit.pas`.
+  Both call `ForceDirectories( ExtractFilePath( FileName ) )`, and `ExtractFilePath` of a bare name is
+  `''`, for which `ForceDirectories` raises. The exception fires in the logger's constructor, so the
+  runner dies before a single test runs. Found in `E:\DBiStoreTests`, whose runner passed
+  `'DBiStoreTests-results.xml'`. The directory is now created only when there is one; a bare name means
+  the current folder. **Upstream has the same code** (checked against `upstream/master`), so this is a
+  deliberate divergence worth offering back.
+
 ### Reviewed and deliberately NOT taken from upstream, so they are not re-derived later
 
 - **Upstream swept 2026-09-18: `upstream/dev` reviewed, nothing taken.** This fork is **0 commits
