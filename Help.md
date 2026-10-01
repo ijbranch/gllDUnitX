@@ -58,7 +58,7 @@ RAD Studio 13 ships its own DUnitX, as compiled DCUs in `lib\win64\release` (59 
 |---|---|
 | `gllStaticCodeAnalyser` `TestProject.exe` | this fork |
 | `gllDelphiRefactoringLight` tests | this fork |
-| `gllMarkDown4D` tests | this fork |
+| `gllMarkDown4D` tests (repo retired 2026-10-01) | this fork |
 
 The last of those was rebuilt from scratch with no stray `.dcu` anywhere in `Source`, and still linked this fork. **The mechanism was not established** — unit resolution is evidently not a plain first-directory-wins over a prebuilt DCU — so treat the ordering as something that does not decide the outcome rather than something you can reason from.
 
