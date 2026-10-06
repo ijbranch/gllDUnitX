@@ -87,6 +87,10 @@ begin
   Result := Int64(LSummary.AllocatedBytes);
 end;
 {$ELSE}
+// System.GetMemoryManagerState is marked platform (W1002). It is the RTL memory
+// manager's own API and this fork targets Windows only, so the warning says nothing
+// here; scoped to this routine, DEFAULT restores the project setting after it.
+{$WARN SYMBOL_PLATFORM OFF}
 var
   st : TMemoryManagerState;
   sb : TSmallBlockTypeState;
@@ -101,6 +105,7 @@ begin
     Result := Result + (Int64(sb.UseableBlockSize) * Int64(sb.AllocatedBlockCount));
   end;
 end;
+{$WARN SYMBOL_PLATFORM DEFAULT}
 {$ENDIF}
 
 procedure TDUnitXFastMM4MemoryLeakMonitor.PostSetUp;

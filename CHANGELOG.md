@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **A full rebuild of `VSoft.DUnitXWinR` reported W1002 `GetMemoryManagerState is specific to a platform`**
+  (2026-10-07) — `Source/DUnitX.MemoryLeakMonitor.FastMM4.pas`. Found by the estate package sweep, which builds with
+  `DCC_BuildAllUnits`. `System.GetMemoryManagerState` is marked `platform`; it is the RTL memory manager's own API and
+  there is no non-platform equivalent, and this fork targets Windows only, so the warning carries no information here.
+  `SYMBOL_PLATFORM` is switched off for that one routine (the non-`USE_FASTMM4_LEAK_MONITOR` branch of
+  `GetMemoryAllocated`) and restored with `DEFAULT`, so the project setting applies everywhere else (Ian, 2026-10-07).
 - **An in-IDE build re-saved the package `.dproj` without its Release output paths** (2026-10-07) —
   `Expert/DUnitX_IDE_Expert_D13Florence.dproj`, `packages/RAD Studio 13.0/VSoft.DUnitXWinR.dproj`. The output standard
   was two `Condition`-ed `DCC_BplOutput` / `DCC_DcpOutput` lines in the Base group, and the IDE keeps one value per
