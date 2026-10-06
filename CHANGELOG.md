@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **An in-IDE build re-saved the package `.dproj` without its Release output paths** (2026-10-07) —
+  `Expert/DUnitX_IDE_Expert_D13Florence.dproj`, `packages/RAD Studio 13.0/VSoft.DUnitXWinR.dproj`. The output standard
+  was two `Condition`-ed `DCC_BplOutput` / `DCC_DcpOutput` lines in the Base group, and the IDE keeps one value per
+  property per group when it re-saves the project on a build, so it wrote back only the active config's: a committed
+  re-save sent Release builds to the root `Bpl` / `Dcp` folders. Now one plain value per group, the form the IDE
+  writes itself: Base `$(BDSCOMMONDIR)\Bpl\$(Platform)\$(Config)` (and `Dcp`), overridden in the Release config group
+  by `$(BDSCOMMONDIR)\Bpl\$(Platform)`. Same output; built in all four modes with the `dcc` `-LE`/`-LN` paths checked
+  per mode.
 - **The NUnit and JUnit XML loggers raised `EInOutError: Unable to create directory []` when given a bare
   file name** (2026-09-29) - `Source/DUnitX.Loggers.XML.NUnit.pas`, `Source/DUnitX.Loggers.XML.JUnit.pas`.
   Both call `ForceDirectories( ExtractFilePath( FileName ) )`, and `ExtractFilePath` of a bare name is
