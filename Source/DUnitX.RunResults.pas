@@ -229,7 +229,7 @@ begin
   end;
 
   //Note, don't treat ignored as errors here!
-  if not (testResult.ResultType in [TTestResultType.Pass, TTestResultType.Ignored]) then
+  if testResult.ResultType not in [TTestResultType.Pass, TTestResultType.Ignored] then
     FAllPassed := False;
 
   (fixtureResult as IFixtureResultBuilder).AddTestResult(testResult);

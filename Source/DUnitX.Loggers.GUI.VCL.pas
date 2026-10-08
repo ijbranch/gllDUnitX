@@ -1370,7 +1370,7 @@ class function PathUtils.GetProgramFilesX86 : string;
 var
   Ident : string;
 begin
-  Ident := IfThen(IsWow64, 'ProgramFiles(x86)', 'ProgramFiles');
+  Ident := if IsWow64 then 'ProgramFiles(x86)' else 'ProgramFiles';
   Result := IncludeTrailingPathDelimiter(GetEnvironmentVariable(Ident));
 end;
 

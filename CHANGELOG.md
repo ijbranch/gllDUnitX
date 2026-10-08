@@ -107,6 +107,7 @@ IDE expert now compiles on Win32 as well as Win64 (2026-09-10) — `DUnitX.Exper
 
 ### Changed
 
+- **D13 language features adopted** (2026-10-08) - `Source/DUnitX.CommandLine.OptionDef.pas`, `Source/DUnitX.Loggers.GUI.VCL.pas`, `Source/DUnitX.RunResults.pas`. 2 `not ( X in S )` / `not ( X is T )` rewritten as `X not in S` / `X is not T` (generated code byte-identical: every project that built before was rebuilt and compared); 1 `IfThen(...)` call replaced by the `if ... then ... else` expression, which evaluates only the branch it picks. **Divergence accepted:** upstream was reviewed first (nothing pending was lost), and Ian's ruling for the gll* forks is that they "are our forks now", to be made "as correct as possible/practical"; these lines will need re-applying or resolving in any later upstream port.
 - Documentation brought level with the D13 / Win32+Win64 / no-C++Builder / no-non-Windows
   state (2026-09-10) — `CONTRIBUTING.md`, `README.md`, `UPSTREAM-PROPOSAL-Assert-Ignore.md`
   Stale supported-version ranges, per-IDE folder paths, C++Builder offers, non-Windows

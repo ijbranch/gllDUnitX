@@ -133,7 +133,7 @@ end;
 constructor TOptionDefinition<T>.Create(const longName, shortName : string; const proc : TProc<T>);
 begin
   FTypeInfo := TypeInfo(T);
-  if not (FTypeInfo.Kind in [tkInteger, tkEnumeration, tkFloat, tkString, tkSet, tkLString, tkWString, tkInt64, tkUString]) then
+  if FTypeInfo.Kind not in [tkInteger, tkEnumeration, tkFloat, tkString, tkSet, tkLString, tkWString, tkInt64, tkUString] then
     raise Exception.Create(SInvalidOptionType);
 
   FLongName := longName;
