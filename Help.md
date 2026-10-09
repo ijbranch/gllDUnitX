@@ -113,9 +113,9 @@ An `override` does not inherit the attribute. The provider walks up the hierarch
 
 `GetMethods` returns inherited methods, so the descendant runs every ancestor `[Test]` again under its own name — inflating the count and reporting one failure twice. Share *helpers*, not fixture ancestry.
 
-### Collection counts need `Assert.AreEqual<NativeInt>`
+### Collection counts: `Assert.AreEqual( 3, List.Count )` compiles since 2026-10-10
 
-Delphi 13 made `TList<T>.Count` a `NativeInt`, so generic inference against an integer literal is ambiguous (`E2532`). An `Assert.AreEqual` overload taking `NativeInt` cannot be added, because on Win64 `NativeInt` and `Int64` are the same type. Write `Assert.AreEqual<NativeInt>( 3, List.Count )`.
+Delphi 13 made `TList<T>.Count` a `NativeInt`, so on Win64 an `Integer` on one side and an `Int64` on the other matched no overload, fell through to `AreEqual<T>`, and generic inference failed with `E2532`. Since 2026-10-10 (upstream `1bdc297`, #397) `Assert.AreEqual( Integer, Int64 )` and `( Int64, Integer )` exist under `{$IFDEF CPU64BITS}`, so the plain form compiles on both platforms. An overload taking `NativeInt` itself still cannot be added (on Win64 it is the same type as `Int64`); the mixed pair is the fix. The older workaround, `Assert.AreEqual<NativeInt>( 3, List.Count )`, still compiles and need not be changed.
 
 ### `[MaxTime]` cannot interrupt a test that never returns
 
@@ -251,7 +251,7 @@ Parsed by `TDUnitX.CheckCommandLine`, which exits on an invalid option. A switch
 | `E2003 Undeclared identifier: 'Ignore'` on `Assert.Ignore` | You are compiling against RAD Studio's bundled DUnitX, not this fork. Put `<repo>\Source` on the project's own unit search path — §2 |
 | `F2048 Bad unit format ... Windows Unicode(x86) / (x64)` | `.dcu` files in `Source\`. Delete them and set `<DCC_DcuOutput>.\$(Platform)\$(Config)</DCC_DcuOutput>` on the consuming project — §7 |
 | `E2004 Identifier redeclared: 'System.Actions'` then `F2063 Could not compile used unit` | The IDE re-added `System.Actions` on the trailing line of `DUnitX.Loggers.GUI.VCL.pas`, exactly as the comment beside it warns. Remove it; `System.ImageList` beside it is listed once and stays |
-| `E2532` on `Assert.AreEqual( 3, List.Count )` | `TList<T>.Count` is `NativeInt` on Delphi 13. Use `Assert.AreEqual<NativeInt>` — §3 |
+| `E2532` on `Assert.AreEqual( 3, List.Count )` | Linking a DUnitX older than 2026-10-10 (the bundled one, or stale DCUs), which lacks the `Integer`/`Int64` overloads. Rebuild against this fork's `Source`, or write `Assert.AreEqual<NativeInt>` — §3 |
 | `F2613 Unit 'Delphi.Mocks' not found`, or the `CheckDelphiMocks` build message | The test project only. Clone `glldelphi-mocks` as a sibling at the commit pinned in `DEPENDENCIES.md`, or set the `DelphiMocks` property |
 | Fewer tests run than you wrote, exit code 0 | `Runner.UseRTTI := False` dropped the `[TestFixture]`-only fixtures — §3 |
 | A test that should crash reports green | `Assert.WillNotRaise( proc, SomeClass )` swallowed a descendant. Use `WillNotRaiseAny` — §3 |

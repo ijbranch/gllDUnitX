@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **The self-test project reported W1000 `Symbol 'CheckEqualsString' is deprecated`** (2026-10-10) —
+  `Tests/DUnitX.Tests.DUnitCompatibility.pas`. The test exercises the DUnit compatibility layer on purpose, and the
+  file already wraps its other deprecated calls (`CheckTrue`, `CheckNotNull`) in `{$WARN SYMBOL_DEPRECATED OFF}` /
+  `ON`; `Test_TestName`'s `CheckEqualsString` was the one call left outside. Wrapped the same way, scoped to that
+  one line (upstream has the same gap).
 - **A full rebuild of `VSoft.DUnitXWinR` reported W1002 `GetMemoryManagerState is specific to a platform`**
   (2026-10-07) — `Source/DUnitX.MemoryLeakMonitor.FastMM4.pas`. Found by the estate package sweep, which builds with
   `DCC_BuildAllUnits`. `System.GetMemoryManagerState` is marked `platform`; it is the RTL memory manager's own API and
@@ -57,6 +62,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **`Assert.AreEqual( Integer, Int64 )` and `( Int64, Integer )` overloads on 64-bit** (2026-10-10) —
+  `Source/DUnitX.Assert.pas`, `Tests/DUnitX.Tests.Assert.pas`. Upstream `1bdc297` (#397), cherry-picked with `-x`.
+  **Why:** on Win64 `Count`/`Length` are `NativeInt`, so `Assert.AreEqual( 1, List.Count )` mixes `Integer` and
+  `Int64`, overload resolution falls through to `AreEqual<T>`, and inference fails with E2532. The estate worked
+  around it by writing `AreEqual<NativeInt>` (see the 2026-08-24 CategoryParser entry); upstream's overloads are the
+  better fix and the workaround stays valid. Under `{$IFDEF CPU64BITS}`, so Win32 is unchanged. Mutation-checked: with
+  the two overloads removed, the two new tests fail to compile with E2532. Suite 289 -> 291 found, 282 passed,
+  9 ignored, 0 failed. Upstream `master` is now reviewed to `1bdc297` (2026-10-09).
 - `Assert.Ignore` — a RUNTIME test skip, reported as ignored rather than passed (2026-09-09) — `Source\DUnitX.Assert.pas`, `Source\DUnitX.Init.pas`, `Source\DUnitX.TestFramework.pas`, `Source\DUnitX.TestRunner.pas`, `Tests\DUnitX.Tests.Assert.pas`
   **Why:** DUnitX could only skip a test at COMPILE time, via the `[Ignore]` attribute. A test whose precondition can only be discovered by looking — an external tool, a source tree, a database — had no honest option. `Assert.Pass` reports PASS, which is indistinguishable from a test that verified something and hides the gap on every later run; doing nothing hides it more quietly still. This closes that.
   **Almost all of the machinery was already upstream and unused:** `ETestIgnored` was declared in `DUnitX.Exceptions.pas`, `TDUnitXTestRunner.ExecuteTest` already caught it, and `TTestResultType.Ignored`, `IgnoredCount` and `OnTestIgnored` were fully plumbed through every logger. Nothing anywhere raised it. The addition is the missing trigger — `Assert.Ignore`, with `fTestIgnored`/`TestIgnored` mirroring the existing `fTestPass`/`TestPass` injection so the exception class stays replaceable.

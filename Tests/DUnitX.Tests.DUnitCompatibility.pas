@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -87,7 +87,9 @@ end;
 procedure TMyDUnitTestSetup.Test_TestName;
 begin
   Status('The Test Name is : ' + Self.Name);
+{$WARN SYMBOL_DEPRECATED OFF}
   CheckEqualsString('Test_TestName', Self.Name, 'Test Name not working');
+{$WARN SYMBOL_DEPRECATED ON}
 end;
 
 initialization

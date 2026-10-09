@@ -197,7 +197,7 @@ Assert.WillRaiseDescendant( procedure begin Parse( 'rubbish' ) end, EParseError 
 Assert.WillRaiseWithMessageRegex( procedure begin Parse( '' ) end, EParseError, 'line \d+' );
 ```
 
-One Delphi 13 wrinkle: `TList<T>.Count` is a `NativeInt`, so `Assert.AreEqual( 3, List.Count )` is ambiguous (`E2532`). Write `Assert.AreEqual<NativeInt>( 3, List.Count )`. An overload taking `NativeInt` cannot be added, because on Win64 that is the same type as `Int64`.
+One Delphi 13 wrinkle: `TList<T>.Count` is a `NativeInt`. Since 2026-10-10 this fork has `Assert.AreEqual( Integer, Int64 )` and `( Int64, Integer )` on Win64 (upstream #397), so `Assert.AreEqual( 3, List.Count )` compiles; before that it failed with `E2532`, and the `Assert.AreEqual<NativeInt>( 3, List.Count )` form written to work around it is still valid.
 
 ---
 
