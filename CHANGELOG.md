@@ -13,7 +13,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `Public\Documents\Embarcadero\Studio\37.0\bin\Win64\<Config>` and DCUs of `Source\` and Delphi.Mocks in the shared
   `dcu\Win64\<Config>` — the shape that shadows a library machine-wide if that folder is ever on a library path (it is
   not today). The overrides are removed, so both platforms inherit Base's `.\$(Platform)\$(Config)`. The 96 stale files
-  left in the shared folders were moved to `Studio\37.0\_stale_gllDUnitX_2026-10-12` (not deleted); clean rebuilds
+  left in the shared folders were moved to `Studio\37.0\_stale_gllDUnitX_2026-10-12` first and, once the rebuilds below had
+  passed without them, deleted with the folder the same day (101 files including the orphans below); clean rebuilds
   (Tests Win64 Debug/Release, Win32 Debug; Examples Win64 Debug) write nothing there and the suite stays 297 / 288 / 0.
   The same folder also received five orphans of a package name this fork no longer builds — `VSoft.DUnitXR.bpl` /
   `.dcp` (root Win32 copies of 2026-04-19, `Win64` copies of 2026-05-23) and a `.rsm`: no project on `D:` or `E:`
