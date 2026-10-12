@@ -106,203 +106,602 @@ uses
   DUnitX.Loggers.GUI.VCL.RichEdit, System.ImageList;
 
 const
+  /// <summary>Posted by <c>FormShow</c> so the tests are loaded once the window has appeared.</summary>
   WM_LOAD_TESTS     = WM_USER + 123;
 
 type
+  /// <summary>
+  ///   Node of the test tree: a fixture or a test, with a tick box (its state image) and a result icon. Ticking or
+  ///   unticking a node applies to all its children and keeps its parents' ticks consistent.
+  /// </summary>
   TTestNode = class(TTreeNode)
   private
+    /// <summary>True when the node is a fixture rather than a test.</summary>
     FIsFixtureNode : boolean;
   public
+    /// <summary>True when the node is a fixture rather than a test.</summary>
     property IsFixtureNode : boolean read FIsFixtureNode;
+    /// <summary>
+    ///   Toggles the node's tick and sets every descendant to match. Ticking also ticks each unticked ancestor;
+    ///   unticking unticks each ancestor that is left with no ticked child.
+    /// </summary>
     procedure InvertState;
+    /// <summary>
+    ///   Ranks a result icon by severity so that the worst result of a test, or of a fixture's tests, wins.
+    /// </summary>
+    /// <param name="ImageIndex">A result image index: -1 not run, 0 ignored, 1 pass, 3 warning; anything else is an error.</param>
+    /// <returns>The severity: -1 not run, 0 ignored, 1 pass, 2 warning, 3 failure or error.</returns>
     class function ToWeight(const ImageIndex : integer) : integer;
+    /// <summary>Converts a severity from <c>ToWeight</c> back to the result image index that shows it.</summary>
+    /// <param name="Weight">The severity: -1 not run, 0 ignored, 1 pass, 2 warning; anything else is an error.</param>
+    /// <returns>The result image index.</returns>
     class function ToImageIndex(const Weight : integer) : integer;
   end;
 
+  /// <summary>
+  ///   Node of the results tree: a test's result, its message, or a log line. A comparable failure also carries the
+  ///   expected and actual text, so they can be copied or opened in Beyond Compare.
+  /// </summary>
   TResultNode = class(TTreeNode)
   public
-    //The test's full name, not its node: the test tree is rebuilt whenever the filter changes.
+    /// <summary>
+    ///   The full name of the test the result belongs to, or empty for a root, message or log node. A name rather than
+    ///   a node reference, because the test tree is rebuilt whenever the filter changes.
+    /// </summary>
     TestFullName : string;
+    /// <summary>True when the result carries expected and actual values that can be compared.</summary>
     IsComparable : boolean;
+    /// <summary>The expected value of a comparable failure.</summary>
     Expected : string;
+    /// <summary>The actual value of a comparable failure.</summary>
     Actual : string;
+    /// <summary>The format of the compared values (XML, CSV, ...), which picks the temporary files' extension.</summary>
     Format : TDUnitXComparableFormatClass;
 
+    /// <summary>Initialises the node as not comparable.</summary>
     procedure AfterConstruction; override;
   end;
 
+  /// <summary>
+  ///   The VCL GUI test runner form, itself a test logger: lists the tests in a tickable tree (filterable by name and
+  ///   by the command line), runs the ticked or the selected test, and shows the results as a structured tree and as
+  ///   a coloured text log. A run can be stopped (Esc) after the current test; ticks are remembered per user between
+  ///   sessions. Tests that make no assertions are failed by the runner and shown as warnings.
+  /// </summary>
   TGUIVCLTestRunner = class(TForm, ITestLogger)
+    /// <summary>Holds the form's actions and the layout of its action toolbars.</summary>
     ActionManager : TActionManager;
+    /// <summary>Images for the actions' toolbar buttons and menu items.</summary>
     ActionImages : TImageList;
+    /// <summary>Runs the test selected in the test tree.</summary>
     actRunSelected : TAction;
+    /// <summary>Runs every ticked test (F9).</summary>
     actRun : TAction;
+    /// <summary>Panel holding the test name filter.</summary>
     pnlFilter : TPanel;
+    /// <summary>Caption of the test name filter.</summary>
     lblFilter : TLabel;
+    /// <summary>Tick box images for the test tree's state icons.</summary>
     StateImages : TImageList;
+    /// <summary>Result icons (pass, failure, ignored, warning, comparable, log levels) for both trees.</summary>
     ResultImages : TImageList;
+    /// <summary>Panel holding the tests and results panes.</summary>
     pnlClient : TPanel;
+    /// <summary>Toolbar of the tests pane (run, select, invert).</summary>
     tbrTests : TActionToolBar;
+    /// <summary>Ticks every test.</summary>
     actTestsSelectAll : TAction;
+    /// <summary>Unticks every test.</summary>
     actTestsUnselectAll : TAction;
+    /// <summary>Splitter between the tests and results panes.</summary>
     splMain : TSplitter;
+    /// <summary>The tests pane.</summary>
     pnlTests : TPanel;
+    /// <summary>Tree of fixtures and tests, with tick boxes and result icons.</summary>
     tvwTests : TTreeView;
+    /// <summary>The results pane.</summary>
     pnlResults : TPanel;
+    /// <summary>Toolbar of the results pane (compare, expand, collapse).</summary>
     tbrResults : TActionToolBar;
+    /// <summary>Opens the selected comparable failure's expected and actual values in Beyond Compare.</summary>
     actCompare : TAction;
+    /// <summary>Pages for the structured and text views of the results.</summary>
     pgeResults : TPageControl;
+    /// <summary>Page holding the structured results tree.</summary>
     tabStructured : TTabSheet;
+    /// <summary>Results grouped by outcome, with each test's message and log lines.</summary>
     tvwResults : TTreeView;
+    /// <summary>Status bar showing the load status, notices and warnings.</summary>
     stsMain : TStatusBar;
+    /// <summary>Context menu of the results tree.</summary>
     popResults : TPopupActionBar;
+    /// <summary>Results context menu item for <c>actCompare</c>.</summary>
     itmComparePop : TMenuItem;
+    /// <summary>Context menu of the test tree.</summary>
     popTests : TPopupActionBar;
+    /// <summary>Test context menu item for <c>actRunSelected</c>.</summary>
     RunAll1 : TMenuItem;
+    /// <summary>Test context menu item for <c>actRun</c>.</summary>
     RunAll2 : TMenuItem;
+    /// <summary>Inverts the tick on every test.</summary>
     actTestsInvert : TAction;
+    /// <summary>Header panel of the tests pane.</summary>
     pnlTestsTop : TPanel;
+    /// <summary>Heading of the tests pane.</summary>
     lblTestsHeader : TLabel;
+    /// <summary>Header panel of the results pane.</summary>
     pnlResultsTop : TPanel;
+    /// <summary>Heading of the results pane.</summary>
     lblResultsHeader : TLabel;
+    /// <summary>Expands every node of the results tree.</summary>
     actResultsExpandAll : TAction;
+    /// <summary>Collapses every node of the results tree.</summary>
     actResultsCollapseAll : TAction;
+    /// <summary>Page holding the text log.</summary>
     tabText : TTabSheet;
+    /// <summary>Coloured text log written by <c>TDUnitXGUIVCLRichEditLogger</c>.</summary>
     rchText : TRichEdit;
+    /// <summary>Panel framing the text log.</summary>
     pnlText : TPanel;
+    /// <summary>Scrolls the text log to the selected test's output.</summary>
     actFindInText : TAction;
+    /// <summary>Test context menu item for <c>actFindInText</c>.</summary>
     itmFindInText : TMenuItem;
+    /// <summary>Separator in the test context menu.</summary>
     N1 : TMenuItem;
+    /// <summary>Selects the selected test's entry in the results tree.</summary>
     actFindInStructured : TAction;
+    /// <summary>Test context menu item for <c>actFindInStructured</c>.</summary>
     itmFindInStructured : TMenuItem;
+    /// <summary>Icon in the tests pane header.</summary>
     imgTests : TImage;
+    /// <summary>Icon in the results pane header.</summary>
     imgResults : TImage;
+    /// <summary>Test name filter: Enter applies it, the right button clears it.</summary>
     edtFilter : TButtonedEdit;
+    /// <summary>Copies the selected comparable failure's actual value to the clipboard.</summary>
     actCopyActual : TAction;
+    /// <summary>Copies the selected comparable failure's expected value to the clipboard.</summary>
     actCopyExpected : TAction;
+    /// <summary>Separator in the results context menu.</summary>
     N2 : TMenuItem;
+    /// <summary>Results context menu item for <c>actCopyExpected</c>.</summary>
     itmCopyExpected : TMenuItem;
+    /// <summary>Results context menu item for <c>actCopyActual</c>.</summary>
     itmCopyActual : TMenuItem;
+    /// <summary>Progress of the current run, in tests begun.</summary>
     pgResults : TProgressBar;
+    /// <summary>Status of the current run (idle, running N of M, stopping, closing).</summary>
     txtStatus : TLabel;
+    /// <summary>Panel of result counts shown after a run, in place of the status.</summary>
     pnlSummary : TPanel;
+    /// <summary>Caption of the ignored count.</summary>
     lblIgnored : TLabel;
+    /// <summary>Caption of the passed count.</summary>
     lblPassed : TLabel;
+    /// <summary>Number of tests passed.</summary>
     txtPassed : TLabel;
+    /// <summary>Number of tests ignored.</summary>
     txtIgnored : TLabel;
+    /// <summary>Caption of the failed count.</summary>
     lblFailed : TLabel;
+    /// <summary>Number of tests failed, not counting no-assertion warnings.</summary>
     txtFailed : TLabel;
+    /// <summary>Caption of the errored count.</summary>
     lblErrored : TLabel;
+    /// <summary>Number of tests that raised an unexpected exception.</summary>
     txtErrored : TLabel;
+    /// <summary>Caption of the memory leak count.</summary>
     lblMemLeak : TLabel;
+    /// <summary>Number of tests that leaked memory.</summary>
     txtMemLeak : TLabel;
+    /// <summary>Caption of the warning count.</summary>
     lblWarnings : TLabel;
+    /// <summary>Number of tests that made no assertions.</summary>
     txtWarnings : TLabel;
+    /// <summary>Unticks every test and refreshes the actions.</summary>
+    /// <param name="Sender">The action.</param>
     procedure actTestsUnselectAllExecute(Sender : TObject);
+    /// <summary>
+    ///   Writes the selected comparable failure's expected and actual values to temporary files and opens them in
+    ///   Beyond Compare without waiting; the files are deleted when the form is destroyed (or at once if it fails to
+    ///   start).
+    /// </summary>
+    /// <param name="Sender">The action.</param>
     procedure actCompareExecute(Sender : TObject);
+    /// <summary>Copies the selected comparable failure's actual value; a busy clipboard is reported in the status bar.</summary>
+    /// <param name="Sender">The action.</param>
     procedure actCopyActualExecute(Sender : TObject);
+    /// <summary>Copies the selected comparable failure's expected value; a busy clipboard is reported in the status bar.</summary>
+    /// <param name="Sender">The action.</param>
     procedure actCopyExpectedExecute(Sender : TObject);
+    /// <summary>Collapses the whole results tree.</summary>
+    /// <param name="Sender">The action.</param>
     procedure actResultsCollapseAllExecute(Sender : TObject);
+    /// <summary>Expands the whole results tree.</summary>
+    /// <param name="Sender">The action.</param>
     procedure actResultsExpandAllExecute(Sender : TObject);
+    /// <summary>Deletes the comparison temporary files and frees the form's lists and maps (before the trees).</summary>
+    /// <param name="Sender">The form.</param>
     procedure FormDestroy(Sender : TObject);
+    /// <summary>Runs every ticked test, selected by exact full name.</summary>
+    /// <param name="Sender">The action.</param>
     procedure actRunExecute(Sender : TObject);
+    /// <summary>Runs the test selected in the test tree.</summary>
+    /// <param name="Sender">The action.</param>
     procedure actRunSelectedExecute(Sender : TObject);
+    /// <summary>Shows the text log scrolled to the selected test's output, or says none was found.</summary>
+    /// <param name="Sender">The action.</param>
     procedure actFindInTextExecute(Sender : TObject);
+    /// <summary>Shows the results tree with the selected test's result selected and expanded, or says none was found.</summary>
+    /// <param name="Sender">The action.</param>
     procedure actFindInStructuredExecute(Sender : TObject);
+    /// <summary>Inverts the tick on every test and refreshes the actions.</summary>
+    /// <param name="Sender">The action.</param>
     procedure actTestsInvertExecute(Sender : TObject);
+    /// <summary>Ticks every test and refreshes the actions.</summary>
+    /// <param name="Sender">The action.</param>
     procedure actTestsSelectAllExecute(Sender : TObject);
+    /// <summary>Clears the filter and reloads the test tree; ignored during a run.</summary>
+    /// <param name="Sender">The filter edit.</param>
     procedure edtFilterRightButtonClick(Sender : TObject);
+    /// <summary>On Enter, applies the filter by reloading the test tree (not during a run) and swallows the key.</summary>
+    /// <param name="Sender">The filter edit.</param>
+    /// <param name="Key">The key pressed; set to #0 when it is Enter.</param>
     procedure edtFilterKeyPress(Sender : TObject; var Key : Char);
+    /// <summary>
+    ///   Sizes the form to the monitor's work area, creates the lists and maps, takes the command-line filter, reads
+    ///   the remembered ticks and arranges for the trees to be rebuilt rather than restored if their windows are
+    ///   recreated.
+    /// </summary>
+    /// <param name="Sender">The form.</param>
     procedure FormCreate(Sender : TObject);
+    /// <summary>F9 runs the ticked tests; Esc stops a run after the current test.</summary>
+    /// <param name="Sender">The form.</param>
+    /// <param name="Key">The key pressed; cleared when Esc stops a run.</param>
+    /// <param name="Shift">The modifier keys held.</param>
     procedure FormKeyDown(Sender : TObject; var Key : Word; Shift : TShiftState);
+    /// <summary>Splits the panes evenly and, the first time only, posts <c>WM_LOAD_TESTS</c> to load the tests.</summary>
+    /// <param name="Sender">The form.</param>
     procedure FormShow(Sender : TObject);
+    /// <summary>Makes the test tree create <c>TTestNode</c> nodes.</summary>
+    /// <param name="Sender">The test tree.</param>
+    /// <param name="NodeClass">Set to <c>TTestNode</c>.</param>
     procedure tvwTestsCreateNodeClass(Sender : TCustomTreeView; var NodeClass : TTreeNodeClass);
+    /// <summary>Space toggles the selected node's tick (not during a run).</summary>
+    /// <param name="Sender">The test tree.</param>
+    /// <param name="Key">The key pressed; set to #0 when it is a space.</param>
     procedure tvwTestsKeyPress(Sender : TObject; var Key : Char);
+    /// <summary>A left click on a tick box toggles it (not during a run, and not on a double-click's second press).</summary>
+    /// <param name="Sender">The test tree.</param>
+    /// <param name="Button">The mouse button pressed.</param>
+    /// <param name="Shift">The modifier keys and click state.</param>
+    /// <param name="X">The horizontal position of the click, in client coordinates.</param>
+    /// <param name="Y">The vertical position of the click, in client coordinates.</param>
     procedure tvwTestsMouseDown(Sender : TObject; Button : TMouseButton; Shift : TShiftState; X, Y : Integer);
+    /// <summary>Refreshes the actions when the selected result changes.</summary>
+    /// <param name="Sender">The results tree.</param>
+    /// <param name="Node">The newly selected node.</param>
     procedure tvwResultsChange(Sender : TObject; Node : TTreeNode);
+    /// <summary>Makes the results tree create <c>TResultNode</c> nodes.</summary>
+    /// <param name="Sender">The results tree.</param>
+    /// <param name="NodeClass">Set to <c>TResultNode</c>.</param>
     procedure tvwResultsCreateNodeClass(Sender : TCustomTreeView; var NodeClass : TTreeNodeClass);
+    /// <summary>Saves the remembered ticks.</summary>
+    /// <param name="Sender">The form.</param>
+    /// <param name="Action">How the form closes; left unchanged.</param>
     procedure FormClose(Sender : TObject; var Action : TCloseAction);
+    /// <summary>
+    ///   Refuses to close mid-run; instead stops the run, and the form closes once the current test has finished.
+    /// </summary>
+    /// <param name="Sender">The form.</param>
+    /// <param name="CanClose">Set to False while a run is in progress.</param>
     procedure FormCloseQuery(Sender : TObject; var CanClose : Boolean);
+    /// <summary>Draws fixture nodes in bold, in the window text colour unless selected.</summary>
+    /// <param name="Sender">The test tree.</param>
+    /// <param name="Node">The node being drawn.</param>
+    /// <param name="State">The node's drawing state.</param>
+    /// <param name="DefaultDraw">Left True so the tree draws the node itself.</param>
     procedure tvwTestsCustomDrawItem(Sender : TCustomTreeView; Node : TTreeNode;
       State : TCustomDrawState; var DefaultDraw : Boolean);
+    /// <summary>Refreshes the actions when the selected test changes.</summary>
+    /// <param name="Sender">The test tree.</param>
+    /// <param name="Node">The newly selected node.</param>
     procedure tvwTestsChange(Sender : TObject; Node : TTreeNode);
   private type
+  /// <summary>Callback for the tree iterators: called once per node; set <c>Stop</c> to end the iteration.</summary>
   TTreeViewIterateProc = reference to procedure(const Node : TTreeNode; var Stop : boolean);
   private
+    /// <summary>Every fixture in the executable, as last built for the test tree.</summary>
     FFixtureList : ITestFixtureList;
+    /// <summary>Line in the text log where each test's output begins, by full name; filled by the rich edit logger.</summary>
     FTestBookmarkList : TTestBookmarkList;
+    /// <summary>The results tree's root node for each outcome, or nil until a result of that outcome arrives.</summary>
     FRootNodes : array[TTestResultType] of TTreeNode;
+    /// <summary>Test tree nodes by full name (tests and the first fixture of each name).</summary>
     FTestNodes : TDictionary<string, TTreeNode>;
+    /// <summary>True while a run is in progress.</summary>
     FRunning : boolean;
+    /// <summary>Number of fixture nodes in the test tree, so the test count excludes them.</summary>
     FFixtureCount : integer;
+    /// <summary>The filter from the command line (<c>--run</c>, <c>--include</c>, <c>--exclude</c>), restored after each run.</summary>
     FCommandLineFilter : ITestFilter;
+    /// <summary>The fixtures of the run in progress, so that <c>StopRun</c> can disable the tests not yet run.</summary>
     FRunFixtures : ITestFixtureList;
+    /// <summary>True once the user has asked to stop the current run.</summary>
     FStopRequested : boolean;
+    /// <summary>True once the user has asked to close the form mid-run; it closes when the run ends.</summary>
     FCloseRequested : boolean;
+    /// <summary>True once <c>WM_LOAD_TESTS</c> has been posted, so the tests load only on the first show.</summary>
     FLoadPosted : boolean;
+    /// <summary>Number of tests in this run failed only for making no assertions.</summary>
     FWarningCount : integer;
+    /// <summary>Number of tests left out of the tree because another test has the same full name.</summary>
     FDuplicateCount : integer;
+    /// <summary>The first duplicated full name, for the status bar.</summary>
     FFirstDuplicate : string;
+    /// <summary>Full names of the tests the user has unticked; sorted, case-sensitive and saved between sessions.</summary>
     FUncheckedTests : TStringList;
+    /// <summary>Temporary comparison files handed to Beyond Compare, deleted when the form is destroyed.</summary>
     FTempFiles : TStringList;
+    /// <summary>Results tree root for results that could not be displayed, or nil.</summary>
+    FDisplayErrorRoot : TTreeNode;
+    /// <summary>Status bar text from the last test load (count found, duplicates, or the load error).</summary>
+    FLoadStatus : string;
+    /// <summary>A transient notice appended to the status bar (run stopped, clipboard busy, results lost).</summary>
+    FNotice : string;
+    /// <summary>Fires after a tree's window was recreated, to rebuild the test tree once no run is in progress.</summary>
+    FRebuildTimer : TTimer;
+    /// <summary>True when the test tree's nodes were discarded by a window recreation and must be rebuilt.</summary>
+    FTestsTreeLost : boolean;
+    /// <summary>True when the results tree's nodes were discarded by a window recreation.</summary>
+    FResultsTreeLost : boolean;
 
+    /// <summary>
+    ///   Rebuilds the test tree from the fixtures, keeping the user's ticks and re-applying the shown results, and
+    ///   updates the status text.
+    /// </summary>
     procedure LoadTests;
+    /// <summary>Calls <c>LoadTests</c>, showing any exception in the status bar and a dialog instead of raising it.</summary>
+    procedure TryLoadTests;
+    /// <summary>
+    ///   Drops every reference to a node being deleted from either tree; when the deletion comes from a window
+    ///   recreation, remembers the tick and starts the rebuild timer.
+    /// </summary>
+    /// <param name="Sender">The tree the node belongs to.</param>
+    /// <param name="Node">The node being deleted.</param>
+    procedure TreeDeletion(Sender : TObject; Node : TTreeNode);
+    /// <summary>Once no run is in progress, rebuilds the test tree and reports lost results after a window recreation.</summary>
+    /// <param name="Sender">The rebuild timer.</param>
+    procedure RebuildTimerTimer(Sender : TObject);
+    /// <summary>Records a test node's tick in <c>FUncheckedTests</c>; fixture nodes are skipped.</summary>
+    /// <param name="Node">The test tree node.</param>
+    procedure RememberCheckedState(const Node : TTreeNode);
+    /// <summary>
+    ///   Removes from <c>FUncheckedTests</c> the names of tests no longer in the executable, so deleted or renamed tests
+    ///   are not remembered for ever. Does nothing until the fixtures have been built.
+    /// </summary>
+    procedure PruneUncheckedTests;
+    /// <summary>Reports whether any test (not fixture) node is ticked.</summary>
+    /// <returns>True when at least one test is ticked.</returns>
+    function AnyTestChecked : boolean;
+    /// <summary>Shows a transient notice in the status bar.</summary>
+    /// <param name="Text">The notice.</param>
+    procedure ShowNotice(const Text : string);
+    /// <summary>
+    ///   Adds fixture and test nodes under a parent for every enabled test the command-line and name filters let
+    ///   through, recursing into child fixtures. Fixtures with no such test are omitted; a test whose full name is
+    ///   already listed is counted as a duplicate and left out.
+    /// </summary>
+    /// <param name="FixtureList">The fixtures to add.</param>
+    /// <param name="ParentNode">The node to add them under, or nil for the top level.</param>
     procedure BuildTestTreeNode(const FixtureList : ITestFixtureList;
       const ParentNode : TTreeNode);
+    /// <summary>Empties the results tree and resets every test's icon to "not run".</summary>
     procedure ClearResults;
+    /// <summary>
+    ///   Runs the tests a filter selects, with the GUI's loggers, then restores the command-line filter and the form
+    ///   whatever happened, and closes the form if that was asked for mid-run.
+    /// </summary>
+    /// <param name="Filter">Selects the tests to run.</param>
+    /// <param name="TestCount">The expected number of tests, for the progress bar.</param>
     procedure RunExecute(const Filter : ITestFilter; const TestCount : integer);
+    /// <summary>
+    ///   Stops the run after the current test by disabling every fixture and test not yet run; fixtures already
+    ///   started still tear down. Does nothing when no run is in progress or a stop was already asked for.
+    /// </summary>
     procedure StopRun;
+    /// <summary>Shows the result of each result-tree entry on the matching test node, after the test tree is rebuilt.</summary>
     procedure ApplyResultsToTests;
+    /// <summary>Lists a result that could not be displayed under a root of its own, with the reason.</summary>
+    /// <param name="TestName">The full name of the test, if it was known.</param>
+    /// <param name="Msg">The message of the exception that prevented display.</param>
     procedure AddResultDisplayError(const TestName, Msg : string);
+    /// <summary>Records every test node's tick in <c>FUncheckedTests</c>.</summary>
     procedure CaptureCheckedState;
+    /// <summary>
+    ///   Returns the per-user settings file: <c>%LOCALAPPDATA%\DUnitX\&lt;exe name&gt;.ini</c> (the home folder when
+    ///   LOCALAPPDATA is not set), since the executable's folder may be read-only.
+    /// </summary>
+    /// <returns>The full path of the settings file.</returns>
     function SettingsFileName : string;
+    /// <summary>
+    ///   Reads the unticked test names from the settings file, or from the older settings beside the executable;
+    ///   unreadable settings just lose the remembered ticks.
+    /// </summary>
     procedure ReadSettings;
+    /// <summary>
+    ///   Captures and prunes the ticks and writes the unticked test names to the settings file; a failure to save is
+    ///   ignored so it cannot stop the form closing.
+    /// </summary>
     procedure WriteSettings;
+    /// <summary>Inverts the tick on every test node.</summary>
     procedure Invert;
+    /// <summary>Ticks every node in the test tree.</summary>
     procedure SelectAll;
+    /// <summary>Unticks every node in the test tree.</summary>
     procedure UnselectAll;
+    /// <summary>
+    ///   Creates a test runner logging to this form and to a rich edit logger on the text page, set to fail tests that
+    ///   make no assertions.
+    /// </summary>
+    /// <returns>The new runner.</returns>
     function NeedRunner : ITestRunner;
+    /// <summary>Finds the test tree node for a test's full name.</summary>
+    /// <param name="TestFullName">The test's full name.</param>
+    /// <returns>The node, or nil when the test is not listed (filtered out, or a fixture teardown failure).</returns>
     function GetNodeByTestFullName(const TestFullName : string) : TTreeNode;
+    /// <summary>Calls a procedure for each node in <c>FTestNodes</c> until it sets <c>Stop</c>.</summary>
+    /// <param name="Proc">The procedure to call; must be assigned.</param>
+    /// <returns>True when the procedure stopped the iteration.</returns>
     function IterateTestNodes(const Proc : TTreeViewIterateProc) : boolean;
+    /// <summary>
+    ///   Shows a result on a test node unless it already shows a worse one, and propagates the worst result of each
+    ///   fixture's children up to its ancestors.
+    /// </summary>
+    /// <param name="Node">The test tree node.</param>
+    /// <param name="ImageIndex">The result image index to show.</param>
     procedure SetNodeTestResult(const Node : TTreeNode; const ImageIndex : integer);
+    /// <summary>
+    ///   Adds a finished test's result to the results tree under its outcome's root (a no-assertion failure as a
+    ///   warning), with its message and log lines, and marks the test node. A result that cannot be displayed is
+    ///   listed as such instead of raising, which would abort the run.
+    /// </summary>
+    /// <param name="Test">The finished test's result.</param>
     procedure ProcessTestResult(const Test : ITestResult);
+    /// <summary>
+    ///   Adds a result's message (for anything but a pass) and its log messages as child nodes of its result node.
+    /// </summary>
+    /// <param name="ResultNode">The result's node.</param>
+    /// <param name="Test">The test's result.</param>
     procedure ProcessMessagesForNode(const ResultNode : TResultNode; const Test : ITestResult);
+    /// <summary>Enables or disables the actions and the filter for the current state, and rewrites the status bar.</summary>
     procedure UpdateFormActions;
+    /// <summary>Returns the results tree's selected node.</summary>
+    /// <returns>The selected node, or nil when none is selected.</returns>
     function GetSelectedResultsNode : TResultNode;
+    /// <summary>Returns the result entry (level 1) of the selected results node, if it is comparable.</summary>
+    /// <returns>The comparable result node, or nil.</returns>
     function GetComparableResultsNode : TResultNode;
+    /// <summary>Returns the results tree's root for an outcome, creating it on first use (passes last, others first).</summary>
+    /// <param name="nodeType">The outcome.</param>
+    /// <returns>The root node.</returns>
     function GetRootNode(const nodeType : TTestResultType) : TTreeNode;
+    /// <summary>Shows the run's counts in the summary panel and, after a stopped run, a notice saying so.</summary>
+    /// <param name="RunResults">The results of the whole run.</param>
     procedure UpdateGUIForComplete(const RunResults : IRunResults);
+    /// <summary>Sets an outcome root's caption to its label and child count.</summary>
+    /// <param name="nodeType">The outcome.</param>
     procedure UpdateRootNodeCaption(const nodeType : TTestResultType);
+    /// <summary>Shows the progress bar and status for a new run.</summary>
+    /// <param name="TestCount">The expected number of tests.</param>
     procedure UpdateGUIForRun(const TestCount : integer);
+    /// <summary>Moves the progress bar (growing its maximum if needed) and updates the status text.</summary>
+    /// <param name="CurrTestCount">The number of tests begun so far.</param>
+    /// <param name="CurrTestName">The full name of the test now running, or empty.</param>
     procedure UpdateGUIForProgress(const CurrTestCount : integer; const CurrTestName : string);
   protected
+    /// <summary>Advances the progress bar to the test and keeps the form responsive.</summary>
+    /// <param name="threadId">The thread running the test.</param>
+    /// <param name="Test">The test about to begin.</param>
     procedure OnBeginTest(const threadId : TThreadID; const Test : ITestInfo);
+    /// <summary>Called after a fixture's setup. Does nothing.</summary>
+    /// <param name="threadId">The thread running the fixture.</param>
+    /// <param name="fixture">The fixture whose setup finished.</param>
     procedure OnEndSetupFixture(const threadId : TThreadID; const fixture : ITestFixtureInfo);
+    /// <summary>Called after a test's setup. Does nothing.</summary>
+    /// <param name="threadId">The thread running the test.</param>
+    /// <param name="Test">The test whose setup finished.</param>
     procedure OnEndSetupTest(const threadId : TThreadID; const Test : ITestInfo);
+    /// <summary>Called after a fixture's teardown. Does nothing.</summary>
+    /// <param name="threadId">The thread running the fixture.</param>
+    /// <param name="fixture">The fixture whose teardown finished.</param>
     procedure OnEndTearDownFixture(const threadId : TThreadID; const fixture : ITestFixtureInfo);
+    /// <summary>Called after a test's teardown. Does nothing.</summary>
+    /// <param name="threadId">The thread running the test.</param>
+    /// <param name="Test">The test whose teardown finished.</param>
     procedure OnEndTeardownTest(const threadId : TThreadID; const Test : ITestInfo);
+    /// <summary>Adds the finished test's result to the results tree and the test tree.</summary>
+    /// <param name="threadId">The thread that ran the test.</param>
+    /// <param name="Test">The finished test's result.</param>
     procedure OnEndTest(const threadId : TThreadID; const Test : ITestResult);
+    /// <summary>Called when a fixture has finished. Does nothing.</summary>
+    /// <param name="threadId">The thread that ran the fixture.</param>
+    /// <param name="results">The fixture's aggregated results.</param>
     procedure OnEndTestFixture(const threadId : TThreadID; const results : IFixtureResult);
+    /// <summary>Called before a test method executes. Does nothing.</summary>
+    /// <param name="threadId">The thread running the test.</param>
+    /// <param name="Test">The test about to execute.</param>
     procedure OnExecuteTest(const threadId : TThreadID; const Test : ITestInfo);
+    /// <summary>Called for a log message. Does nothing: log lines are shown with each result.</summary>
+    /// <param name="logType">The severity of the message.</param>
+    /// <param name="msg">The message text.</param>
     procedure OnLog(const logType : TLogLevel; const msg : string);
+    /// <summary>Called before a fixture's setup. Does nothing.</summary>
+    /// <param name="threadId">The thread running the fixture.</param>
+    /// <param name="fixture">The fixture being set up.</param>
     procedure OnSetupFixture(const threadId : TThreadID; const fixture : ITestFixtureInfo);
+    /// <summary>Called before a test's setup. Does nothing.</summary>
+    /// <param name="threadId">The thread running the test.</param>
+    /// <param name="Test">The test being set up.</param>
     procedure OnSetupTest(const threadId : TThreadID; const Test : ITestInfo);
+    /// <summary>Called when a fixture starts. Does nothing.</summary>
+    /// <param name="threadId">The thread running the fixture.</param>
+    /// <param name="fixture">The fixture starting.</param>
     procedure OnStartTestFixture(const threadId : TThreadID; const fixture : ITestFixtureInfo);
+    /// <summary>Called before a fixture's teardown. Does nothing.</summary>
+    /// <param name="threadId">The thread running the fixture.</param>
+    /// <param name="fixture">The fixture being torn down.</param>
     procedure OnTearDownFixture(const threadId : TThreadID; const fixture : ITestFixtureInfo);
+    /// <summary>Called before a test's teardown. Does nothing.</summary>
+    /// <param name="threadId">The thread running the test.</param>
+    /// <param name="Test">The test being torn down.</param>
     procedure OnTeardownTest(const threadId : TThreadID; const Test : ITestInfo);
+    /// <summary>Called when a test errors. Does nothing: the result arrives through <c>OnEndTest</c>.</summary>
+    /// <param name="threadId">The thread that ran the test.</param>
+    /// <param name="Error">The error result.</param>
     procedure OnTestError(const threadId : TThreadID; const Error : ITestError);
+    /// <summary>Called when a test fails. Does nothing: the result arrives through <c>OnEndTest</c>.</summary>
+    /// <param name="threadId">The thread that ran the test.</param>
+    /// <param name="Failure">The failure result.</param>
     procedure OnTestFailure(const threadId : TThreadID; const Failure : ITestError);
+    /// <summary>Called when a test passes. Does nothing: the result arrives through <c>OnEndTest</c>.</summary>
+    /// <param name="threadId">The thread that ran the test.</param>
+    /// <param name="Test">The passing test's result.</param>
     procedure OnTestSuccess(const threadId : TThreadID; const Test : ITestResult);
+    /// <summary>Called when a test leaks. Does nothing: the result arrives through <c>OnEndTest</c>.</summary>
+    /// <param name="threadId">The thread that ran the test.</param>
+    /// <param name="Test">The leaking test's result.</param>
     procedure OnTestMemoryLeak(const threadId : TThreadID; const Test : ITestResult);
+    /// <summary>Called when a test is ignored. Does nothing: the result arrives through <c>OnEndTest</c>.</summary>
+    /// <param name="threadId">The thread that would have run the test.</param>
+    /// <param name="Ignored">The ignored test's result.</param>
     procedure OnTestIgnored(const threadId : TThreadID; const Ignored : ITestResult);
+    /// <summary>Shows the run's summary counts.</summary>
+    /// <param name="RunResults">The results of the whole run.</param>
     procedure OnTestingEnds(const RunResults : IRunResults);
+    /// <summary>
+    ///   Sets the progress bar's maximum to the runner's count (the active count when ignored tests are hidden) and
+    ///   resets it.
+    /// </summary>
+    /// <param name="threadId">The thread starting the run.</param>
+    /// <param name="testCount">The total number of tests found.</param>
+    /// <param name="testActiveCount">The number of tests that will actually run.</param>
     procedure OnTestingStarts(const threadId : TThreadID; testCount, testActiveCount : Cardinal);
 
+    /// <summary>Loads the tests, after the form has first been shown.</summary>
+    /// <param name="message">The <c>WM_LOAD_TESTS</c> message.</param>
     procedure WMLoadTests(var message : TMessage); message WM_LOAD_TESTS;
   end;
 
 var
+  /// <summary>The runner form created by <c>Run</c>.</summary>
   GUIVCLTestRunner : TGUIVCLTestRunner;
 
+/// <summary>
+///   Entry point of a GUI test executable: checks the command line, then creates and shows the runner form and runs
+///   the application until it closes.
+/// </summary>
 procedure Run;
 
 implementation
@@ -338,6 +737,16 @@ const
   cTestSetup        = 'TestSetup';
   cUncheckedTests   = 'UncheckedTests';
 
+  cStatusSeparator  = '    ';
+
+resourcestring
+  SGUIStatusStopped = 'Run stopped: the results are for the tests that ran before it stopped';
+  SGUINoTestsChecked = 'No tests are checked: tick the tests to run';
+  SGUILoadTestsFailed = 'Could not load the tests: %s: %s';
+  SGUIClipboardBusy = 'Could not copy to the clipboard: %s';
+  SGUIResultsNotDisplayed = 'Results Not Displayed : %d';
+  SGUIResultsLost = 'Results shown before the window was recreated were lost; run the tests again to see them';
+
 type
   //can't return "array of string" on function (at least in XE)
   TStringArray = array of string;
@@ -355,6 +764,7 @@ type
   TTreeViewHelper = class helper for TTreeView
   public
     function IterateAll(const Proc : TGUIVCLTestRunner.TTreeViewIterateProc) : boolean;
+    procedure DiscardNodesOnRecreate;
   end;
 
   TTreeNodeHelper = class helper for TTreeNode
@@ -376,6 +786,7 @@ end;
 procedure TGUIVCLTestRunner.actTestsUnselectAllExecute(Sender : TObject);
 begin
   UnselectAll;
+  UpdateFormActions;
 end;
 
 procedure TGUIVCLTestRunner.actCompareExecute(Sender : TObject);
@@ -428,7 +839,13 @@ var
 begin
   ResultNode := GetComparableResultsNode;
   if ResultNode <> nil then
+  try
     Clipboard.AsText := ResultNode.Actual;
+  except
+    //Another program holding the clipboard open is no reason for an error dialog.
+    on E : EClipboardException do
+      ShowNotice(Format(SGUIClipboardBusy, [E.Message]));
+  end;
 end;
 
 procedure TGUIVCLTestRunner.actCopyExpectedExecute(Sender : TObject);
@@ -437,7 +854,13 @@ var
 begin
   ResultNode := GetComparableResultsNode;
   if ResultNode <> nil then
+  try
     Clipboard.AsText := ResultNode.Expected;
+  except
+    //Another program holding the clipboard open is no reason for an error dialog.
+    on E : EClipboardException do
+      ShowNotice(Format(SGUIClipboardBusy, [E.Message]));
+  end;
 end;
 
 procedure TGUIVCLTestRunner.actResultsCollapseAllExecute(Sender : TObject);
@@ -456,10 +879,11 @@ var
 begin
   for TempFile in FTempFiles do
     DeleteFile(TempFile);
-  FTempFiles.Free;
-  FUncheckedTests.Free;
-  FTestBookmarkList.Free;
-  FTestNodes.Free;
+  FreeAndNil(FTempFiles);
+  FreeAndNil(FUncheckedTests);
+  FreeAndNil(FTestBookmarkList);
+  //The trees are freed after this, and TreeDeletion must then find no map to update.
+  FreeAndNil(FTestNodes);
 end;
 
 function TGUIVCLTestRunner.GetComparableResultsNode : TResultNode;
@@ -597,11 +1021,13 @@ end;
 procedure TGUIVCLTestRunner.actTestsInvertExecute(Sender : TObject);
 begin
   Invert;
+  UpdateFormActions;
 end;
 
 procedure TGUIVCLTestRunner.actTestsSelectAllExecute(Sender : TObject);
 begin
   SelectAll;
+  UpdateFormActions;
 end;
 
 procedure TGUIVCLTestRunner.FormClose(Sender : TObject; var Action : TCloseAction);
@@ -637,6 +1063,19 @@ begin
   FCommandLineFilter := TDUnitX.Filter;
   ReadSettings;
 
+  //A recreated tree window would otherwise re-read its nodes as new objects without their fields,
+  //leaving FTestNodes and FRootNodes pointing at freed ones. Instead the nodes are deleted (TreeDeletion
+  //drops every reference to them) and RebuildTimerTimer rebuilds the test tree.
+  tvwTests.DiscardNodesOnRecreate;
+  tvwResults.DiscardNodesOnRecreate;
+  tvwTests.OnDeletion := TreeDeletion;
+  tvwResults.OnDeletion := TreeDeletion;
+  //A timer has a window of its own, so it still fires when the form's window is the one recreated.
+  FRebuildTimer := TTimer.Create(Self);
+  FRebuildTimer.Enabled := False;
+  FRebuildTimer.Interval := 100;
+  FRebuildTimer.OnTimer := RebuildTimerTimer;
+
   Self.Caption := Format(SApplicationName, [ExtractFileName(ParamStr(0))]);
   Application.Title := Self.Caption;
 
@@ -645,6 +1084,8 @@ begin
   pnlSummary.Visible := False;
 
   pgeResults.ActivePageIndex := 0;
+  //The actions are enabled in the form file; nothing can run until the tests have loaded.
+  UpdateFormActions;
 end;
 
 function TGUIVCLTestRunner.NeedRunner : ITestRunner;
@@ -746,7 +1187,13 @@ end;
 
 procedure TGUIVCLTestRunner.OnTestingStarts(const threadId : TThreadID; testCount, testActiveCount : Cardinal);
 begin
-  //Empty
+  //The runner's own count includes repeated and same-named tests, which the checked names do not.
+  //Ignored tests are begun (and so counted by the progress bar) unless they are not shown.
+  if TDUnitX.Options.DontShowIgnored then
+    pgResults.Max := Integer(testActiveCount)
+  else
+    pgResults.Max := Integer(testCount);
+  UpdateGUIForProgress(0, '');
 end;
 
 procedure TGUIVCLTestRunner.OnTestMemoryLeak(const threadId : TThreadID; const Test : ITestResult);
@@ -793,8 +1240,10 @@ var
   TestNode : TTreeNode;
   TestName : string;
   testResult : TTestResultType;
+  RootType : TTestResultType;
 begin
   TestName := '';
+  ResultNode := nil;
   tvwResults.Items.BeginUpdate;
   try
     //A result that cannot be displayed is reported in the tree; raising here would abort the whole run.
@@ -835,7 +1284,21 @@ begin
       ResultNode.Expand(True);
     except
       on E : Exception do
+      begin
+        //Remove the half-built entry, and the root it alone made, so each root counts only what it shows.
+        if ResultNode <> nil then
+        begin
+          ParentNode := ResultNode.Parent;
+          ResultNode.Delete;
+          if ParentNode.Count = 0 then
+            ParentNode.Delete
+          else
+            for RootType := Low(TTestResultType) to High(TTestResultType) do
+              if FRootNodes[RootType] = ParentNode then
+                UpdateRootNodeCaption(RootType);
+        end;
         AddResultDisplayError(TestName, E.Message);
+      end;
     end;
   finally
     tvwResults.Items.EndUpdate;
@@ -879,10 +1342,84 @@ begin
 
   StatusText := Format(STestsFound, [tvwTests.Items.Count - FFixtureCount]);
   if FDuplicateCount > 0 then
-    StatusText := StatusText + '    ' + Format(SGUIDuplicateTestNames, [FDuplicateCount, FFirstDuplicate]);
-  stsMain.Panels[0].Text := StatusText;
+    StatusText := StatusText + cStatusSeparator + Format(SGUIDuplicateTestNames, [FDuplicateCount, FFirstDuplicate]);
+  FLoadStatus := StatusText;
 
+  //Also writes the status bar.
   UpdateFormActions;
+end;
+
+procedure TGUIVCLTestRunner.TryLoadTests;
+begin
+  try
+    LoadTests;
+  except
+    //Shown rather than re-raised: the caller is a message or event handler, and the form stays usable.
+    on E : Exception do
+    begin
+      FLoadStatus := Format(SGUILoadTestsFailed, [E.ClassName, E.Message]);
+      UpdateFormActions;
+      MessageDlg(FLoadStatus, mtError, [mbOK], 0);
+    end;
+  end;
+end;
+
+procedure TGUIVCLTestRunner.TreeDeletion(Sender : TObject; Node : TTreeNode);
+var
+  Mapped : TTreeNode;
+  RootType : TTestResultType;
+begin
+  //The form frees its maps before its trees, whose nodes are then deleted.
+  if (csDestroying in ComponentState) or (FTestNodes = nil) then
+    Exit;
+
+  if Sender = tvwTests then
+  begin
+    if csRecreating in tvwTests.ControlState then
+    begin
+      //The ticks live only on the nodes; keep them for the rebuilt tree.
+      RememberCheckedState(Node);
+      FTestsTreeLost := True;
+    end;
+    if FTestNodes.TryGetValue(Node.Text, Mapped) and (Mapped = Node) then
+      FTestNodes.Remove(Node.Text);
+  end
+  else
+  begin
+    if csRecreating in tvwResults.ControlState then
+      FResultsTreeLost := True;
+    for RootType := Low(TTestResultType) to High(TTestResultType) do
+      if FRootNodes[RootType] = Node then
+        FRootNodes[RootType] := nil;
+    if FDisplayErrorRoot = Node then
+      FDisplayErrorRoot := nil;
+  end;
+
+  if FTestsTreeLost or FResultsTreeLost then
+    FRebuildTimer.Enabled := True;
+end;
+
+procedure TGUIVCLTestRunner.RebuildTimerTimer(Sender : TObject);
+begin
+  //Rebuilding the test tree mid-run would free the nodes the running tests report to; wait for the run to end.
+  if FRunning then
+    Exit;
+  FRebuildTimer.Enabled := False;
+
+  if FResultsTreeLost then
+  begin
+    FResultsTreeLost := False;
+    FNotice := SGUIResultsLost;
+  end;
+
+  if FTestsTreeLost then
+  begin
+    FTestsTreeLost := False;
+    //The results tree still holds what it shows; LoadTests puts those results back on the tests.
+    TryLoadTests;
+  end
+  else
+    UpdateFormActions;
 end;
 
 procedure TGUIVCLTestRunner.RunExecute(const Filter : ITestFilter; const TestCount : integer);
@@ -891,6 +1428,7 @@ var
 begin
   FRunning := true;
   FStopRequested := False;
+  FNotice := '';
   UpdateFormActions;
   UpdateGUIForRun(TestCount);
   Screen.Cursor := crHourGlass;
@@ -972,29 +1510,83 @@ procedure TGUIVCLTestRunner.AddResultDisplayError(const TestName, Msg : string);
 var
   Node : TTreeNode;
 begin
-  Node := tvwResults.Items.AddChild(GetRootNode(TTestResultType.Error), Format(SGUIResultDisplayError, [TestName, Msg]));
+  //A root of their own: these results are counted under their real type in the summary, so the Errored
+  //root, which counts its children, must not count them too.
+  if FDisplayErrorRoot = nil then
+  begin
+    FDisplayErrorRoot := tvwResults.Items.AddFirst(nil, '');
+    FDisplayErrorRoot.ImageIndex := cTestResultImageMap[TTestResultType.Error];
+    FDisplayErrorRoot.SelectedIndex := FDisplayErrorRoot.ImageIndex;
+  end;
+  Node := tvwResults.Items.AddChild(FDisplayErrorRoot, Format(SGUIResultDisplayError, [TestName, Msg]));
   Node.ImageIndex := cTestResultImageMap[TTestResultType.Error];
   Node.SelectedIndex := Node.ImageIndex;
-  UpdateRootNodeCaption(TTestResultType.Error);
+  FDisplayErrorRoot.Text := Format(SGUIResultsNotDisplayed, [FDisplayErrorRoot.Count]);
+  if FDisplayErrorRoot.Count = 1 then
+    FDisplayErrorRoot.Expand(False);
+end;
+
+procedure TGUIVCLTestRunner.RememberCheckedState(const Node : TTreeNode);
+var
+  Index : integer;
+begin
+  if TTestNode(Node).IsFixtureNode then
+    Exit;
+  if Node.StateIndex = cTestNodeStateChecked then
+  begin
+    if FUncheckedTests.Find(Node.Text, Index) then
+      FUncheckedTests.Delete(Index);
+  end
+  else
+    FUncheckedTests.Add(Node.Text);
 end;
 
 procedure TGUIVCLTestRunner.CaptureCheckedState;
 begin
   IterateTestNodes(
     procedure(const Node : TTreeNode; var Stop : boolean)
-    var
-      Index : integer;
     begin
-      if TTestNode(Node).IsFixtureNode then
-        Exit;
-      if Node.StateIndex = cTestNodeStateChecked then
-      begin
-        if FUncheckedTests.Find(Node.Text, Index) then
-          FUncheckedTests.Delete(Index);
-      end
-      else
-        FUncheckedTests.Add(Node.Text);
+      RememberCheckedState(Node);
     end);
+end;
+
+procedure TGUIVCLTestRunner.PruneUncheckedTests;
+
+  procedure AddTestNames(const Fixtures : ITestFixtureList; const Names : TStringList);
+  var
+    Fixture : ITestFixture;
+    Test : ITest;
+  begin
+    for Fixture in Fixtures do
+    begin
+      if Fixture.Tests <> nil then
+        for Test in Fixture.Tests do
+          Names.Add(Test.FullName);
+      if Fixture.HasChildFixtures then
+        AddTestNames(Fixture.Children, Names);
+    end;
+  end;
+
+var
+  Names : TStringList;
+  i : integer;
+begin
+  //Pruned against every test in the executable, not the tree, which lists only what the filters let through.
+  //Without that list nothing is known to be gone.
+  if FFixtureList = nil then
+    Exit;
+  Names := TStringList.Create;
+  try
+    Names.CaseSensitive := True;
+    Names.Duplicates := dupIgnore;
+    Names.Sorted := True;
+    AddTestNames(FFixtureList, Names);
+    for i := FUncheckedTests.Count - 1 downto 0 do
+      if Names.IndexOf(FUncheckedTests[i]) < 0 then
+        FUncheckedTests.Delete(i);
+  finally
+    Names.Free;
+  end;
 end;
 
 function TGUIVCLTestRunner.SettingsFileName : string;
@@ -1070,6 +1662,8 @@ var
   i : integer;
 begin
   CaptureCheckedState;
+  //Names of tests since deleted or renamed would otherwise be kept for ever.
+  PruneUncheckedTests;
   try
     ForceDirectories(ExtractFilePath(SettingsFileName));
     IniFile := TMemIniFile.Create(SettingsFileName, TEncoding.UTF8);
@@ -1099,10 +1693,14 @@ procedure TGUIVCLTestRunner.SetNodeTestResult(const Node : TTreeNode; const Imag
 var
   NewWeight : integer;
 begin
+  NewWeight := TTestNode.ToWeight(ImageIndex);
+  //A test can have several results (a repeated or same-named test): the worst one shows, so a later
+  //pass cannot turn a failed test green. ClearResults resets the icons, so a new run starts from 'not run'.
+  if NewWeight < TTestNode.ToWeight(Node.ImageIndex) then
+    Exit;
+
   Node.ImageIndex := ImageIndex;
   Node.SelectedIndex := ImageIndex;
-
-  NewWeight := TTestNode.ToWeight(ImageIndex);
 
   Node.IterateParents(
     procedure(const Node : TTreeNode; var Stop : boolean)
@@ -1231,7 +1829,7 @@ begin
   if FRunning then
     Exit;
   edtFilter.Clear;
-  LoadTests;
+  TryLoadTests;
 end;
 
 procedure TGUIVCLTestRunner.ClearResults;
@@ -1241,6 +1839,7 @@ var
 begin
   for i := Low(TTestResultType) to High(TTestResultType) do
     FRootNodes[i] := nil;
+  FDisplayErrorRoot := nil;
 
   tvwResults.Items.Clear;
   FWarningCount := 0;
@@ -1258,7 +1857,7 @@ begin
   if Key = #13 then
   begin
     if not FRunning then
-      LoadTests;
+      TryLoadTests;
     Key := #0;
   end;
 end;
@@ -1290,6 +1889,10 @@ end;
 
 procedure TGUIVCLTestRunner.UpdateGUIForProgress(const CurrTestCount : integer; const CurrTestName : string);
 begin
+  //A fixture teardown failure is begun as a test of its own, beyond the runner's count; the position
+  //is also the count of tests begun, so it must not be clamped.
+  if CurrTestCount > pgResults.Max then
+    pgResults.Max := CurrTestCount;
   pgResults.Position := CurrTestCount;
   if FCloseRequested then
     txtStatus.Caption := SGUIStatusClosing
@@ -1337,12 +1940,12 @@ begin
 end;
 
 procedure TGUIVCLTestRunner.SelectAll;
+var
+  Node : TTreeNode;
 begin
-  IterateTestNodes(
-    procedure(const Node : TTreeNode; var Stop : boolean)
-    begin
-      Node.StateIndex := cTestNodeStateChecked;
-    end);
+  //Every node: FTestNodes lacks a fixture whose full name another fixture already has.
+  for Node in tvwTests.Items do
+    Node.StateIndex := cTestNodeStateChecked;
 end;
 
 procedure TGUIVCLTestRunner.tvwTestsMouseDown(Sender : TObject; Button : TMouseButton; Shift : TShiftState; X, Y : Integer);
@@ -1353,13 +1956,19 @@ begin
   //The checked tests are being run; they cannot change meanwhile.
   if FRunning then
     Exit;
-  //Right-click selection and the popup menu are the tree's own (RightClickSelect, PopupMenu).
+  //Right-click selection and the popup menu are the tree's own (RightClickSelect, PopupMenu). A double-click's
+  //first press has already toggled the box; its second press must not toggle it back.
+  if (Button <> mbLeft) or (ssDouble in Shift) then
+    Exit;
   HitTestRes := tvwTests.GetHitTestInfoAt(X, Y);
   if htOnStateIcon in HitTestRes then
   begin
     HitNode := tvwTests.GetNodeAt(X, Y);
     if HitNode <> nil then
+    begin
       TTestNode(HitNode).InvertState;
+      UpdateFormActions;
+    end;
   end;
 end;
 
@@ -1390,7 +1999,10 @@ begin
   if Key = ' ' then
   begin
     if (not FRunning) and (tvwTests.Selected <> nil) then
+    begin
       TTestNode(tvwTests.Selected).InvertState;
+      UpdateFormActions;
+    end;
     Key := #0;
   end;
 end;
@@ -1406,30 +2018,59 @@ begin
 end;
 
 procedure TGUIVCLTestRunner.UnselectAll;
+var
+  Node : TTreeNode;
 begin
-  IterateTestNodes(
+  //Every node: FTestNodes lacks a fixture whose full name another fixture already has.
+  for Node in tvwTests.Items do
+    Node.StateIndex := cTestNodeStateUnchecked;
+end;
+
+function TGUIVCLTestRunner.AnyTestChecked : boolean;
+begin
+  Result := IterateTestNodes(
     procedure(const Node : TTreeNode; var Stop : boolean)
     begin
-      Node.StateIndex := cTestNodeStateUnchecked;
+      Stop := (not TTestNode(Node).IsFixtureNode) and (Node.StateIndex = cTestNodeStateChecked);
     end);
 end;
 
-procedure TGUIVCLTestRunner.UpdateFormActions;
+procedure TGUIVCLTestRunner.ShowNotice(const Text : string);
 begin
+  FNotice := Text;
+  UpdateFormActions;
+end;
+
+procedure TGUIVCLTestRunner.UpdateFormActions;
+var
+  HasTests : boolean;
+  StatusText : string;
+begin
+  //A tree's selection can change as it is destroyed, after FormDestroy has freed FTestNodes.
+  if csDestroying in ComponentState then
+    Exit;
   //Re-filtering rebuilds the test tree, which a running suite reports into.
   if FRunning and edtFilter.Focused and tvwTests.CanFocus then
     tvwTests.SetFocus;
   edtFilter.Enabled := not FRunning;
 
-  actRun.Enabled := (not FRunning) and
-    ((tvwTests.Items.Count - FFixtureCount) > 0);
+  HasTests := (not FRunning) and ((tvwTests.Items.Count - FFixtureCount) > 0);
+  //A run with nothing checked would run nothing, silently.
+  actRun.Enabled := HasTests and AnyTestChecked;
 
   actRunSelected.Enabled := (not FRunning) and (tvwTests.Selected <> nil)
     and (not TTestNode(tvwTests.Selected).IsFixtureNode);
 
-  actTestsSelectAll.Enabled := actRun.Enabled;
-  actTestsUnselectAll.Enabled := actRun.Enabled;
-  actTestsInvert.Enabled := actRun.Enabled;
+  actTestsSelectAll.Enabled := HasTests;
+  actTestsUnselectAll.Enabled := HasTests;
+  actTestsInvert.Enabled := HasTests;
+
+  StatusText := FLoadStatus;
+  if HasTests and (not actRun.Enabled) then
+    StatusText := StatusText + cStatusSeparator + SGUINoTestsChecked;
+  if FNotice <> '' then
+    StatusText := StatusText + cStatusSeparator + FNotice;
+  stsMain.Panels[0].Text := StatusText;
 
   actResultsExpandAll.Enabled := tvwResults.Items.Count > 0;
   actResultsCollapseAll.Enabled := actResultsExpandAll.Enabled;
@@ -1458,6 +2099,9 @@ begin
 
   txtStatus.Visible := False;
   pnlSummary.Visible := True;
+  //A stopped run's summary would otherwise read as a finished run's. RunExecute shows it in the status bar.
+  if FStopRequested then
+    FNotice := SGUIStatusStopped;
 end;
 
 procedure TGUIVCLTestRunner.UpdateRootNodeCaption(const nodeType : TTestResultType);
@@ -1473,7 +2117,7 @@ end;
 
 procedure TGUIVCLTestRunner.WMLoadTests(var message : TMessage);
 begin
-  LoadTests;
+  TryLoadTests;
 end;
 
 class function PathUtils.Compare(const ExpFile, ActFile : string) : boolean;
@@ -1607,7 +2251,13 @@ begin
   if (FileExtNoDot <> '') and RenameFile(FileName, ChangeFileExt(FileName, '.' + FileExtNoDot)) then
     Result := ChangeFileExt(FileName, '.' + FileExtNoDot);
 
-  TFile.WriteAllText(Result, Contents);
+  try
+    TFile.WriteAllText(Result, Contents);
+  except
+    //The caller never learns the name, so it cannot delete the file.
+    DeleteFile(Result);
+    raise;
+  end;
 end;
 
 // TTreeViewHelper
@@ -1625,6 +2275,12 @@ begin
     if Result then
       break;
   end;
+end;
+
+procedure TTreeViewHelper.DiscardNodesOnRecreate;
+begin
+  //CreateWndRestores is protected; a helper may set it.
+  Self.CreateWndRestores := False;
 end;
 
 // TTreeNodeHelper

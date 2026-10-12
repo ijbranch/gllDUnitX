@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -45,52 +45,159 @@ uses
   DUnitX.TestFramework;
 
 type
+  /// <summary>
+  ///   Maps a test's full name to the rich edit line where its output begins, so the GUI runner can scroll the log to
+  ///   the test the user selects.
+  /// </summary>
   TTestBookmarkList = TDictionary<string, integer>;
 
+  /// <summary>
+  ///   Logger used by the VCL GUI runner: writes the console-style, colour-coded progress log and summary into a
+  ///   <c>TRichEdit</c>, recording where each test's output begins. Tests failed only for making no assertions are
+  ///   listed as warnings in the summary rather than as failures.
+  /// </summary>
   TDUnitXGUIVCLRichEditLogger = class(TInterfacedObject, ITestLogger)
   private
+    /// <summary>The rich edit the log is written into; owned by the form, not the logger.</summary>
     FRichEdit : TRichEdit;
+    /// <summary>The current indent, in spaces.</summary>
     FIndent : integer;
+    /// <summary>The colour applied to the next line written.</summary>
     FCurrColor : TColor;
+    /// <summary>The caller's test-to-line map, filled as each test begins; owned by the caller.</summary>
     FTestBookmarkList : TTestBookmarkList;
+    /// <summary>The indent at the start of each open fixture, so its end can restore it even after a failed setup.</summary>
     FFixtureIndents : TStack<integer>;
+    /// <summary>Appends a line at the end of the rich edit, at the current indent and colour, wherever the caret is.</summary>
+    /// <param name="Msg">The text of the line.</param>
     procedure Write(const Msg : string);
+    /// <summary>Appends an empty line at the end of the rich edit.</summary>
     procedure WriteBlankLine;
+    /// <summary>Sets the colour of the following lines.</summary>
+    /// <param name="Color">The text colour.</param>
     procedure SetColor(const Color : TColor);
+    /// <summary>Increases the indent.</summary>
+    /// <param name="Value">The number of spaces to add.</param>
     procedure Indent(const Value : integer = 1);
+    /// <summary>Decreases the indent.</summary>
+    /// <param name="Value">The number of spaces to remove.</param>
     procedure Outdent(const Value : integer = 1);
   strict protected
+    /// <summary>Sets the default text colour (black).</summary>
     procedure SetConsoleDefaultColor; virtual;
+    /// <summary>Sets the colour used for failures and errors (red).</summary>
     procedure SetConsoleErrorColor; virtual;
+    /// <summary>Sets the colour used for passing tests (green).</summary>
     procedure SetConsolePassColor; virtual;
+    /// <summary>Sets the colour used for the test heading (navy).</summary>
     procedure SetConsoleRunTestColor; virtual;
+    /// <summary>Sets the colour used for test setup lines (purple).</summary>
     procedure SetConsoleSetupTestColor; virtual;
+    /// <summary>Sets the colour used for the end-of-run summary (black).</summary>
     procedure SetConsoleSummaryColor; virtual;
+    /// <summary>Sets the colour used for warnings, fixture headings and leaks (olive).</summary>
     procedure SetConsoleWarningColor; virtual;
   protected
+    /// <summary>
+    ///   Records the line where the test's output begins (a test that begins twice keeps the later line), then writes
+    ///   its full name as a heading and indents.
+    /// </summary>
+    /// <param name="threadId">The thread running the test.</param>
+    /// <param name="Test">The test about to begin.</param>
     procedure OnBeginTest(const threadId : TThreadID; const Test : ITestInfo);
+    /// <summary>Outdents after the fixture setup.</summary>
+    /// <param name="threadId">The thread running the fixture.</param>
+    /// <param name="fixture">The fixture whose setup finished.</param>
     procedure OnEndSetupFixture(const threadId : TThreadID; const fixture : ITestFixtureInfo);
+    /// <summary>Called after a test's setup. Writes nothing.</summary>
+    /// <param name="threadId">The thread running the test.</param>
+    /// <param name="Test">The test whose setup finished.</param>
     procedure OnEndSetupTest(const threadId : TThreadID; const Test : ITestInfo);
+    /// <summary>Called after a fixture's teardown. Writes nothing.</summary>
+    /// <param name="threadId">The thread running the fixture.</param>
+    /// <param name="fixture">The fixture whose teardown finished.</param>
     procedure OnEndTearDownFixture(const threadId : TThreadID; const fixture : ITestFixtureInfo);
+    /// <summary>Called after a test's teardown. Writes nothing.</summary>
+    /// <param name="threadId">The thread running the test.</param>
+    /// <param name="Test">The test whose teardown finished.</param>
     procedure OnEndTeardownTest(const threadId : TThreadID; const Test : ITestInfo);
+    /// <summary>Outdents after the test.</summary>
+    /// <param name="threadId">The thread that ran the test.</param>
+    /// <param name="Test">The finished test's result.</param>
     procedure OnEndTest(const threadId : TThreadID; const Test : ITestResult);
+    /// <summary>
+    ///   Restores the indent the fixture started at (so a failed fixture setup cannot leave it skewed) and writes a
+    ///   blank line.
+    /// </summary>
+    /// <param name="threadId">The thread that ran the fixture.</param>
+    /// <param name="results">The fixture's aggregated results.</param>
     procedure OnEndTestFixture(const threadId : TThreadID; const results : IFixtureResult);
+    /// <summary>Writes an "executing test" line.</summary>
+    /// <param name="threadId">The thread running the test.</param>
+    /// <param name="Test">The test about to execute.</param>
     procedure OnExecuteTest(const threadId : TThreadID; const Test : ITestInfo);
+    /// <summary>Writes a log message, indented and coloured by its level.</summary>
+    /// <param name="logType">The severity, which selects the colour.</param>
+    /// <param name="msg">The message text.</param>
     procedure OnLog(const logType : TLogLevel; const msg : string);
+    /// <summary>Writes the name of the fixture setup method about to run.</summary>
+    /// <param name="threadId">The thread running the fixture.</param>
+    /// <param name="fixture">The fixture being set up.</param>
     procedure OnSetupFixture(const threadId : TThreadID; const fixture : ITestFixtureInfo);
+    /// <summary>Writes a "running setup" line for the test.</summary>
+    /// <param name="threadId">The thread running the test.</param>
+    /// <param name="Test">The test being set up.</param>
     procedure OnSetupTest(const threadId : TThreadID; const Test : ITestInfo);
+    /// <summary>Saves the current indent, writes the fixture's full name as a heading and indents.</summary>
+    /// <param name="threadId">The thread running the fixture.</param>
+    /// <param name="fixture">The fixture starting.</param>
     procedure OnStartTestFixture(const threadId : TThreadID; const fixture : ITestFixtureInfo);
+    /// <summary>Writes the name of the fixture teardown method about to run.</summary>
+    /// <param name="threadId">The thread running the fixture.</param>
+    /// <param name="fixture">The fixture being torn down.</param>
     procedure OnTearDownFixture(const threadId : TThreadID; const fixture : ITestFixtureInfo);
+    /// <summary>Writes a "running teardown" line for the test.</summary>
+    /// <param name="threadId">The thread running the test.</param>
+    /// <param name="Test">The test being torn down.</param>
     procedure OnTeardownTest(const threadId : TThreadID; const Test : ITestInfo);
+    /// <summary>Called when a test errors. Writes nothing; errors appear in the summary.</summary>
+    /// <param name="threadId">The thread that ran the test.</param>
+    /// <param name="Error">The error result.</param>
     procedure OnTestError(const threadId : TThreadID; const Error : ITestError);
+    /// <summary>Called when a test fails. Writes nothing; failures appear in the summary.</summary>
+    /// <param name="threadId">The thread that ran the test.</param>
+    /// <param name="Failure">The failure result.</param>
     procedure OnTestFailure(const threadId : TThreadID; const Failure : ITestError);
+    /// <summary>Called when a test is ignored. Writes nothing.</summary>
+    /// <param name="threadId">The thread that would have run the test.</param>
+    /// <param name="AIgnored">The ignored test's result.</param>
     procedure OnTestIgnored(const threadId : TThreadID; const AIgnored : ITestResult);
+    /// <summary>
+    ///   Writes the end-of-run summary: counts found, ignored, passed, leaked, failed, errored and warned, then the
+    ///   failing, erroring, no-assertion (warning) and leaking tests with their messages. A failure whose message is
+    ///   the no-assertions message is counted as a warning, not a failure.
+    /// </summary>
+    /// <param name="RunResults">The results of the whole run.</param>
     procedure OnTestingEnds(const RunResults : IRunResults);
+    /// <summary>Clears the rich edit, the bookmarks and the indent, then writes the "starting tests" banner.</summary>
+    /// <param name="threadId">The thread starting the run.</param>
+    /// <param name="testCount">The total number of tests found.</param>
+    /// <param name="testActiveCount">The number of tests that will actually run.</param>
     procedure OnTestingStarts(const threadId : TThreadID; testCount, testActiveCount : Cardinal);
+    /// <summary>Called when a test leaks. Writes nothing; leaks appear in the summary.</summary>
+    /// <param name="threadId">The thread that ran the test.</param>
+    /// <param name="Test">The leaking test's result.</param>
     procedure OnTestMemoryLeak(const threadId : TThreadID; const Test : ITestResult);
+    /// <summary>Writes a green "success" line with any result message.</summary>
+    /// <param name="threadId">The thread that ran the test.</param>
+    /// <param name="Test">The passing test's result.</param>
     procedure OnTestSuccess(const threadId : TThreadID; const Test : ITestResult);
   public
+    /// <summary>Creates a logger writing into the given rich edit.</summary>
+    /// <param name="RichEdit">The rich edit to write into; not owned by the logger.</param>
+    /// <param name="TestBookmarkList">The map to fill with each test's starting line; not owned by the logger.</param>
     constructor Create(const RichEdit : TRichEdit; const TestBookmarkList : TTestBookmarkList);
+    /// <summary>Frees the fixture indent stack.</summary>
     destructor Destroy; override;
   end;
 
@@ -103,6 +210,9 @@ uses
   SysUtils,
 {$ENDIF}
   DUnitX.ResStrs;
+
+resourcestring
+  STestsWithWarnings = 'Tests With Warnings';
 
 constructor TDUnitXGUIVCLRichEditLogger.Create(const RichEdit : TRichEdit; const TestBookmarkList : TTestBookmarkList);
 begin
@@ -248,9 +358,27 @@ begin
 end;
 
 procedure TDUnitXGUIVCLRichEditLogger.OnTestingEnds(const RunResults : IRunResults);
+
+  //The GUI makes the runner fail tests that make no assertions; like the structured summary, this lists
+  //them as warnings, not failures.
+  function IsNoAssertions(const TestResult : ITestResult) : boolean;
+  begin
+    Result := (TestResult.ResultType = TTestResultType.Failure) and (TestResult.Message = SNoAssertions);
+  end;
+
 var
   TestResult : ITestResult;
+  WarningCount : integer;
+  FailureCount : integer;
 begin
+  WarningCount := 0;
+  for TestResult in RunResults.GetAllTestResults do
+    if IsNoAssertions(TestResult) then
+      Inc(WarningCount);
+  FailureCount := RunResults.FailureCount - WarningCount;
+  if FailureCount < 0 then
+    FailureCount := 0;
+
   OutDent(1);
   Write(SDoneTesting);
 
@@ -275,11 +403,11 @@ begin
     SetConsoleDefaultColor;
   Write(Format(STestsLeaked, [RunResults.MemoryLeakCount]));
 
-  if RunResults.FailureCount > 0 then
+  if FailureCount > 0 then
     SetConsoleErrorColor()
   else
     SetConsoleDefaultColor;
-  Write(Format(STestsFailed, [RunResults.FailureCount]));
+  Write(Format(STestsFailed, [FailureCount]));
 
   if RunResults.ErrorCount > 0 then
     SetConsoleErrorColor()
@@ -287,7 +415,13 @@ begin
     SetConsoleDefaultColor;
   Write(Format(STestsErrored, [RunResults.ErrorCount]));
 
-  if RunResults.FailureCount > 0 then
+  if WarningCount > 0 then
+    SetConsoleWarningColor()
+  else
+    SetConsoleDefaultColor;
+  Write(Format(STestsWarning, [WarningCount]));
+
+  if FailureCount > 0 then
   begin
     SetConsoleErrorColor;
     WriteBlankLine;
@@ -297,7 +431,7 @@ begin
 
     for TestResult in RunResults.GetAllTestResults do
     begin
-      if TestResult.ResultType = TTestResultType.Failure then
+      if (TestResult.ResultType = TTestResultType.Failure) and (not IsNoAssertions(TestResult)) then
       begin
         SetConsoleErrorColor;
         Write('  ' + TestResult.Test.FullName);
@@ -322,6 +456,28 @@ begin
       if TestResult.ResultType = TTestResultType.Error then
       begin
         SetConsoleErrorColor;
+        Write('  ' + TestResult.Test.FullName);
+        SetConsoleDefaultColor;
+        Write(SMessage + TestResult.Message);
+        WriteBlankLine;
+      end;
+    end;
+    WriteBlankLine;
+  end;
+
+  if WarningCount > 0 then
+  begin
+    SetConsoleWarningColor;
+    WriteBlankLine;
+    Write(STestsWithWarnings);
+    WriteBlankLine;
+    SetConsoleDefaultColor;
+
+    for TestResult in RunResults.GetAllTestResults do
+    begin
+      if IsNoAssertions(TestResult) then
+      begin
+        SetConsoleWarningColor;
         Write('  ' + TestResult.Test.FullName);
         SetConsoleDefaultColor;
         Write(SMessage + TestResult.Message);

@@ -66,6 +66,7 @@ object GUIVCLTestRunner: TGUIVCLTestRunner
         ReadOnly = True
         RightClickSelect = True
         RowSelect = True
+        ShowHint = True
         SortType = stText
         StateImages = StateImages
         TabOrder = 1
@@ -275,6 +276,7 @@ object GUIVCLTestRunner: TGUIVCLTestRunner
             ReadOnly = True
             RightClickSelect = True
             RowSelect = True
+            ShowHint = True
             TabOrder = 0
             OnChange = tvwResultsChange
             OnCreateNodeClass = tvwResultsCreateNodeClass
