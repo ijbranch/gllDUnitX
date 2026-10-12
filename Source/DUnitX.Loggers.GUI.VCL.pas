@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -93,6 +93,7 @@ uses
 {$ENDIF}
   DUnitX.TestFrameWork,
   DUnitX.Extensibility,
+  DUnitX.Filters,
   DUnitX.InternalInterfaces,
   DUnitX.ResStrs,
   DUnitX.ComparableFormat,
@@ -102,8 +103,6 @@ uses
 
 const
   WM_LOAD_TESTS     = WM_USER + 123;
-  WM_TESTPOPUP      = WM_USER + 124;
-  WM_RESULTPOPUP    = WM_USER + 125;
 
 type
   TTestNode = class(TTreeNode)
@@ -118,9 +117,8 @@ type
 
   TResultNode = class(TTreeNode)
   public
-    TestNode : TTreeNode;
-    Messages : string;
-    LogMessages : TLogMessageArray;
+    //The test's full name, not its node: the test tree is rebuilt whenever the filter changes.
+    TestFullName : string;
     IsComparable : boolean;
     Expected : string;
     Actual : string;
@@ -193,6 +191,8 @@ type
     txtErrored : TLabel;
     lblMemLeak : TLabel;
     txtMemLeak : TLabel;
+    lblWarnings : TLabel;
+    txtWarnings : TLabel;
     procedure actTestsUnselectAllExecute(Sender : TObject);
     procedure actCompareExecute(Sender : TObject);
     procedure actCopyActualExecute(Sender : TObject);
@@ -216,8 +216,8 @@ type
     procedure tvwTestsMouseDown(Sender : TObject; Button : TMouseButton; Shift : TShiftState; X, Y : Integer);
     procedure tvwResultsChange(Sender : TObject; Node : TTreeNode);
     procedure tvwResultsCreateNodeClass(Sender : TCustomTreeView; var NodeClass : TTreeNodeClass);
-    procedure tvwResultsMouseDown(Sender : TObject; Button : TMouseButton; Shift : TShiftState; X, Y : Integer);
     procedure FormClose(Sender : TObject; var Action : TCloseAction);
+    procedure FormCloseQuery(Sender : TObject; var CanClose : Boolean);
     procedure tvwTestsCustomDrawItem(Sender : TCustomTreeView; Node : TTreeNode;
       State : TCustomDrawState; var DefaultDraw : Boolean);
     procedure tvwTestsChange(Sender : TObject; Node : TTreeNode);
@@ -225,18 +225,34 @@ type
   TTreeViewIterateProc = reference to procedure(const Node : TTreeNode; var Stop : boolean);
   private
     FFixtureList : ITestFixtureList;
-    FLastResult : IRunResults;
     FTestBookmarkList : TTestBookmarkList;
     FRootNodes : array[TTestResultType] of TTreeNode;
     FTestNodes : TDictionary<string, TTreeNode>;
     FRunning : boolean;
     FFixtureCount : integer;
+    FCommandLineFilter : ITestFilter;
+    FRunFixtures : ITestFixtureList;
+    FStopRequested : boolean;
+    FCloseRequested : boolean;
+    FLoadPosted : boolean;
+    FWarningCount : integer;
+    FDuplicateCount : integer;
+    FFirstDuplicate : string;
+    FUncheckedTests : TStringList;
+    FTempFiles : TStringList;
 
     procedure LoadTests;
     procedure BuildTestTreeNode(const FixtureList : ITestFixtureList;
       const ParentNode : TTreeNode);
     procedure ClearResults;
-    procedure RunExecute;
+    procedure RunExecute(const Filter : ITestFilter; const TestCount : integer);
+    procedure StopRun;
+    procedure ApplyResultsToTests;
+    procedure AddResultDisplayError(const TestName, Msg : string);
+    procedure CaptureCheckedState;
+    function SettingsFileName : string;
+    procedure ReadSettings;
+    procedure WriteSettings;
     procedure Invert;
     procedure SelectAll;
     procedure UnselectAll;
@@ -277,11 +293,7 @@ type
     procedure OnTestingEnds(const RunResults : IRunResults);
     procedure OnTestingStarts(const threadId : TThreadID; testCount, testActiveCount : Cardinal);
 
-    procedure WMTestPopUp(var message : TMessage); message WM_TESTPOPUP;
-    procedure WMResultPopUp(var message : TMessage); message WM_RESULTPOPUP;
-
     procedure WMLoadTests(var message : TMessage); message WM_LOAD_TESTS;
-    procedure Loaded; override;
   end;
 
 var
@@ -298,28 +310,29 @@ uses
   System.IOUtils,
   System.StrUtils,
   System.Math,
+  System.Win.Registry,
   Vcl.Clipbrd,
 {$ELSE}
   IOUtils,
   StrUtils,
   Math,
+  Registry,
   Clipbrd,
 {$ENDIF}
-  DUnitX.Filters,
   DUnitX.Exceptions;
 
 const
   cTestNodeStateUnchecked = 1;
   cTestNodeStateChecked = 2;
-  cTestNodeStatePartialChecked = 3;
 
   cTestResultImageMap : array[TTestResultType] of integer = (1, 2, 2, 0, 2, 3);
 
   cLogLevelImageMap : array[TLogLevel] of integer = (6, 7, 8);
 
-  cRootNodeStrings  : array[TTestResultType] of string = (STestsPassed, STestsFailed, STestsErrored, STestsIgnored, STestsWithLeak, STestsWarning);
+  cRootNodeStrings  : array[TTestResultType] of string = (STestsPassed, STestsFailed, STestsErrored, STestsIgnored, STestsLeaked, STestsWarning);
 
   cTestSetup        = 'TestSetup';
+  cUncheckedTests   = 'UncheckedTests';
 
 type
   //can't return "array of string" on function (at least in XE)
@@ -328,13 +341,11 @@ type
   PathUtils = record
   public
     class function FindBeyondCompare : string; static;
-    class function IsWow64 : boolean; static;
-    class function GetProgramFilesX64 : string; static;
-    class function GetProgramFilesX86 : string; static;
+    class function FindBeyondCompareInRegistry : string; static;
     class function GetProgramFiles : TStringArray; static;
     class function MakeTempFile(const Contents : string; const FileExtNoDot : string = '') : string; static;
-    class function CreateProcessAndWait(const CmdLine : string) : boolean; static;
-    class procedure Compare(const ExpFile, ActFile : string); static;
+    class function Launch(const CmdLine : string; out ErrorMsg : string) : boolean; static;
+    class function Compare(const ExpFile, ActFile : string) : boolean; static;
   end;
 
   TTreeViewHelper = class helper for TTreeView
@@ -369,6 +380,7 @@ var
   FileExt : string;
   ExpFile : string;
   ActFile : string;
+  Launched : boolean;
 begin
   ResultNode := GetComparableResultsNode;
   if ResultNode <> nil then
@@ -380,15 +392,28 @@ begin
     else
       FileExt := '';
 
-    //Save files
-    ExpFile := PathUtils.MakeTempFile(ResultNode.Expected, FileExt);
-    ActFile := PathUtils.MakeTempFile(ResultNode.Actual, FileExt);
+    ExpFile := '';
+    ActFile := '';
+    Launched := False;
     try
-      //Spawn BC
-      PathUtils.Compare(ExpFile, ActFile);
+      //Save files
+      ExpFile := PathUtils.MakeTempFile(ResultNode.Expected, FileExt);
+      ActFile := PathUtils.MakeTempFile(ResultNode.Actual, FileExt);
+      //Spawn BC. It is not waited for, so its files are deleted when the runner closes.
+      Launched := PathUtils.Compare(ExpFile, ActFile);
     finally
-      TFile.Delete(ExpFile);
-      TFile.Delete(ActFile);
+      if Launched then
+      begin
+        FTempFiles.Add(ExpFile);
+        FTempFiles.Add(ActFile);
+      end
+      else
+      begin
+        if ExpFile <> '' then
+          DeleteFile(ExpFile);
+        if ActFile <> '' then
+          DeleteFile(ActFile);
+      end;
     end;
   end;
 end;
@@ -422,7 +447,13 @@ begin
 end;
 
 procedure TGUIVCLTestRunner.FormDestroy(Sender : TObject);
+var
+  TempFile : string;
 begin
+  for TempFile in FTempFiles do
+    DeleteFile(TempFile);
+  FTempFiles.Free;
+  FUncheckedTests.Free;
   FTestBookmarkList.Free;
   FTestNodes.Free;
 end;
@@ -436,7 +467,8 @@ begin
   Selected := GetSelectedResultsNode;
   if Selected <> nil then
   begin
-    if Selected.Level = 2 then
+    //The result is level 1; its message is level 2 and the message's log lines level 3.
+    while Selected.Level > 1 do
       Selected := Selected.Parent as TResultNode;
 
     if Selected.IsComparable then
@@ -446,8 +478,9 @@ end;
 
 function TGUIVCLTestRunner.GetNodeByTestFullName(const TestFullName : string) : TTreeNode;
 begin
+  //A result can name a test that is not listed: filtered out, or a fixture teardown failure.
   if not FTestNodes.TryGetValue(TestFullName, Result) then
-    raise Exception.Create('Could not find node for test: ' + TestFullName);
+    Result := nil;
 end;
 
 function TGUIVCLTestRunner.GetRootNode(const nodeType : TTestResultType) : TTreeNode;
@@ -476,6 +509,8 @@ end;
 procedure TGUIVCLTestRunner.actRunExecute(Sender : TObject);
 var
   StrList : TStringList;
+  TestFilter : ITestFilter;
+  TestCount : integer;
 begin
   StrList := TStringList.Create;
   try
@@ -486,24 +521,20 @@ begin
           (Node.StateIndex = cTestNodeStateChecked) then
           StrList.Add(Node.Text);
       end);
-    TDUnitX.Filter := TNameFilter.Create(StrList);
-    UpdateGUIForRun(StrList.Count);
+    //Exact names: TNameFilter would also run every fixture whose name starts with a checked test's name.
+    TestFilter := TFullNameFilter.Create(StrList);
+    TestCount := StrList.Count;
   finally
     StrList.Free;
   end;
 
-  RunExecute;
+  RunExecute(TestFilter, TestCount);
 end;
 
 procedure TGUIVCLTestRunner.actRunSelectedExecute(Sender : TObject);
 begin
   if tvwTests.Selected <> nil then
-  begin
-    TDUnitX.Filter := TNameFilter.Create(tvwTests.Selected.Text);
-    UpdateGUIForRun(1);
-
-    RunExecute;
-  end;
+    RunExecute(TFullNameFilter.Create(tvwTests.Selected.Text), 1);
 end;
 
 procedure TGUIVCLTestRunner.actFindInTextExecute(Sender : TObject);
@@ -544,7 +575,7 @@ begin
         ResultNode : TResultNode;
       begin
         ResultNode := Node as TResultNode;
-        if ResultNode.TestNode = tvwTests.Selected then
+        if (ResultNode.TestFullName <> '') and (ResultNode.TestFullName = tvwTests.Selected.Text) then
         begin
           tvwResults.Selected := ResultNode;
           tvwResults.Selected.Expand(True);
@@ -570,31 +601,37 @@ begin
 end;
 
 procedure TGUIVCLTestRunner.FormClose(Sender : TObject; var Action : TCloseAction);
-var
-  IniFile : TMemIniFile;
 begin
-  IniFile := TMemIniFile.Create(ChangeFileExt(ParamStr(0), '.ini'));
-  try
-    IterateTestNodes(
-      procedure(const Node : TTreeNode; var Stop : boolean)
-      begin
-        if TTestNode(Node).IsFixtureNode then
-          Exit;
-        IniFile.WriteBool(cTestSetup, Node.Text, Node.StateIndex = cTestNodeStateChecked);
-      end);
-    IniFile.UpdateFile;
-  finally
-    IniFile.Free;
+  WriteSettings;
+end;
+
+procedure TGUIVCLTestRunner.FormCloseQuery(Sender : TObject; var CanClose : Boolean);
+begin
+  CanClose := not FRunning;
+  if FRunning then
+  begin
+    //Closing mid-run stops the run; the window closes once the current test has finished.
+    FCloseRequested := True;
+    StopRun;
+    txtStatus.Caption := SGUIStatusClosing;
   end;
 end;
 
 procedure TGUIVCLTestRunner.FormCreate(Sender : TObject);
 begin
-  Width := Screen.WorkAreaWidth;
-  Height := Screen.WorkAreaHeight;
+  Width := Monitor.WorkareaRect.Width;
+  Height := Monitor.WorkareaRect.Height;
 
   FTestBookmarkList := TTestBookmarkList.Create;
   FTestNodes := TDictionary<string, TTreeNode>.Create;
+  FTempFiles := TStringList.Create;
+  FUncheckedTests := TStringList.Create;
+  FUncheckedTests.CaseSensitive := True;
+  FUncheckedTests.Duplicates := dupIgnore;
+  FUncheckedTests.Sorted := True;
+  //The command line's --run / --include / --exclude decide which tests are listed.
+  FCommandLineFilter := TDUnitX.Filter;
+  ReadSettings;
 
   Self.Caption := Format(SApplicationName, [ExtractFileName(ParamStr(0))]);
   Application.Title := Self.Caption;
@@ -604,12 +641,6 @@ begin
   pnlSummary.Visible := False;
 
   pgeResults.ActivePageIndex := 0;
-end;
-
-procedure TGUIVCLTestRunner.Loaded;
-begin
-  inherited;
-  PostMessage(Self.Handle, WM_LOAD_TESTS, 0, 0);
 end;
 
 function TGUIVCLTestRunner.NeedRunner : ITestRunner;
@@ -754,39 +785,32 @@ procedure TGUIVCLTestRunner.ProcessTestResult(const Test : ITestResult);
 var
   Error : ITestError;
   ParentNode : TTreeNode;
-  Node : TTreeNode;
   ResultNode : TResultNode;
+  TestNode : TTreeNode;
+  TestName : string;
   testResult : TTestResultType;
 begin
-  testResult := Test.ResultType;
-
+  TestName := '';
   tvwResults.Items.BeginUpdate;
   try
-    if Test.QueryInterface(ITestError, Error) = 0 then
-    begin
-      case testResult of
-        TTestResultType.Failure :
-          begin
-            //Not sure if this is correct behavior - the no assertions is generated by an option to fail test.
-            if Test.Message = SNoAssertions then
-            begin
-              ParentNode := GetRootNode(TTestResultType.Warning);
-              testResult := TTestResultType.Warning;
-            end
-            else
-              ParentNode := GetRootNode(TTestResultType.Failure);
-          end;
-        TTestResultType.Error : ParentNode := GetRootNode(TTestResultType.Error);
-        TTestResultType.MemoryLeak : ParentNode := GetRootNode(TTestResultType.MemoryLeak);
-      else
-        raise Exception.Create('Passing/ignored test implements ITestError!');
+    //A result that cannot be displayed is reported in the tree; raising here would abort the whole run.
+    try
+      TestName := Test.Test.FullName;
+      testResult := Test.ResultType;
+      //The GUI makes the runner fail tests that make no assertions; they are filed and counted as warnings.
+      if (testResult = TTestResultType.Failure) and (Test.Message = SNoAssertions) then
+      begin
+        testResult := TTestResultType.Warning;
+        Inc(FWarningCount);
       end;
 
-      Node := tvwResults.Items.AddChild(ParentNode, Error.Test.FullName);
-      ResultNode := Node as TResultNode;
-      ResultNode.ImageIndex := -1;
+      ParentNode := GetRootNode(testResult);
+      ResultNode := tvwResults.Items.AddChild(ParentNode, TestName) as TResultNode;
+      ResultNode.TestFullName := TestName;
+      ResultNode.ImageIndex := ParentNode.ImageIndex;
+      ResultNode.SelectedIndex := ResultNode.ImageIndex;
 
-      if Error.IsComparable then
+      if (Test.QueryInterface(ITestError, Error) = 0) and Error.IsComparable then
       begin
         ResultNode.IsComparable := True;
         ResultNode.Expected := Error.Expected;
@@ -795,37 +819,20 @@ begin
         ResultNode.ImageIndex := 9;
         ResultNode.SelectedIndex := ResultNode.ImageIndex;
       end;
-    end
-    else
-    begin
-      case testResult of
-        TTestResultType.Pass : ParentNode := GetRootNode(TTestResultType.Pass);
-        TTestResultType.Ignored : ParentNode := GetRootNode(TTestResultType.Ignored);
-        TTestResultType.MemoryLeak : ParentNode := GetRootNode(TTestResultType.MemoryLeak);
-      else
-        raise Exception.Create('Failing test does not implement ITestError!');
-      end;
 
-      Node := tvwResults.Items.AddChild(ParentNode, Test.Test.FullName);
-      ResultNode := Node as TResultNode;
-      ResultNode.ImageIndex := -1;
+      ProcessMessagesForNode(ResultNode, Test);
+      TestNode := GetNodeByTestFullName(TestName);
+      if TestNode <> nil then
+        SetNodeTestResult(TestNode, ResultNode.ImageIndex);
+      UpdateRootNodeCaption(testResult);
+      //Expand a root only when it appears, so a root the user has collapsed stays collapsed.
+      if ParentNode.Count = 1 then
+        ParentNode.Expand(False);
+      ResultNode.Expand(True);
+    except
+      on E : Exception do
+        AddResultDisplayError(TestName, E.Message);
     end;
-
-    ResultNode.TestNode := GetNodeByTestFullName(Test.Test.FullName);
-    if ResultNode.ImageIndex < 0 then
-    begin
-      ResultNode.ImageIndex := ResultNode.Parent.ImageIndex;
-      ResultNode.SelectedIndex := ResultNode.ImageIndex;
-    end;
-
-    ProcessMessagesForNode(ResultNode, Test);
-    SetNodeTestResult(ResultNode.TestNode, ResultNode.ImageIndex);
-    UpdateRootNodeCaption(testResult);
-    ParentNode.Expand(False);
-    ResultNode.Expand(True);
-
-    if tvwResults.Items.Count > 0 then
-      tvwResults.TopItem := tvwResults.Items[0];
   finally
     tvwResults.Items.EndUpdate;
   end;
@@ -835,7 +842,11 @@ end;
 procedure TGUIVCLTestRunner.LoadTests;
 var
   Runner : ITestRunner;
+  StatusText : string;
 begin
+  //Keep the user's ticks across a re-filter: the rebuilt tree reads them back.
+  CaptureCheckedState;
+
   Runner := NeedRunner;
 
   FFixtureList := Runner.BuildFixtures as ITestFixtureList;
@@ -843,9 +854,10 @@ begin
   tvwTests.Items.BeginUpdate;
   try
     tvwTests.Items.Clear;
-    FTestBookmarkList.Clear;
     FTestNodes.Clear;
     FFixtureCount := 0;
+    FDuplicateCount := 0;
+    FFirstDuplicate := '';
     BuildTestTreeNode(FFixtureList, nil);
 
     if tvwTests.Items.Count > 0 then
@@ -858,37 +870,224 @@ begin
     tvwTests.Items.EndUpdate;
   end;
 
-  stsMain.Panels[0].Text := Format(STestsFound, [tvwTests.Items.Count - FFixtureCount]);
+  //Results refer to tests by full name, so they survive the rebuild; show them on the new nodes.
+  ApplyResultsToTests;
+
+  StatusText := Format(STestsFound, [tvwTests.Items.Count - FFixtureCount]);
+  if FDuplicateCount > 0 then
+    StatusText := StatusText + '    ' + Format(SGUIDuplicateTestNames, [FDuplicateCount, FFirstDuplicate]);
+  stsMain.Panels[0].Text := StatusText;
 
   UpdateFormActions;
 end;
 
-procedure TGUIVCLTestRunner.RunExecute;
+procedure TGUIVCLTestRunner.RunExecute(const Filter : ITestFilter; const TestCount : integer);
 var
   Runner : ITestRunner;
 begin
   FRunning := true;
+  FStopRequested := False;
   UpdateFormActions;
+  UpdateGUIForRun(TestCount);
   Screen.Cursor := crHourGlass;
   try
     ClearResults;
     //Make sure UI is up-to-date before entering test run
     Application.ProcessMessages;
 
+    TDUnitX.Filter := Filter;
     Runner := NeedRunner;
-    FLastResult := Runner.Execute;
+    //Held so that StopRun can disable the tests that have not run yet.
+    FRunFixtures := Runner.BuildFixtures as ITestFixtureList;
+    Runner.Execute;
 
     if tvwResults.Items.Count > 0 then
       tvwResults.TopItem := tvwResults.Items[0];
 
     tvwTests.Invalidate;
   finally
+    //Whatever happened, the form must be usable again.
+    TDUnitX.Filter := FCommandLineFilter;
+    FRunFixtures := nil;
+    FRunning := False;
     Screen.Cursor := crDefault;
+    if txtStatus.Visible then
+      txtStatus.Caption := SGUIStatusIdle;
+    UpdateFormActions;
   end;
 
-  FRunning := False;
+  if FCloseRequested then
+    Close;
+end;
 
-  UpdateFormActions;
+procedure TGUIVCLTestRunner.StopRun;
+
+  procedure DisableTests(const Fixtures : ITestFixtureList);
+  var
+    Fixture : ITestFixture;
+    Test : ITest;
+  begin
+    for Fixture in Fixtures do
+    begin
+      //A fixture not yet started is skipped whole; the running one has passed this check and still tears down.
+      Fixture.Enabled := False;
+      for Test in Fixture.Tests do
+        Test.Enabled := False;
+      if Fixture.HasChildFixtures then
+        DisableTests(Fixture.Children);
+    end;
+  end;
+
+begin
+  if (not FRunning) or FStopRequested then
+    Exit;
+  FStopRequested := True;
+  //The runner skips disabled tests and fixtures, so the run ends after the current test. Started fixtures still tear down.
+  if FRunFixtures <> nil then
+    DisableTests(FRunFixtures);
+  txtStatus.Caption := SGUIStatusStopping;
+end;
+
+procedure TGUIVCLTestRunner.ApplyResultsToTests;
+var
+  Node : TTreeNode;
+  TestNode : TTreeNode;
+begin
+  for Node in tvwResults.Items do
+  begin
+    if (Node.Level = 1) and (TResultNode(Node).TestFullName <> '') then
+    begin
+      TestNode := GetNodeByTestFullName(TResultNode(Node).TestFullName);
+      if TestNode <> nil then
+        SetNodeTestResult(TestNode, Node.ImageIndex);
+    end;
+  end;
+end;
+
+procedure TGUIVCLTestRunner.AddResultDisplayError(const TestName, Msg : string);
+var
+  Node : TTreeNode;
+begin
+  Node := tvwResults.Items.AddChild(GetRootNode(TTestResultType.Error), Format(SGUIResultDisplayError, [TestName, Msg]));
+  Node.ImageIndex := cTestResultImageMap[TTestResultType.Error];
+  Node.SelectedIndex := Node.ImageIndex;
+  UpdateRootNodeCaption(TTestResultType.Error);
+end;
+
+procedure TGUIVCLTestRunner.CaptureCheckedState;
+begin
+  IterateTestNodes(
+    procedure(const Node : TTreeNode; var Stop : boolean)
+    var
+      Index : integer;
+    begin
+      if TTestNode(Node).IsFixtureNode then
+        Exit;
+      if Node.StateIndex = cTestNodeStateChecked then
+      begin
+        if FUncheckedTests.Find(Node.Text, Index) then
+          FUncheckedTests.Delete(Index);
+      end
+      else
+        FUncheckedTests.Add(Node.Text);
+    end);
+end;
+
+function TGUIVCLTestRunner.SettingsFileName : string;
+var
+  Dir : string;
+begin
+  //Per user, not beside the exe, whose folder may be read-only.
+  Dir := GetEnvironmentVariable('LOCALAPPDATA');
+  if Dir = '' then
+    Dir := TPath.GetHomePath;
+  Result := TPath.Combine(TPath.Combine(Dir, 'DUnitX'), ChangeFileExt(ExtractFileName(ParamStr(0)), '.ini'));
+end;
+
+procedure TGUIVCLTestRunner.ReadSettings;
+var
+  IniFile : TMemIniFile;
+  Lines : TStringList;
+  OldFile : string;
+  i : integer;
+begin
+  FUncheckedTests.Clear;
+  Lines := TStringList.Create;
+  try
+    try
+      if TFile.Exists(SettingsFileName) then
+      begin
+        IniFile := TMemIniFile.Create(SettingsFileName, TEncoding.UTF8);
+        try
+          //The names are values, not keys: a test name can contain '='.
+          IniFile.ReadSectionValues(cUncheckedTests, Lines);
+          for i := 0 to Lines.Count - 1 do
+            FUncheckedTests.Add(Lines.ValueFromIndex[i]);
+        finally
+          IniFile.Free;
+        end;
+      end
+      else
+      begin
+        //Settings used to be kept beside the exe, as one Boolean per test name.
+        OldFile := ChangeFileExt(ParamStr(0), '.ini');
+        if TFile.Exists(OldFile) then
+        begin
+          IniFile := TMemIniFile.Create(OldFile);
+          try
+            IniFile.ReadSection(cTestSetup, Lines);
+            for i := 0 to Lines.Count - 1 do
+              if not IniFile.ReadBool(cTestSetup, Lines[i], True) then
+                FUncheckedTests.Add(Lines[i]);
+          finally
+            IniFile.Free;
+          end;
+        end;
+      end;
+    except
+      //Unreadable settings only lose the remembered ticks.
+      on EStreamError do
+        FUncheckedTests.Clear;
+      on EEncodingError do
+        FUncheckedTests.Clear;
+      on EIniFileException do
+        FUncheckedTests.Clear;
+      on EInOutError do
+        FUncheckedTests.Clear;
+    end;
+  finally
+    Lines.Free;
+  end;
+end;
+
+procedure TGUIVCLTestRunner.WriteSettings;
+var
+  IniFile : TMemIniFile;
+  i : integer;
+begin
+  CaptureCheckedState;
+  try
+    ForceDirectories(ExtractFilePath(SettingsFileName));
+    IniFile := TMemIniFile.Create(SettingsFileName, TEncoding.UTF8);
+    try
+      IniFile.EraseSection(cUncheckedTests);
+      for i := 0 to FUncheckedTests.Count - 1 do
+        IniFile.WriteString(cUncheckedTests, IntToStr(i + 1), FUncheckedTests[i]);
+      IniFile.UpdateFile;
+    finally
+      IniFile.Free;
+    end;
+  except
+    //Settings are a convenience: failing to save them must not stop the window closing.
+    on EStreamError do
+      ;
+    on EEncodingError do
+      ;
+    on EIniFileException do
+      ;
+    on EInOutError do
+      ;
+  end;
 end;
 
 procedure TGUIVCLTestRunner.SetNodeTestResult(const Node : TTreeNode; const ImageIndex : integer);
@@ -937,19 +1136,23 @@ end;
 procedure TGUIVCLTestRunner.BuildTestTreeNode(const FixtureList : ITestFixtureList;
   const ParentNode : TTreeNode);
 
+  function IsListed(const Test : ITest) : boolean;
+  begin
+    Result := Test.Enabled and
+      ((FCommandLineFilter = nil) or FCommandLineFilter.Match(Test)) and
+      ((edtFilter.Text = '') or ContainsText(Test.FullName, edtFilter.Text));
+  end;
+
   function HasFilteredTests(Fixture : ITestFixture) : boolean;
   var
     Test : ITest;
-    Filter : string;
   begin
     Result := false;
     if Fixture.Tests = nil then
       Exit;
-    filter := edtFilter.Text;
     for Test in Fixture.Tests do
     begin
-      if (Test.Enabled) and
-        ((Filter = '') or ContainsText(Test.FullName, Filter)) then
+      if IsListed(Test) then
         Exit(true);
     end;
   end;
@@ -974,48 +1177,55 @@ var
   Fixture : ITestFixture;
   Test : ITest;
   TestNode : TTreeNode;
-  IniFile : TIniFile;
   FixtureNode : TTreeNode;
   HasTests : boolean;
   HasChildTests : boolean;
 begin
-  IniFile := TIniFile.Create(ChangeFileExt(ParamStr(0), '.ini'));
-  try
-    for Fixture in FixtureList do
+  for Fixture in FixtureList do
+  begin
+    HasTests := HasFilteredTests(Fixture);
+    HasChildTests := HasFilteredChildTests(Fixture);
+    if (not HasTests) and (not HasChildTests) then
+      continue;
+    FixtureNode := tvwTests.Items.AddChild(ParentNode, Fixture.FullName);
+    FTestNodes.TryAdd(Fixture.FullName, FixtureNode);
+    FixtureNode.StateIndex := cTestNodeStateUnChecked;
+    FixtureNode.ImageIndex := -1;
+    FixtureNode.SelectedIndex := -1;
+    inc(FFixtureCount);
+    TTestNode(FixtureNode).FIsFixtureNode := true;
+
+    if HasChildTests then
+      BuildTestTreeNode(Fixture.Children, FixtureNode);
+
+    for Test in Fixture.Tests do
     begin
-      HasTests := HasFilteredTests(Fixture);
-      HasChildTests := HasFilteredChildTests(Fixture);
-      if (not HasTests) and (not HasChildTests) then
+      if not IsListed(Test) then
         continue;
-      FixtureNode := tvwTests.Items.AddChild(ParentNode, Fixture.FullName);
-      FTestNodes.TryAdd(Fixture.FullName, FixtureNode);
-      FixtureNode.StateIndex := cTestNodeStateUnChecked;
-      inc(FFixtureCount);
-      TTestNode(FixtureNode).FIsFixtureNode := true;
-
-      if HasChildTests then
-        BuildTestTreeNode(Fixture.Children, FixtureNode);
-
-      for Test in Fixture.Tests do
+      //The full name is what selects a test to run, so a second test with the same name cannot be listed.
+      if FTestNodes.ContainsKey(Test.FullName) then
       begin
-        if Test.Enabled and
-          ((edtFilter.Text = '') or ContainsText(Test.FullName, edtFilter.Text)) then
-        begin
-          TestNode := tvwTests.Items.AddChild(FixtureNode, Test.FullName);
-          FTestNodes.TryAdd(Test.FullName, TestNode);
-          TestNode.StateIndex := cTestNodeStateUnchecked;
-          if IniFile.ReadBool(cTestSetup, Test.FullName, true) then
-            TTestNode(TestNode).InvertState;
-        end;
+        Inc(FDuplicateCount);
+        if FFirstDuplicate = '' then
+          FFirstDuplicate := Test.FullName;
+        continue;
       end;
+      TestNode := tvwTests.Items.AddChild(FixtureNode, Test.FullName);
+      FTestNodes.Add(Test.FullName, TestNode);
+      TestNode.StateIndex := cTestNodeStateUnchecked;
+      TestNode.ImageIndex := -1;
+      TestNode.SelectedIndex := -1;
+      if FUncheckedTests.IndexOf(Test.FullName) < 0 then
+        TTestNode(TestNode).InvertState;
     end;
-  finally
-    IniFile.Free;
   end;
 end;
 
 procedure TGUIVCLTestRunner.edtFilterRightButtonClick(Sender : TObject);
 begin
+  //Rebuilding the tree mid-run would free the nodes the running tests report to.
+  if FRunning then
+    Exit;
   edtFilter.Clear;
   LoadTests;
 end;
@@ -1023,11 +1233,19 @@ end;
 procedure TGUIVCLTestRunner.ClearResults;
 var
   i : TTestResultType;
+  Node : TTreeNode;
 begin
   for i := Low(TTestResultType) to High(TTestResultType) do
     FRootNodes[i] := nil;
 
   tvwResults.Items.Clear;
+  FWarningCount := 0;
+  //Back to 'not run', so a test this run skips does not keep the last run's icon.
+  for Node in tvwTests.Items do
+  begin
+    Node.ImageIndex := -1;
+    Node.SelectedIndex := -1;
+  end;
   pgeResults.ActivePageIndex := 0;
 end;
 
@@ -1035,7 +1253,8 @@ procedure TGUIVCLTestRunner.edtFilterKeyPress(Sender : TObject; var Key : Char);
 begin
   if Key = #13 then
   begin
-    LoadTests;
+    if not FRunning then
+      LoadTests;
     Key := #0;
   end;
 end;
@@ -1043,20 +1262,41 @@ end;
 procedure TGUIVCLTestRunner.FormKeyDown(Sender : TObject; var Key : Word; Shift : TShiftState);
 begin
   if (Key = VK_F9) and (Shift = []) then
-    actRun.Execute;
+  begin
+    if actRun.Enabled then
+      actRun.Execute;
+  end
+  else if (Key = VK_ESCAPE) and (Shift = []) and FRunning then
+  begin
+    StopRun;
+    Key := 0;
+  end;
 end;
 
 procedure TGUIVCLTestRunner.FormShow(Sender : TObject);
 begin
   pnlResults.Width := (ClientWidth - splMain.Width) div 2;
+  //Load once, after the window has appeared.
+  if not FLoadPosted then
+  begin
+    FLoadPosted := True;
+    PostMessage(Handle, WM_LOAD_TESTS, 0, 0);
+  end;
 end;
 
 procedure TGUIVCLTestRunner.UpdateGUIForProgress(const CurrTestCount : integer; const CurrTestName : string);
 begin
   pgResults.Position := CurrTestCount;
-  txtStatus.Caption := Format(SGUIStatusRunning, [pgResults.Position, pgResults.Max]);
-  if CurrTestName <> '' then
-    txtStatus.Caption := txtStatus.Caption + ' - ' + CurrTestName;
+  if FCloseRequested then
+    txtStatus.Caption := SGUIStatusClosing
+  else if FStopRequested then
+    txtStatus.Caption := SGUIStatusStopping
+  else
+  begin
+    txtStatus.Caption := Format(SGUIStatusRunning, [pgResults.Position, pgResults.Max]);
+    if CurrTestName <> '' then
+      txtStatus.Caption := txtStatus.Caption + ' - ' + CurrTestName;
+  end;
 end;
 
 procedure TGUIVCLTestRunner.UpdateGUIForRun(const TestCount : integer);
@@ -1101,32 +1341,21 @@ begin
     end);
 end;
 
-procedure TGUIVCLTestRunner.WMTestPopUp(var message : TMessage);
-begin
-  popTests.Popup(message.WParam, message.LParam);
-end;
-
 procedure TGUIVCLTestRunner.tvwTestsMouseDown(Sender : TObject; Button : TMouseButton; Shift : TShiftState; X, Y : Integer);
 var
   HitTestRes : THitTests;
   HitNode : TTreeNode;
 begin
+  //The checked tests are being run; they cannot change meanwhile.
+  if FRunning then
+    Exit;
+  //Right-click selection and the popup menu are the tree's own (RightClickSelect, PopupMenu).
   HitTestRes := tvwTests.GetHitTestInfoAt(X, Y);
   if htOnStateIcon in HitTestRes then
   begin
     HitNode := tvwTests.GetNodeAt(X, Y);
     if HitNode <> nil then
       TTestNode(HitNode).InvertState;
-  end
-  else if (Button = mbRight) and (THitTest.htOnItem in HitTestRes) then
-  begin
-    HitNode := tvwTests.GetNodeAt(X, Y);
-    if HitNode <> nil then
-    begin
-      HitNode.Selected := true;
-      Application.ProcessMessages;
-      PostMessage(Handle, WM_TESTPOPUP, Mouse.CursorPos.X, Mouse.CursorPos.Y);
-    end;
   end;
 end;
 
@@ -1146,7 +1375,9 @@ begin
   if TTestNode(Node).IsFixtureNode then
   begin
     Sender.Canvas.Font.Style := Sender.Canvas.Font.Style + [fsBold];
-    Sender.Canvas.Font.Color := clWindowText;
+    //A selected node keeps the highlight text colour.
+    if not (cdsSelected in State) then
+      Sender.Canvas.Font.Color := clWindowText;
   end;
 end;
 
@@ -1154,7 +1385,8 @@ procedure TGUIVCLTestRunner.tvwTestsKeyPress(Sender : TObject; var Key : Char);
 begin
   if Key = ' ' then
   begin
-    TTestNode(tvwTests.Selected).InvertState;
+    if (not FRunning) and (tvwTests.Selected <> nil) then
+      TTestNode(tvwTests.Selected).InvertState;
     Key := #0;
   end;
 end;
@@ -1169,26 +1401,6 @@ begin
   NodeClass := TResultNode;
 end;
 
-procedure TGUIVCLTestRunner.WMResultPopUp(var message : TMessage);
-begin
-  popResults.Popup(message.WParam, message.LParam);
-end;
-
-procedure TGUIVCLTestRunner.tvwResultsMouseDown(Sender : TObject; Button : TMouseButton; Shift : TShiftState; X, Y : Integer);
-var
-  Node : TTreeNode;
-begin
-  if Button = mbRight then
-  begin
-    Node := tvwResults.GetNodeAt(X, Y);
-    if Node <> nil then
-    begin
-      Node.Selected := True;
-      PostMessage(handle, WM_RESULTPOPUP, Mouse.CursorPos.X, Mouse.CursorPos.Y);
-    end;
-  end;
-end;
-
 procedure TGUIVCLTestRunner.UnselectAll;
 begin
   IterateTestNodes(
@@ -1200,6 +1412,11 @@ end;
 
 procedure TGUIVCLTestRunner.UpdateFormActions;
 begin
+  //Re-filtering rebuilds the test tree, which a running suite reports into.
+  if FRunning and edtFilter.Focused and tvwTests.CanFocus then
+    tvwTests.SetFocus;
+  edtFilter.Enabled := not FRunning;
+
   actRun.Enabled := (not FRunning) and
     ((tvwTests.Items.Count - FFixtureCount) > 0);
 
@@ -1229,7 +1446,9 @@ procedure TGUIVCLTestRunner.UpdateGUIForComplete(const RunResults : IRunResults)
 begin
   txtPassed.Caption := IntToStr(RunResults.PassCount);
   txtIgnored.Caption := IntToStr(RunResults.IgnoredCount);
-  txtFailed.Caption := IntToStr(RunResults.FailureCount);
+  //No-assertion failures are counted as warnings, not as failures.
+  txtFailed.Caption := IntToStr(Max(0, RunResults.FailureCount - FWarningCount));
+  txtWarnings.Caption := IntToStr(FWarningCount);
   txtErrored.Caption := IntToStr(RunResults.ErrorCount);
   txtMemLeak.Caption := IntToStr(RunResults.MemoryLeakCount);
 
@@ -1253,63 +1472,48 @@ begin
   LoadTests;
 end;
 
-class procedure PathUtils.Compare(const ExpFile, ActFile : string);
+class function PathUtils.Compare(const ExpFile, ActFile : string) : boolean;
 var
   BCPath : string;
   CmdLine : string;
+  ErrorMsg : string;
 begin
+  Result := False;
   BCPath := FindBeyondCompare;
   if BCPath <> '' then
   begin
-    CmdLine := Format('"%s" "%s" "%s" /lefttitle="%s" /righttitle="%s"', [BCPath, ExpFile, ActFile, 'Expected', 'Actual']);
-    CreateProcessAndWait(CmdLine);
+    CmdLine := Format('"%s" "%s" "%s" /lefttitle="%s" /righttitle="%s"', [BCPath, ExpFile, ActFile, SGUICompareExpected, SGUICompareActual]);
+    Result := Launch(CmdLine, ErrorMsg);
+    if not Result then
+      MessageDlg(Format(SGUIBeyondCompareNotStarted, [BCPath, ErrorMsg]), mtError, [mbOK], 0);
   end
   else
-    MessageDlg('Could not find BeyondCompare in any known paths.', mtError, [mbOK], 0);
+    MessageDlg(SGUIBeyondCompareNotFound, mtError, [mbOK], 0);
 end;
 
-class function PathUtils.CreateProcessAndWait(const CmdLine : string) : boolean;
-
-  procedure WaitFor(const ProcessHandle : THandle);
-  var
-    msg : TMsg;
-    ret : DWORD;
-    hdl : THandle;
-  begin
-    //Param can't be const, so assign to local var
-    hdl := ProcessHandle;
-    repeat
-      ret := MsgWaitForMultipleObjects(1, hdl, False, INFINITE, QS_PAINT or QS_SENDMESSAGE);
-
-      if ret = WAIT_FAILED then
-        exit;
-
-      if ret = (WAIT_OBJECT_0 + 1) then
-      begin
-        while PeekMessage(msg, 0, WM_PAINT, WM_PAINT, PM_REMOVE) do
-          DispatchMessage(msg);
-      end;
-    until ret = WAIT_OBJECT_0;
-  end;
-
+class function PathUtils.Launch(const CmdLine : string; out ErrorMsg : string) : boolean;
 var
   StartupInfo : TStartupInfo;
   ProcessInfo : TProcessInformation;
-
+  CmdBuf : string;
 begin
+  ErrorMsg := '';
+  //CreateProcess may write to the command line, so it gets a buffer of its own.
+  CmdBuf := CmdLine;
+  UniqueString(CmdBuf);
   FillChar(StartupInfo, Sizeof(StartupInfo), #0);
   StartupInfo.cb := Sizeof(StartupInfo);
   StartupInfo.dwFlags := STARTF_USESHOWWINDOW;
   StartupInfo.wShowWindow := SW_SHOWNORMAL;
-  if CreateProcess(nil, PChar(CmdLine), nil, nil, False, CREATE_NEW_CONSOLE or NORMAL_PRIORITY_CLASS, nil, nil, StartupInfo, ProcessInfo) then
+  Result := CreateProcess(nil, PChar(CmdBuf), nil, nil, False, CREATE_NEW_CONSOLE or NORMAL_PRIORITY_CLASS, nil, nil, StartupInfo, ProcessInfo);
+  if Result then
   begin
-    Result := True;
-    WaitFor(ProcessInfo.hProcess);
+    //Not waited for: the comparison runs alongside the runner, whose UI stays live.
     CloseHandle(ProcessInfo.hProcess);
     CloseHandle(ProcessInfo.hThread);
   end
   else
-    Result := False;
+    ErrorMsg := SysErrorMessage(GetLastError);
 end;
 
 class function PathUtils.FindBeyondCompare : string;
@@ -1322,71 +1526,70 @@ const
     );
 var
   BCPath : string;
-  PFPathList : TStringArray;
   PFPath : string;
 begin
-  Result := '';
+  Result := FindBeyondCompareInRegistry;
+  if Result <> '' then
+    Exit;
 
-  PFPathList := PathUtils.GetProgramFiles;
-
-  for PFPath in PFPathList do
+  for PFPath in PathUtils.GetProgramFiles do
     for BCPath in BCPathList do
       if TFile.Exists(PFPath + BCPath) then
-      begin
-        Result := PFPath + BCPath;
-        break;
-      end;
+        Exit(PFPath + BCPath);
 end;
 
-class function PathUtils.GetProgramFiles : TStringArray;
+class function PathUtils.FindBeyondCompareInRegistry : string;
+const
+  cBCKey = 'Software\Scooter Software\Beyond Compare';
+  cRoots : array[0..1] of HKEY = (HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE);
 var
-  X86 : string;
-  X64 : string;
+  Reg : TRegistry;
+  Root : HKEY;
+  ExePath : string;
 begin
-  X86 := GetProgramFilesX86;
-  X64 := GetProgramFilesX64;
-  if X64 <> '' then
-  begin
-    SetLength(Result, 2);
-    Result[0] := X64;
-    Result[1] := X86;
-  end
-  else
-  begin
-    SetLength(Result, 1);
-    Result[0] := X86;
+  Result := '';
+  Reg := TRegistry.Create(KEY_READ);
+  try
+    for Root in cRoots do
+    begin
+      Reg.RootKey := Root;
+      if Reg.OpenKeyReadOnly(cBCKey) then
+      try
+        //ExePath names BCompare.exe; BComp.exe, which takes the same arguments, sits beside it.
+        if Reg.ValueExists('ExePath') and (Reg.GetDataType('ExePath') in [rdString, rdExpandString]) then
+        begin
+          ExePath := Reg.ReadString('ExePath');
+          if TFile.Exists(ExtractFilePath(ExePath) + 'BComp.exe') then
+            Exit(ExtractFilePath(ExePath) + 'BComp.exe');
+          if TFile.Exists(ExePath) then
+            Exit(ExePath);
+        end;
+      finally
+        Reg.CloseKey;
+      end;
+    end;
+  finally
+    Reg.Free;
   end;
 end;
 
-class function PathUtils.GetProgramFilesX64 : string;
-begin
-  if IsWow64 then
-    Result := IncludeTrailingPathDelimiter(GetEnvironmentVariable('ProgramW6432'))
-  else
-    Result := '';
-end;
-
-class function PathUtils.GetProgramFilesX86 : string;
+class function PathUtils.GetProgramFiles : TStringArray;
+const
+  cVars : array[0..2] of string = ('ProgramW6432', 'ProgramFiles', 'ProgramFiles(x86)');
 var
-  Ident : string;
+  VarName : string;
+  Dir : string;
 begin
-  Ident := if IsWow64 then 'ProgramFiles(x86)' else 'ProgramFiles';
-  Result := IncludeTrailingPathDelimiter(GetEnvironmentVariable(Ident));
-end;
-
-class function PathUtils.IsWow64 : boolean;
-type
-  TIsWow64Process = function(hProcess : THandle; var bWow64Process : BOOL) : BOOL; stdcall;
-var
-  IsWow64Process : TIsWow64Process;
-  bWow64Process : BOOL;
-begin
-  Result := False;
-  @IsWow64Process := GetProcAddress(GetModuleHandle('kernel32.dll'), 'IsWow64Process');
-  if @IsWow64Process <> nil then
+  //Both Program Files folders, whichever bitness this process is: Beyond Compare may be 32- or 64-bit.
+  Result := nil;
+  for VarName in cVars do
   begin
-    IsWow64Process(GetCurrentProcess(), bWow64Process);
-    Result := bWow64Process;
+    Dir := GetEnvironmentVariable(VarName);
+    if Dir = '' then
+      Continue;
+    Dir := IncludeTrailingPathDelimiter(Dir);
+    if not MatchText(Dir, Result) then
+      Result := Result + [Dir];
   end;
 end;
 
@@ -1395,15 +1598,11 @@ var
   FileName : string;
 begin
   FileName := TPath.GetTempFileName;
-  if FileExtNoDot <> '' then
-  begin
+  Result := FileName;
+  //If the rename fails, compare the file without its extension rather than lose it.
+  if (FileExtNoDot <> '') and RenameFile(FileName, ChangeFileExt(FileName, '.' + FileExtNoDot)) then
     Result := ChangeFileExt(FileName, '.' + FileExtNoDot);
-    RenameFile(FileName, Result);
-  end
-  else
-    Result := FileName;
 
-  System.Assert(FileExists(Result));
   TFile.WriteAllText(Result, Contents);
 end;
 
@@ -1534,6 +1733,7 @@ end;
 class function TTestNode.ToWeight(const ImageIndex : integer) : integer;
 begin
   case ImageIndex of
+    -1 : Result := -1;                  // not run
     0 : Result := 0;                    // ignored
     1 : Result := 1;                    // pass
     3 : Result := 2;                    // warning
@@ -1545,6 +1745,7 @@ end;
 class function TTestNode.ToImageIndex(const Weight : integer) : integer;
 begin
   case Weight of
+    -1 : Result := -1;                  // not run
     0 : Result := 0;                    // ignored
     1 : Result := 1;                    // pass
     2 : Result := 3;                    // warning

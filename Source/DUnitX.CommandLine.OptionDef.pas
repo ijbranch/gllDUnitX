@@ -270,7 +270,7 @@ begin
           end;
         tkFloat :
           begin
-            floatVal := StrToFloat(value);
+            floatVal := StrToFloat(value, TFormatSettings.Invariant);
             v := TValue.From<Double>(floatVal);
           end;
       else

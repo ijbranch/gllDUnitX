@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -137,6 +137,22 @@ type
     constructor Create; overload;
     constructor Create(const AName : string); overload;
     constructor Create(const ANames : TArray<string>); overload;
+    constructor Create(const ANames : TStrings); overload;
+    destructor Destroy; override;
+  end;
+
+  /// <summary>
+  /// Selects tests by their exact full name only. Unlike TNameFilter it does
+  /// not treat a name as a fixture name prefix, so it runs exactly the tests
+  /// named (the GUI runner's checked tests).
+  /// </summary>
+  TFullNameFilter = class(TTestFilter, ITestFilter)
+  private
+    FNames : TDictionary<string, Boolean>;
+  protected
+    function Match(const test : ITest) : Boolean; override;
+  public
+    constructor Create(const AName : string); overload;
     constructor Create(const ANames : TStrings); overload;
     destructor Destroy; override;
   end;
@@ -295,6 +311,38 @@ begin
   //hacky way to allow filtering on test cases.
   if (not result) and test.IsTestCase then
     result := FNames.IndexOf(test.MethodName) <> -1;
+end;
+
+{ TFullNameFilter }
+
+constructor TFullNameFilter.Create(const AName : string);
+begin
+  inherited Create;
+  //Case-sensitive: test case names can differ only in case.
+  FNames := TDictionary<string, Boolean>.Create;
+  if AName <> '' then
+    FNames.AddOrSetValue(AName, True);
+end;
+
+constructor TFullNameFilter.Create(const ANames : TStrings);
+var
+  name : string;
+begin
+  Create('');
+  for name in ANames do
+    if name <> '' then
+      FNames.AddOrSetValue(name, True);
+end;
+
+destructor TFullNameFilter.Destroy;
+begin
+  FNames.Free;
+  inherited;
+end;
+
+function TFullNameFilter.Match(const test : ITest) : Boolean;
+begin
+  result := FNames.ContainsKey(test.FullName);
 end;
 
 { TAndFilter }

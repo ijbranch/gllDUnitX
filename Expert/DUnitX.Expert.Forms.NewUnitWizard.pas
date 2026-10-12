@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -31,7 +31,6 @@ interface
 {$I DUnitX.inc}
 
 uses
-{$IFDEF USE_NS}
   WinAPI.Windows,
   WinAPI.Messages,
   System.SysUtils,
@@ -42,18 +41,6 @@ uses
   VCL.Forms,
   VCL.Dialogs,
   VCL.StdCtrls;
-{$ELSE}
-  Windows,
-  Messages,
-  SysUtils,
-  Variants,
-  Classes,
-  Graphics,
-  Controls,
-  Forms,
-  Dialogs,
-  StdCtrls;
-{$ENDIF}
 
 type
   TfrmDunitXNewUnit = class(TForm)
@@ -65,6 +52,7 @@ type
     chkCreateSetupTearDown : TCheckBox;
     chkCreateSampleMethods : TCheckBox;
     procedure FormCreate(Sender : TObject);
+    procedure FormCloseQuery(Sender : TObject; var CanClose : Boolean);
   private
     function GetCreateSampleMethods : boolean;
     function GetCreateSetupTearDownMethods : boolean;
@@ -72,14 +60,11 @@ type
     { Private declarations }
   public
     { Public declarations }
-    property TestFixtureClasaName : string read GetTestFixtureClassName;
+    property TestFixtureClassName : string read GetTestFixtureClassName;
     property CreateSetupTearDownMethods : boolean read GetCreateSetupTearDownMethods;
     property CreateSampleMethods : boolean read GetCreateSampleMethods;
 
   end;
-
-var
-  frmDunitXNewUnit : TfrmDunitXNewUnit;
 
 implementation
 
@@ -89,6 +74,17 @@ uses
 {$R *.dfm}
 
 { TfrmDunitXNewUnit }
+
+procedure TfrmDunitXNewUnit.FormCloseQuery(Sender : TObject; var CanClose : Boolean);
+begin
+  // Refuse OK while the class name would generate a unit that does not compile.
+  if (ModalResult = mrOk) and not IsValidFixtureClassName(TestFixtureClassName) then
+  begin
+    MessageDlg(Format(SInvalidFixtureClassName, [TestFixtureClassName]), mtError, [mbOK], 0);
+    edtClassName.SetFocus;
+    CanClose := False;
+  end;
+end;
 
 procedure TfrmDunitXNewUnit.FormCreate(Sender : TObject);
 begin

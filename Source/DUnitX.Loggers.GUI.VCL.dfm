@@ -18,6 +18,7 @@ object GUIVCLTestRunner: TGUIVCLTestRunner
   OldCreateOrder = False
   Position = poScreenCenter
   OnClose = FormClose
+  OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnKeyDown = FormKeyDown
@@ -61,6 +62,7 @@ object GUIVCLTestRunner: TGUIVCLTestRunner
         HideSelection = False
         Images = ResultImages
         Indent = 19
+        PopupMenu = popTests
         ReadOnly = True
         RightClickSelect = True
         RowSelect = True
@@ -72,14 +74,6 @@ object GUIVCLTestRunner: TGUIVCLTestRunner
         OnCustomDrawItem = tvwTestsCustomDrawItem
         OnKeyPress = tvwTestsKeyPress
         OnMouseDown = tvwTestsMouseDown
-        Items.NodeData = {
-          03020000002800000000000000000000000000000000000000FFFFFFFF000000
-          00020000000105540065007300740032002C0000000000000000000000010000
-          0000000000FFFFFFFF0000000000000000010753007500620054006500730074
-          003200000000000000000000000000000000000000FFFFFFFF00000000000000
-          00010A530075006200540065007300740031002E003200280000000000000000
-          0000000100000000000000FFFFFFFF0000000000000000010554006500730074
-          003200}
       end
       object tbrTests: TActionToolBar
         Left = 1
@@ -277,14 +271,13 @@ object GUIVCLTestRunner: TGUIVCLTestRunner
             HideSelection = False
             Images = ResultImages
             Indent = 19
+            PopupMenu = popResults
             ReadOnly = True
             RightClickSelect = True
             RowSelect = True
-            StateImages = ResultImages
             TabOrder = 0
             OnChange = tvwResultsChange
             OnCreateNodeClass = tvwResultsCreateNodeClass
-            OnMouseDown = tvwResultsMouseDown
           end
           object tbrResults: TActionToolBar
             Left = 0
@@ -336,8 +329,6 @@ object GUIVCLTestRunner: TGUIVCLTestRunner
               Font.Height = -11
               Font.Name = 'Courier New'
               Font.Style = []
-              Lines.Strings = (
-                'rchLog')
               ParentFont = False
               ReadOnly = True
               ScrollBars = ssBoth
@@ -522,8 +513,30 @@ object GUIVCLTestRunner: TGUIVCLTestRunner
             Font.Style = [fsBold]
             ParentFont = False
           end
-          object lblErrored: TLabel
+          object lblWarnings: TLabel
             Left = 220
+            Top = 0
+            Width = 66
+            Height = 13
+            Align = alLeft
+            Caption = '   Warnings  '
+          end
+          object txtWarnings: TLabel
+            Left = 286
+            Top = 0
+            Width = 28
+            Height = 13
+            Align = alLeft
+            Caption = '1000'
+            Font.Charset = DEFAULT_CHARSET
+            Font.Color = clWindowText
+            Font.Height = -11
+            Font.Name = 'Tahoma'
+            Font.Style = [fsBold]
+            ParentFont = False
+          end
+          object lblErrored: TLabel
+            Left = 314
             Top = 0
             Width = 51
             Height = 13
@@ -531,7 +544,7 @@ object GUIVCLTestRunner: TGUIVCLTestRunner
             Caption = '   Errored  '
           end
           object txtErrored: TLabel
-            Left = 271
+            Left = 365
             Top = 0
             Width = 28
             Height = 13
@@ -545,7 +558,7 @@ object GUIVCLTestRunner: TGUIVCLTestRunner
             ParentFont = False
           end
           object lblMemLeak: TLabel
-            Left = 299
+            Left = 393
             Top = 0
             Width = 62
             Height = 13
@@ -553,7 +566,7 @@ object GUIVCLTestRunner: TGUIVCLTestRunner
             Caption = '   Mem Leak  '
           end
           object txtMemLeak: TLabel
-            Left = 361
+            Left = 455
             Top = 0
             Width = 28
             Height = 13
@@ -592,38 +605,6 @@ object GUIVCLTestRunner: TGUIVCLTestRunner
   object ActionManager: TActionManager
     ActionBars = <
       item
-      end
-      item
-      end
-      item
-        Items = <
-          item
-            Caption = '&File'
-          end>
-      end
-      item
-        Items.CaptionOptions = coNone
-        Items = <
-          item
-            Action = actRunSelected
-            Caption = '&Run Selected Only'
-          end
-          item
-            Action = actRun
-            Caption = 'R&un'
-          end>
-      end
-      item
-        Items = <
-          item
-            Caption = '&File'
-          end>
-      end
-      item
-      end
-      item
-      end
-      item
         Items = <
           item
             Action = actRun
@@ -660,7 +641,7 @@ object GUIVCLTestRunner: TGUIVCLTestRunner
           end
           item
             Action = actFindInText
-            Caption = '&Find Result in Text'
+            Caption = 'Find Result in &Text'
           end>
         ActionBar = tbrTests
       end

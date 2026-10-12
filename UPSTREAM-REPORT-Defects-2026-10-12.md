@@ -92,7 +92,7 @@ Section 6 lists fixes we already carry in our fork, which you may want to take.
 | 3.9 | `DUnitX.Utils.XML.pas:46` `IsValidXMLChar` | Treats form feed (`$0C`) as legal. XML 1.0 forbids it, so a message containing one produces ill-formed XML. The exe path and category names are written into XML attributes without `EscapeForXML`. | Traced |
 | 3.10 | `DUnitX.Loggers.XML.JUnit.pas:225` | `FormatDateTime('yyyy-MM-dd"T"hh:nn:ss')` leaves `:` unquoted, so the locale's time separator is used and the timestamp is not ISO 8601 everywhere. NUnit quotes it correctly. NUnit's assembly `time` attribute holds a clock time where a duration belongs. | Traced |
 | 3.11 | `DUnitX.OptionsDefinition.pas:92` | `--dontshowignored` ignores its value: `-dsi:false` turns it **on**. | Traced |
-| 3.12 | `DUnitX.StackTrace.EurekaLog7.pas:89` `PointerToLocationInfo` (MadExcept4 the same) | Computes the location, then assigns `Result := ''`, so EurekaLog users always get empty location info. | Traced |
+| 3.12 | ~~`DUnitX.StackTrace.EurekaLog7.pas:89` `PointerToLocationInfo`~~ | **Withdrawn (2026-10-12): not a defect.** The `Result := ''` is in the `{$ELSE}` branch of `{$IFDEF USE_EUREKALOG7}`, after the real assignment; MadExcept3/4/5 have the same shape. We misread it. | n/a |
 
 ## 4. VCL GUI runner (`DUnitX.Loggers.GUI.VCL.pas`, `...GUI.VCL.RichEdit.pas`)
 
@@ -139,6 +139,21 @@ These are in our fork with tests, and we can send any of them as a pull request.
 - **The service locator leaked the constructed object** whenever `Supports` failed.
 - **`TValueHelper.IsUInt64`** tested `NativeInt`, the signed type that `IsInt64` already uses.
 - **`Assert.Ignore(reason)`**, a run-time test skip, was proposed separately on 2026-09-09.
+
+## 7. Status in our fork (updated 2026-10-12, after this report was filed)
+
+We have since fixed these in `ijbranch/gllDUnitX`, each with a test that fails on the old code where the defect can be
+unit-tested (52 new tests). The GUI runner and IDE expert changes were verified by build and, for the GUI, a smoke test.
+Any of these can be offered as pull requests.
+
+- **Fixed:** 1.1–1.12, 2.1–2.7, 2.9, 3.1–3.7, 3.9–3.11, 4.1–4.12, 5.1–5.4; also the timeout fix in section 6.
+- **Not changed:** 2.8 (method `[Category]` replacing the fixture's) — we read it as your intent; changing it would alter
+  test selection for every existing suite. 3.8 is documentation only.
+- **Withdrawn:** 3.12 (see its row): not a defect.
+- **Behaviour changes a suite can notice:** a run that executes no tests no longer counts as passed; `WillRaise`
+  without a class no longer catches `ETestFailure` / `ETestPass` / `ETestIgnored`; bad `[TestCase]` data is an error;
+  DUnit-compatibility string checks are case-sensitive; `[RepeatTest]` names are `Method-1-of-N`; TearDown is skipped
+  after a failed Setup.
 
 ---
 

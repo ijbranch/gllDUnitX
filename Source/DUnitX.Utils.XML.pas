@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -46,7 +46,7 @@ uses
 function IsValidXMLChar(const wc : WideChar) : Boolean;
 begin
   case Word(wc) of
-    $0009, $000A, $000C, $000D,
+    $0009, $000A, $000D,                // XML 1.0 forbids every other C0 control, form feed ($0C) included
     $0020..$D7FF,
     $E000..$FFFD,                       // Standard Unicode chars below $FFFF
     $D800..$DBFF,                       // High surrogate of Unicode character  = $10000 - $10FFFF

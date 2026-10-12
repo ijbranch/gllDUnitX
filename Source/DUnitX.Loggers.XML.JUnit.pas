@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -77,8 +77,10 @@ implementation
 uses
   DUnitX.Utils.XML,
 {$IFDEF USE_NS}
+  System.StrUtils,
   System.TypInfo;
 {$ELSE}
+  StrUtils,
   TypInfo;
 {$ENDIF}
 
@@ -183,7 +185,8 @@ begin
   // Global overview
   // There is only a "disabled" attribute on the top level, but "disabled" and "skipped" on fixture level. Return ignored tests as "disabled"
   WriteXMLLine(Format('<testsuites name="%s" tests="%d" disabled="%d" errors="%d" failures="%d" time="%s">',
-      [sExeName, RunResults.TestCount, RunResults.IgnoredCount, RunResults.ErrorCount, RunResults.FailureCount, sTime]));
+      [EscapeForXML(sExeName), RunResults.TestCount, RunResults.IgnoredCount, RunResults.ErrorCount + RunResults.MemoryLeakCount,
+      RunResults.FailureCount, sTime])); //a leaked test is written as <error>
 
   Indent;
 
@@ -207,6 +210,7 @@ var
   testResult : ITestResult;
   sExecuted : string;
   sName : string;
+  leakCount : integer;
 begin
   //its a real fixture if the class is not TObject.
   if (not fixtureResult.Fixture.TestClass.ClassNameIs('TObject')) then
@@ -217,16 +221,26 @@ begin
     sExecuted := BoolToStr(fixtureResult.ResultCount > 0, true);
     sExecuted := EscapeForXML(sExecuted);
 
-    sName := StringReplace(fixtureResult.Fixture.FullName, '.' + fixtureResult.Fixture.Name, '', []);
+    //The suite name is the full name without its trailing '.Name' (not the first '.Name' found).
+    sName := fixtureResult.Fixture.FullName;
+    if EndsStr('.' + fixtureResult.Fixture.Name, sName) then
+      SetLength(sName, Length(sName) - Length(fixtureResult.Fixture.Name) - 1);
     sTime := Format('%.3f', [fixtureResult.Duration.TotalSeconds]);
 
     sName := EscapeForXML(sName);
     sTime := EscapeForXML(sTime);
-    sDate := FormatDateTime('yyyy-MM-dd"T"hh:nn:ss', fixtureResult.StartTime);
+    //':' unquoted is the locale's time separator; ISO 8601 needs a literal ':'.
+    sDate := FormatDateTime('yyyy-MM-dd"T"hh":"nn":"ss', fixtureResult.StartTime);
+
+    //a leaked test is written as <error>, so count it as one
+    leakCount := 0;
+    for testResult in fixtureResult.TestResults do
+      if testResult.ResultType = TTestResultType.MemoryLeak then
+        Inc(leakCount);
 
     // There is only a "disabled" attribute on the top level, but "disabled" and "skipped" on fixture level. Return ignored tests as "disabled"
     WriteXMLLine(Format('<testsuite name="%s" tests="%d" disabled="%d" errors="%d" failures="%d" time="%s" timestamp="%s">',
-        [sName, fixtureResult.TestResults.Count, fixtureResult.IgnoredCount, fixtureResult.ErrorCount, fixtureResult.FailureCount, sTime, sDate]));
+        [sName, fixtureResult.TestResults.Count, fixtureResult.IgnoredCount, fixtureResult.ErrorCount + leakCount, fixtureResult.FailureCount, sTime, sDate]));
     //WriteCategoryNodes(fixtureResult.Fixture.Categories);
 
     for testResult in fixtureResult.TestResults do
@@ -276,7 +290,7 @@ begin
           Indent;
           WriteXMLLine(Format('<failure message="%s">', [EscapeForXML(testResult.Message)]));
           Indent;
-          WriteXMLLine(Format('<![CDATA[ %s ]]>', [EscapeForXML(testResult.Message, False, True)]));
+          WriteXMLLine(Format('<![CDATA[ %s ]]>', [EscapeForXML(testResult.StackTrace, False, True)]));
           Outdent;
           WriteXMLLine('</failure>');
           Outdent;
@@ -324,7 +338,7 @@ begin
     WriteXMLLine('<categories>');
     Indent;
     for sCategory in ACategoryList do
-      WriteXMLLine(Format('<category name="%s" />', [sCategory]));
+      WriteXMLLine(Format('<category name="%s" />', [EscapeForXML(sCategory)]));
     Outdent;
     WriteXMLLine('</categories>');
     Outdent;

@@ -153,9 +153,9 @@ type
     procedure AreEqual_TClass_Throws_ETestFailure_When_Classes_Are_NotEqual;
 
     [Test]
-    [TestCase('Empty', ',')]
-    [TestCase('CR', #13','#13)]
-    [TestCase('Simple', 'abc,abc')]
+    [TestCase('Empty', ',,false')]
+    [TestCase('CR', #13','#13',false')]
+    [TestCase('Simple', 'abc,abc,false')]
     [TestCase('Ignore case simple', 'abc,ABC,true')]
     [TestCase('Ignore case complex', 'LoReM iPsUm DoLoR sIt AmEt,lOrEm IpSuM dOlOr SiT aMeT,true')]
     procedure NoDiff_Throws_No_Exception_When_Strings_Are_Equal(const A, B : string; AIgnoreCase : boolean = false);
@@ -163,47 +163,47 @@ type
     [TestCase('Length',
         '  '#8',' +
         ' ,' +
-        'Difference at position 2: [''  ''#8] does not match ['' '']',
+        'Difference at position 2: [''  ''#8] does not match ['' '']' + ',',
         ',', false)]
     [TestCase('First Char',
         'lorem ipsum,' +
         '1orem ipsum,' +
-        'Difference at position 1: [''lorem ''] does not match [''1orem '']',
+        'Difference at position 1: [''lorem ''] does not match [''1orem '']' + ',',
         ',', false)]
     [TestCase('Last Char',
         'Lorem ipsum,' +
         'Lorem ipsuw,' +
-        'Difference at position 11: ['' ipsum''] does not match ['' ipsuw'']',
+        'Difference at position 11: ['' ipsum''] does not match ['' ipsuw'']' + ',',
         ',', false)]
     [TestCase('Leading Space',
         ' Lorem ipsum,' +
         'Lorem ipsum ,' +
-        'Difference at position 1: ['' Lorem''] does not match [''Lorem '']',
+        'Difference at position 1: ['' Lorem''] does not match [''Lorem '']' + ',',
         ',', false)]
     [TestCase('Trailing Space',
         'Lorem ipsum,' +
         'Lorem ipsum ,' +
-        'Difference at position 12: [''ipsum''] does not match [''ipsum '']',
+        'Difference at position 12: [''ipsum''] does not match [''ipsum '']' + ',',
         ',', false)]
     [TestCase('A sub B',
         'Lorem ip,' +
         'Lorem ipsum,' +
-        'Difference at position 9: [''em ip''] does not match [''em ipsum'']',
+        'Difference at position 9: [''em ip''] does not match [''em ipsum'']' + ',',
         ',', false)]
     [TestCase('B sub A',
         'Lorem ipsum,' +
         'Lorem ip,' +
-        'Difference at position 9: [''em ipsum''] does not match [''em ip'']',
+        'Difference at position 9: [''em ipsum''] does not match [''em ip'']' + ',',
         ',', false)]
     [TestCase('Different Spaces',
         'lorem ipsum,' +
         'lorem  ipsum,' +
-        'Difference at position 7: [''orem ipsum''] does not match [''orem  ipsu'']',
+        'Difference at position 7: [''orem ipsum''] does not match [''orem  ipsu'']' + ',',
         ',', false)]
     [TestCase('Capitalization',
         'lorem ipsum,' +
         'lorem Ipsum,' +
-        'Difference at position 7: [''orem ipsum''] does not match [''orem Ipsum'']',
+        'Difference at position 7: [''orem ipsum''] does not match [''orem Ipsum'']' + ',',
         ',', false)]
     [TestCase('CR vs LF',
         #13',' +
@@ -213,12 +213,12 @@ type
     [TestCase('Space vs TAB',
         'lorem ipsum,' +
         'lorem'#9'ipsum,' +
-        'Difference at position 6: [''lorem ipsu''] does not match [''lorem''#9''ipsu'']',
+        'Difference at position 6: [''lorem ipsu''] does not match [''lorem''#9''ipsu'']' + ',',
         ',', false)]
     [TestCase('TAB vs Space',
         'lorem'#9'ipsum,' +
         'lorem ipsum,' +
-        'Difference at position 6: [''lorem''#9''ipsu''] does not match [''lorem ipsu'']',
+        'Difference at position 6: [''lorem''#9''ipsu''] does not match [''lorem ipsu'']' + ',',
         ',', false)]
     procedure NoDiff_Throws_ETestFailure_When_Strings_Are_NotEqual(const A, B, AException, AMessage : string);
 
@@ -419,6 +419,125 @@ type
 
     [Test]
     procedure Test64BitListIndex;
+
+    /// <summary>
+    ///   Proves IsEmpty( Variant ) fails for an assigned value and passes for Unassigned and Null; the condition was
+    ///   inverted, so IsEmpty( 'abc' ) passed and IsEmpty( Unassigned ) failed. Issue #398 item 1.1.
+    /// </summary>
+    [Test]
+    procedure IsEmpty_Variant_Fails_Only_When_Value_Is_Assigned;
+
+    /// <summary>
+    ///   Proves IsNotEmpty( Variant ) fails for Null as well as for Unassigned. Issue #398 item 1.1.
+    /// </summary>
+    [Test]
+    procedure IsNotEmpty_Variant_Fails_When_Value_Is_Null;
+
+    /// <summary>
+    ///   Proves the TTestMethod overload of WillNotRaiseDescendant fails when the method raises a DESCENDANT of the
+    ///   named class; it forwarded to the exact-match WillNotRaise, so a descendant passed. Issue #398 item 1.2.
+    /// </summary>
+    [Test]
+    procedure WillNotRaiseDescendant_Method_Fails_When_Descendant_Raised;
+
+    /// <summary>
+    ///   Proves AreEqual&lt;Double&gt; and AreEqual&lt;T&gt;( TArray ) fail when one value is NaN, and
+    ///   AreNotEqual&lt;Double&gt; passes. TComparer&lt;Double&gt; reports NaN as equal to everything.
+    ///   Issue #398 item 1.3.
+    /// </summary>
+    [Test]
+    procedure AreEqual_T_Double_Fails_When_One_Value_Is_NaN;
+
+    /// <summary>
+    ///   Proves Contains&lt;Double&gt; fails, and DoesNotContain&lt;Double&gt; passes, for a NaN value that is not in
+    ///   the array. Issue #398 item 1.3.
+    /// </summary>
+    [Test]
+    procedure Contains_T_Double_Does_Not_Match_NaN;
+
+    /// <summary>
+    ///   Proves WillRaiseAny, WillRaise, WillRaiseDescendant and WillRaiseWithMessage let a failed assertion inside
+    ///   the method through as the failure it is, rather than counting it as the expected exception.
+    ///   Issue #398 item 1.4.
+    /// </summary>
+    [Test]
+    procedure WillRaise_Family_Does_Not_Swallow_A_Failed_Assertion;
+
+    /// <summary>
+    ///   Proves the WillRaise family lets Assert.Pass and Assert.Ignore inside the method through, so the test
+    ///   outcome they set is not swallowed. Issue #398 item 1.4.
+    /// </summary>
+    [Test]
+    procedure WillRaise_Family_Does_Not_Swallow_Pass_Or_Ignore;
+
+    /// <summary>
+    ///   Proves '%' and '%s' in the user message of WillNotRaiseAny and WillNotRaise appear literally instead of
+    ///   being parsed as format specifiers (which raised EConvertError). Issue #398 item 3.1.
+    /// </summary>
+    [Test]
+    procedure WillNotRaise_User_Message_Is_Not_A_Format_String;
+
+    /// <summary>
+    ///   Proves a nil exception class in WillNotRaiseDescendant and WillNotRaiseWithMessage gives a readable failure
+    ///   naming the raised class, not an access violation. Issue #398 item 3.2.
+    /// </summary>
+    [Test]
+    procedure WillNotRaise_Nil_Class_Fails_Readably;
+
+    /// <summary>
+    ///   Proves AreSame and AreNotSame( TObject ) compare identity, ignoring an overridden Equals, and handle nil
+    ///   without an access violation. Issue #398 item 3.3.
+    /// </summary>
+    [Test]
+    procedure AreSame_Object_Compares_Identity;
+
+    /// <summary>
+    ///   Proves AreEqual and AreNotEqual( Double ) treat +Inf as equal only to +Inf, and reject a negative
+    ///   tolerance. Issue #398 item 3.4.
+    /// </summary>
+    [Test]
+    procedure AreEqual_Double_Infinity_And_Negative_Tolerance;
+
+    /// <summary>
+    ///   Proves AreEqual and AreNotEqual( Extended ) treat +Inf as equal only to +Inf, and reject a negative
+    ///   tolerance. Issue #398 item 3.4.
+    /// </summary>
+    [Test]
+    procedure AreEqual_Extended_Infinity_And_Negative_Tolerance;
+
+    /// <summary>
+    ///   Proves the failure messages of AreEqual( Currency ), DoesNotContain( string ), AreEqual( Cardinal ) and
+    ///   WillNotRaiseDescendant say what actually happened. Issue #398 item 3.5.
+    /// </summary>
+    [Test]
+    procedure Failure_Messages_Describe_The_Failure;
+
+    /// <summary>
+    ///   Proves AreEqual( TStrings ) passes for the same instance and accepts a duplicated ignoreLines entry.
+    ///   Issue #398 item 3.6.
+    /// </summary>
+    [Test]
+    procedure AreEqual_TStrings_Same_Instance_And_Duplicate_IgnoreLines;
+
+    /// <summary>
+    ///   Proves Contains and DoesNotContain( string ) both reject an empty substring, as StartsWith and EndsWith
+    ///   do. Issue #398 item 3.7.
+    /// </summary>
+    [Test]
+    procedure Contains_And_DoesNotContain_Reject_Empty_SubString;
+
+    /// <summary>
+    ///   Proves AreEqual( TStream ) restores both streams' positions and passes for the same instance.
+    /// </summary>
+    [Test]
+    procedure AreEqual_Stream_Restores_Positions_And_Accepts_Same_Instance;
+
+    /// <summary>
+    ///   Proves AreEqual( TStream ) fails, rather than looping for ever, for streams whose Read returns nothing
+    ///   short of their Size.
+    /// </summary>
+    [Test]
+    procedure AreEqual_Stream_Fails_When_Read_Returns_Nothing;
   end;
 
 implementation
@@ -429,10 +548,12 @@ uses
   System.Classes,
   System.Generics.Collections,
   System.Math,
+  System.Variants,
 {$ELSE}
   SysUtils,
   Classes,
   Math,
+  Variants,
 {$ENDIF}
   DUnitX.Exceptions,
   DUnitX.Assert;
@@ -460,8 +581,71 @@ type
   TestExceptionOne = class(Exception);
   TestExceptionTwo = class(Exception);
 
+  TAlwaysEqual = class(TObject)
+  public
+    function Equals(Obj : TObject) : Boolean; override;
+  end;
+
+  TMethodRaiser = class(TObject)
+  public
+    procedure RaiseFilerError;
+  end;
+
+  // Reports a Size but delivers no bytes, as a broken or exhausted source stream can.
+  TStreamThatReadsNothing = class(TStream)
+  protected
+    function GetSize : Int64; override;
+  public
+    function Read(var Buffer; Count : Longint) : Longint; override;
+    function Write(const Buffer; Count : Longint) : Longint; override;
+    function Seek(const Offset : Int64; Origin : TSeekOrigin) : Int64; override;
+  end;
+
   //Mask to override the default AssertEx in DUnitX.TestFramework
   Assert = class(DUnitX.Assert.Assert);
+
+// Runs AProc and returns the message of the ETestFailure it raised, or '' when it raised none. Any other exception
+// propagates, so an access violation or EConvertError inside an assertion still errors the calling test.
+function FailureMessage(const AProc : TProc) : string;
+begin
+  Result := '';
+  try
+    AProc;
+  except
+    on E : ETestFailure do
+      Result := E.Message;
+  end;
+end;
+
+function TAlwaysEqual.Equals(Obj : TObject) : Boolean;
+begin
+  Result := True;
+end;
+
+procedure TMethodRaiser.RaiseFilerError;
+begin
+  raise EFilerError.Create('Test');
+end;
+
+function TStreamThatReadsNothing.GetSize : Int64;
+begin
+  Result := 10;
+end;
+
+function TStreamThatReadsNothing.Read(var Buffer; Count : Longint) : Longint;
+begin
+  Result := 0;
+end;
+
+function TStreamThatReadsNothing.Write(const Buffer; Count : Longint) : Longint;
+begin
+  Result := 0;
+end;
+
+function TStreamThatReadsNothing.Seek(const Offset : Int64; Origin : TSeekOrigin) : Int64;
+begin
+  Result := 0;
+end;
 
 procedure TTestsAssert.Fail_Throws_ETestFailure_Exception;
 begin
@@ -673,7 +857,7 @@ begin
         begin
           raise Exception.Create('Test');
         end);
-    end);
+    end, ETestFailure);
 end;
 
 procedure TTestsAssert.WillNotRaiseWithMessage_NilExceptionParam_MatchingExceptionMessage_WillRaise;
@@ -686,7 +870,7 @@ begin
         begin
           raise Exception.Create('Test');
         end, nil, 'Test');
-    end);
+    end, ETestFailure);
 end;
 
 procedure TTestsAssert.WillNotRaiseWithMessage_NilExceptionParam_NonMatchingExceptionMessage_WillNotRaise;
@@ -712,7 +896,7 @@ begin
         begin
           raise TestExceptionOne.Create('Test');
         end, TestExceptionOne);
-    end);
+    end, ETestFailure);
 end;
 
 procedure TTestsAssert.WillNotRaiseWithMessage_MatchingExceptionParam_MatchingExceptionMessage_WillRaise;
@@ -725,7 +909,7 @@ begin
         begin
           raise TestExceptionOne.Create('Test');
         end, TestExceptionOne, 'Test');
-    end);
+    end, ETestFailure);
 end;
 
 procedure TTestsAssert.WillNotRaiseWithMessage_MatchingExceptionParam_NonMatchingExceptionMessage_WillNotRaise;
@@ -1730,6 +1914,310 @@ begin
 end;
 
 {$ENDIF}
+
+procedure TTestsAssert.IsEmpty_Variant_Fails_Only_When_Value_Is_Assigned;
+var
+  value : Variant;
+begin
+  value := Unassigned;
+  Assert.AreEqual('', FailureMessage(procedure begin Assert.IsEmpty(value) end), 'IsEmpty( Unassigned ) failed');
+  value := Null;
+  Assert.AreEqual('', FailureMessage(procedure begin Assert.IsEmpty(value) end), 'IsEmpty( Null ) failed');
+  value := 'abc';
+  Assert.AreNotEqual('', FailureMessage(procedure begin Assert.IsEmpty(value) end), 'IsEmpty( ''abc'' ) passed');
+end;
+
+procedure TTestsAssert.IsNotEmpty_Variant_Fails_When_Value_Is_Null;
+var
+  value : Variant;
+begin
+  value := Null;
+  Assert.AreNotEqual('', FailureMessage(procedure begin Assert.IsNotEmpty(value) end), 'IsNotEmpty( Null ) passed');
+  value := Unassigned;
+  Assert.AreNotEqual('', FailureMessage(procedure begin Assert.IsNotEmpty(value) end), 'IsNotEmpty( Unassigned ) passed');
+  value := 'abc';
+  Assert.AreEqual('', FailureMessage(procedure begin Assert.IsNotEmpty(value) end), 'IsNotEmpty( ''abc'' ) failed');
+end;
+
+procedure TTestsAssert.WillNotRaiseDescendant_Method_Fails_When_Descendant_Raised;
+var
+  raiser : TMethodRaiser;
+begin
+  raiser := TMethodRaiser.Create;
+  try
+    Assert.AreNotEqual('', FailureMessage(
+      procedure
+      begin
+        Assert.WillNotRaiseDescendant(raiser.RaiseFilerError, EStreamError);
+      end), 'WillNotRaiseDescendant( TTestMethod ) passed when a descendant of EStreamError was raised');
+  finally
+    raiser.Free;
+  end;
+end;
+
+procedure TTestsAssert.AreEqual_T_Double_Fails_When_One_Value_Is_NaN;
+var
+  nanValue : Double;
+begin
+  nanValue := NaN;
+  Assert.AreNotEqual('', FailureMessage(procedure begin Assert.AreEqual<Double>(1.0, nanValue) end), 'AreEqual<Double>( 1, NaN ) passed');
+  Assert.AreNotEqual('', FailureMessage(procedure begin Assert.AreEqual<Double>(nanValue, 1.0) end), 'AreEqual<Double>( NaN, 1 ) passed');
+  Assert.AreEqual('', FailureMessage(procedure begin Assert.AreNotEqual<Double>(1.0, nanValue) end), 'AreNotEqual<Double>( 1, NaN ) failed');
+  Assert.AreNotEqual('', FailureMessage(
+    procedure
+    begin
+      Assert.AreEqual<Double>(TArray<Double>.Create(1.0, 2.0), TArray<Double>.Create(1.0, nanValue));
+    end), 'AreEqual<Double>( TArray ) passed with a NaN element');
+end;
+
+procedure TTestsAssert.Contains_T_Double_Does_Not_Match_NaN;
+var
+  nanValue : Double;
+begin
+  nanValue := NaN;
+  Assert.AreNotEqual('', FailureMessage(procedure begin Assert.Contains<Double>([1.0, 2.0], nanValue) end), 'Contains<Double> matched NaN');
+  Assert.AreEqual('', FailureMessage(procedure begin Assert.DoesNotContain<Double>([1.0, 2.0], nanValue) end), 'DoesNotContain<Double> matched NaN');
+end;
+
+procedure TTestsAssert.WillRaise_Family_Does_Not_Swallow_A_Failed_Assertion;
+const
+  INNER_MSG = 'inner failure';
+begin
+  Assert.WillRaiseWithMessage(
+    procedure
+    begin
+      Assert.WillRaiseAny(procedure begin Assert.Fail(INNER_MSG) end);
+    end, ETestFailure, INNER_MSG, 'WillRaiseAny swallowed a failed assertion');
+  Assert.WillRaiseWithMessage(
+    procedure
+    begin
+      Assert.WillRaise(procedure begin Assert.Fail(INNER_MSG) end);
+    end, ETestFailure, INNER_MSG, 'WillRaise swallowed a failed assertion');
+  Assert.WillRaiseWithMessage(
+    procedure
+    begin
+      Assert.WillRaiseDescendant(procedure begin Assert.Fail(INNER_MSG) end, Exception);
+    end, ETestFailure, INNER_MSG, 'WillRaiseDescendant( Exception ) swallowed a failed assertion');
+  Assert.WillRaiseWithMessage(
+    procedure
+    begin
+      Assert.WillRaiseWithMessage(procedure begin Assert.Fail(INNER_MSG) end);
+    end, ETestFailure, INNER_MSG, 'WillRaiseWithMessage swallowed a failed assertion');
+{$IFDEF SUPPORTS_REGEX}
+  Assert.WillRaiseWithMessage(
+    procedure
+    begin
+      Assert.WillRaiseWithMessageRegex(procedure begin Assert.Fail(INNER_MSG) end);
+    end, ETestFailure, INNER_MSG, 'WillRaiseWithMessageRegex swallowed a failed assertion');
+{$ENDIF}
+end;
+
+procedure TTestsAssert.WillRaise_Family_Does_Not_Swallow_Pass_Or_Ignore;
+begin
+  Assert.WillRaiseWithMessage(
+    procedure
+    begin
+      Assert.WillRaiseAny(procedure begin Assert.Pass('inner pass') end);
+    end, ETestPass, 'inner pass', 'WillRaiseAny swallowed Assert.Pass');
+  Assert.WillRaiseWithMessage(
+    procedure
+    begin
+      Assert.WillRaiseDescendant(procedure begin Assert.Ignore('inner ignore') end, Exception);
+    end, ETestIgnored, 'inner ignore', 'WillRaiseDescendant( Exception ) swallowed Assert.Ignore');
+end;
+
+procedure TTestsAssert.WillNotRaise_User_Message_Is_Not_A_Format_String;
+const
+  USER_MSG = 'coverage 100% %s';
+var
+  msg : string;
+begin
+  msg := FailureMessage(
+    procedure
+    begin
+      Assert.WillNotRaiseAny(procedure begin raise Exception.Create('boom') end, USER_MSG);
+    end);
+  Assert.Contains(msg, USER_MSG, False, 'WillNotRaiseAny lost or reformatted the user message');
+
+  msg := FailureMessage(
+    procedure
+    begin
+      Assert.WillNotRaise(procedure begin raise Exception.Create('boom') end, nil, USER_MSG);
+    end);
+  Assert.Contains(msg, USER_MSG, False, 'WillNotRaise( nil ) lost or reformatted the user message');
+end;
+
+procedure TTestsAssert.WillNotRaise_Nil_Class_Fails_Readably;
+var
+  msg : string;
+begin
+  msg := FailureMessage(
+    procedure
+    begin
+      Assert.WillNotRaiseDescendant(procedure begin raise EFilerError.Create('boom') end, nil);
+    end);
+  Assert.Contains(msg, 'EFilerError', False, 'WillNotRaiseDescendant( nil ) did not name the raised class');
+
+  msg := FailureMessage(
+    procedure
+    begin
+      Assert.WillNotRaiseWithMessage(procedure begin raise EFilerError.Create('boom') end, nil, 'boom');
+    end);
+  Assert.Contains(msg, 'EFilerError', False, 'WillNotRaiseWithMessage( nil ) did not name the raised class');
+end;
+
+procedure TTestsAssert.AreSame_Object_Compares_Identity;
+var
+  first, second : TAlwaysEqual;
+begin
+  first := TAlwaysEqual.Create;
+  second := TAlwaysEqual.Create;
+  try
+    Assert.AreNotEqual('', FailureMessage(procedure begin Assert.AreSame(first, second) end),
+      'AreSame passed for two instances whose Equals is overridden');
+    Assert.AreEqual('', FailureMessage(procedure begin Assert.AreNotSame(first, second) end),
+      'AreNotSame failed for two distinct instances');
+    Assert.AreEqual('', FailureMessage(procedure begin Assert.AreSame(first, first) end), 'AreSame failed for one instance');
+    Assert.AreNotEqual('', FailureMessage(procedure begin Assert.AreSame(TObject(nil), first) end), 'AreSame( nil, obj ) passed');
+    Assert.AreEqual('', FailureMessage(procedure begin Assert.AreNotSame(TObject(nil), first) end), 'AreNotSame( nil, obj ) failed');
+  finally
+    second.Free;
+    first.Free;
+  end;
+end;
+
+procedure TTestsAssert.AreEqual_Double_Infinity_And_Negative_Tolerance;
+var
+  posInf, negInf, one, two, zeroTol, negTol : Double;
+  msg : string;
+begin
+  posInf := Infinity;
+  negInf := NegInfinity;
+  one := 1;
+  two := 2;
+  zeroTol := 0;
+  negTol := -0.5;
+  Assert.AreEqual('', FailureMessage(procedure begin Assert.AreEqual(posInf, posInf, zeroTol) end), 'AreEqual( Inf, Inf ) failed');
+  Assert.AreNotEqual('', FailureMessage(procedure begin Assert.AreNotEqual(posInf, posInf, zeroTol) end), 'AreNotEqual( Inf, Inf ) passed');
+  Assert.AreNotEqual('', FailureMessage(procedure begin Assert.AreEqual(posInf, negInf, zeroTol) end), 'AreEqual( Inf, -Inf ) passed');
+  Assert.AreNotEqual('', FailureMessage(procedure begin Assert.AreNotEqual(one, two, negTol) end),
+    'AreNotEqual accepted a negative tolerance');
+  msg := FailureMessage(procedure begin Assert.AreEqual(one, one, negTol) end);
+  Assert.Contains(msg, 'negative', False, 'AreEqual accepted a negative tolerance');
+end;
+
+procedure TTestsAssert.AreEqual_Extended_Infinity_And_Negative_Tolerance;
+var
+  posInf, negInf, one, two, zeroTol, negTol : Extended;
+  msg : string;
+begin
+  posInf := Infinity;
+  negInf := NegInfinity;
+  one := 1;
+  two := 2;
+  zeroTol := 0;
+  negTol := -0.5;
+  Assert.AreEqual('', FailureMessage(procedure begin Assert.AreEqual(posInf, posInf, zeroTol) end), 'AreEqual( Inf, Inf ) failed');
+  Assert.AreNotEqual('', FailureMessage(procedure begin Assert.AreNotEqual(posInf, posInf, zeroTol) end), 'AreNotEqual( Inf, Inf ) passed');
+  Assert.AreNotEqual('', FailureMessage(procedure begin Assert.AreEqual(posInf, negInf, zeroTol) end), 'AreEqual( Inf, -Inf ) passed');
+  Assert.AreNotEqual('', FailureMessage(procedure begin Assert.AreNotEqual(one, two, negTol) end),
+    'AreNotEqual accepted a negative tolerance');
+  msg := FailureMessage(procedure begin Assert.AreEqual(one, one, negTol) end);
+  Assert.Contains(msg, 'negative', False, 'AreEqual accepted a negative tolerance');
+end;
+
+procedure TTestsAssert.Failure_Messages_Describe_The_Failure;
+var
+  currencyOne, currencyTwo : Currency;
+  cardinalMax, cardinalZero : Cardinal;
+  msg : string;
+begin
+  currencyOne := 1;
+  currencyTwo := 2;
+  msg := FailureMessage(procedure begin Assert.AreEqual(currencyOne, currencyTwo) end);
+  Assert.StartsWith('Expected [1] but got [2]', msg, False, 'AreEqual( Currency ) message: ' + msg);
+
+  msg := FailureMessage(procedure begin Assert.DoesNotContain('abc', 'b', False) end);
+  Assert.Contains(msg, '[abc] contains [b]', False, 'DoesNotContain message: ' + msg);
+
+  cardinalMax := High(Cardinal);
+  cardinalZero := 0;
+  msg := FailureMessage(procedure begin Assert.AreEqual(cardinalMax, cardinalZero) end);
+  Assert.Contains(msg, '4294967295', False, 'AreEqual( Cardinal ) message: ' + msg);
+
+  msg := FailureMessage(
+    procedure
+    begin
+      Assert.WillNotRaiseDescendant(procedure begin raise EFilerError.Create('boom') end, EStreamError);
+    end);
+  Assert.Contains(msg, 'EFilerError', False, 'WillNotRaiseDescendant message: ' + msg);
+end;
+
+procedure TTestsAssert.AreEqual_TStrings_Same_Instance_And_Duplicate_IgnoreLines;
+var
+  expected, actual : TStringList;
+begin
+  expected := TStringList.Create;
+  actual := TStringList.Create;
+  try
+    expected.Add('a');
+    expected.Add('b');
+    actual.Add('a');
+    actual.Add('c');
+    Assert.AreEqual('', FailureMessage(procedure begin Assert.AreEqual(expected, expected) end),
+      'AreEqual( TStrings ) failed for the same instance');
+    Assert.AreEqual('', FailureMessage(procedure begin Assert.AreEqual(expected, actual, [2, 2]) end),
+      'AreEqual( TStrings ) failed with a duplicated ignoreLines entry');
+  finally
+    actual.Free;
+    expected.Free;
+  end;
+end;
+
+procedure TTestsAssert.Contains_And_DoesNotContain_Reject_Empty_SubString;
+var
+  msg : string;
+begin
+  msg := FailureMessage(procedure begin Assert.Contains('abc', '', False) end);
+  Assert.Contains(msg, 'cannot be empty', False, 'Contains( '''' ) message: ' + msg);
+  msg := FailureMessage(procedure begin Assert.DoesNotContain('abc', '', False) end);
+  Assert.Contains(msg, 'cannot be empty', False, 'DoesNotContain( '''' ) message: ' + msg);
+end;
+
+procedure TTestsAssert.AreEqual_Stream_Restores_Positions_And_Accepts_Same_Instance;
+var
+  first, second : TStringStream;
+begin
+  first := TStringStream.Create('abcdef');
+  second := TStringStream.Create('abcdef');
+  try
+    first.Position := 2;
+    second.Position := 3;
+    Assert.AreEqual(TStream(first), TStream(second));
+    Assert.AreEqual(Int64(2), first.Position, 'expected stream position not restored');
+    Assert.AreEqual(Int64(3), second.Position, 'actual stream position not restored');
+    Assert.AreEqual('', FailureMessage(procedure begin Assert.AreEqual(TStream(first), TStream(first)) end),
+      'AreEqual( TStream ) failed for the same instance');
+  finally
+    second.Free;
+    first.Free;
+  end;
+end;
+
+procedure TTestsAssert.AreEqual_Stream_Fails_When_Read_Returns_Nothing;
+var
+  first, second : TStream;
+begin
+  first := TStreamThatReadsNothing.Create;
+  second := TStreamThatReadsNothing.Create;
+  try
+    Assert.AreNotEqual('', FailureMessage(procedure begin Assert.AreEqual(first, second) end),
+      'AreEqual( TStream ) passed for streams that delivered no bytes');
+  finally
+    second.Free;
+    first.Free;
+  end;
+end;
 
 initialization
   TDUnitX.RegisterTestFixture(TTestsAssert);

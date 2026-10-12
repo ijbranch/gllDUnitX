@@ -66,7 +66,7 @@ begin
   nest := 0;
   result := -1;
 {$IFNDEF NEXTGEN}
-  while index < Length(arg) do
+  while index <= Length(arg) do
   begin
     case arg[index] of
       ',' :
@@ -77,7 +77,7 @@ begin
       '"' :
         begin
           Inc(index);
-          while (index < Length(arg)) and (arg[index] <> '"') do
+          while (index <= Length(arg)) and (arg[index] <> '"') do
             Inc(index);
 
         end;
@@ -125,7 +125,7 @@ begin
   else
   begin
     result := Trim(Copy(arg, index, Length(arg)));
-    index := Length(arg);
+    index := Length(arg) + 1;
   end;
 {$ELSE}
   if sep > -1 then
@@ -153,7 +153,7 @@ begin
     begin
 {$IFNDEF NEXTGEN}
       i := 1;
-      while i < Length(arg) do
+      while i <= Length(arg) do
 {$ELSE}
       i := 0;
       while i < arg.Length - 1 do

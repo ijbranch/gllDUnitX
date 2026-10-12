@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -58,6 +58,7 @@ type
     class var fTestIgnored : ExceptClass;
     class procedure CheckExceptionClass(E : Exception; const exceptionClass : ExceptClass);
     class procedure CheckExceptionClassDescendant(E : Exception; const exceptionClass : ExceptClass);
+    class function IsUnrequestedTestOutcome(E : Exception; const exceptionClass : ExceptClass) : boolean;
   protected
     class function StreamsEqual(const stream1, stream2 : TStream) : boolean;
     class function AddLineBreak(const msg : string) : string;
@@ -411,6 +412,14 @@ end;
 {$ENDIF}
 {$ENDIF}
 
+function ObjectToString(const obj : TObject) : string;
+begin
+  if obj = nil then
+    Result := 'nil'
+  else
+    Result := obj.ToString;
+end;
+
 { Assert }
 
 class procedure Assert.DoAssert;
@@ -422,7 +431,12 @@ end;
 class procedure Assert.AreEqual(const expected, actual, tolerance : Extended; const message : string);
 begin
   DoAssert;
-  if not {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(expected, actual, tolerance) then
+  if tolerance < 0 then
+    FailFmt(SNegativeTolerance, [tolerance, message], ReturnAddress);
+  // expected = actual first: SameValue(Inf, Inf) is False (Inf - Inf is NaN). Infinities equal only themselves:
+  // SameValue(Inf, -Inf) is True because its derived epsilon is itself infinite. NaN still equals nothing.
+  if not ((expected = actual) or ((not IsInfinite(expected)) and (not IsInfinite(actual)) and
+    {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(expected, actual, tolerance))) then
     FailFmt(SUnexpectedErrorExt, [expected, actual, message], ReturnAddress);
 end;
 
@@ -455,12 +469,13 @@ end;
 //Delphi 2010 and XE compiler bug breaks this
 class procedure Assert.AreEqual<T>(const expected, actual : T; const message : string);
 var
-  comparer : IComparer<T>;
+  comparer : IEqualityComparer<T>;
   expectedValue, actualValue : TValue;
 begin
   DoAssert;
-  comparer := TComparer<T>.Default;
-  if comparer.Compare(actual, expected) <> 0 then
+  // An equality comparer, not TComparer: TComparer<Double> reports NaN as equal to everything.
+  comparer := TEqualityComparer<T>.Default;
+  if not comparer.Equals(actual, expected) then
   begin
     expectedValue := TValue.From<T>(expected);
     actualValue := TValue.From<T>(actual);
@@ -471,7 +486,7 @@ end;
 class procedure Assert.AreEqual<T>(const expected, actual : TArray<T>; const message : string = '');
 var
   i : integer;
-  comparer : IComparer<T>;
+  comparer : IEqualityComparer<T>;
   expectedValue, actualValue : TValue;
 begin
   DoAssert;
@@ -479,10 +494,10 @@ begin
     FailFmt(SArraysHaveDifferentLength, [Length(expected), Length(actual), message], ReturnAddress)
   else
   begin
-    comparer := TComparer<T>.Default;
+    comparer := TEqualityComparer<T>.Default;
     for i := 0 to High(expected) do
     begin
-      if comparer.Compare(expected[i], actual[i]) <> 0 then
+      if not comparer.Equals(expected[i], actual[i]) then
       begin
         expectedValue := TValue.From<T>(expected[i]);
         actualValue := TValue.From<T>(actual[i]);
@@ -543,13 +558,17 @@ class procedure Assert.AreEqual(const expected, actual : cardinal; const message
 begin
   DoAssert;
   if expected <> actual then
-    FailFmt(SUnexpectedErrorInt, [expected, actual, message], ReturnAddress);
+    FailFmt(SUnexpectedErrorStr, [UIntToStr(expected), UIntToStr(actual), message], ReturnAddress);
 end;
 
 class procedure Assert.AreEqual(const expected, actual, tolerance : Double; const message : string);
 begin
   DoAssert;
-  if not {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(expected, actual, tolerance) then
+  if tolerance < 0 then
+    FailFmt(SNegativeTolerance, [tolerance, message], ReturnAddress);
+  // See AreEqual(Extended): expected = actual first for Inf, and infinities equal only themselves.
+  if not ((expected = actual) or ((not IsInfinite(expected)) and (not IsInfinite(actual)) and
+    {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(expected, actual, tolerance))) then
     FailFmt(SUnexpectedErrorDbl, [expected, actual, message], ReturnAddress);
 end;
 
@@ -573,7 +592,7 @@ class procedure Assert.AreEqual(const expected, actual : Currency; const message
 begin
   DoAssert;
   if expected <> actual then
-    FailFmt(SEqualsErrorExt, [expected, actual, message], ReturnAddress);
+    FailFmt(SUnexpectedErrorExt, [expected, actual, message], ReturnAddress);
 end;
 
 class procedure Assert.AreEqualMemory(const expected : Pointer; const actual : Pointer; const size : Cardinal; const message : string);
@@ -586,7 +605,11 @@ end;
 class procedure Assert.AreNotEqual(const expected, actual, tolerance : Extended; const message : string);
 begin
   DoAssert;
-  if {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(expected, actual, tolerance) then
+  if tolerance < 0 then
+    FailFmt(SNegativeTolerance, [tolerance, message], ReturnAddress);
+  // See AreEqual(Extended): expected = actual first for Inf, and infinities equal only themselves.
+  if (expected = actual) or ((not IsInfinite(expected)) and (not IsInfinite(actual)) and
+    {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(expected, actual, tolerance)) then
     FailFmt(SEqualsErrorExt, [expected, actual, message], ReturnAddress);
 end;
 
@@ -634,12 +657,12 @@ end;
 //Delphi 2010 and XE compiler bug breaks this
 class procedure Assert.AreNotEqual<T>(const expected, actual : T; const message : string);
 var
-  comparer : IComparer<T>;
+  comparer : IEqualityComparer<T>;
   expectedValue, actualValue : TValue;
 begin
   DoAssert;
-  comparer := TComparer<T>.Default;
-  if comparer.Compare(actual, expected) = 0 then
+  comparer := TEqualityComparer<T>.Default;
+  if comparer.Equals(actual, expected) then
   begin
     expectedValue := TValue.From<T>(expected);
     actualValue := TValue.From<T>(actual);
@@ -682,7 +705,11 @@ end;
 class procedure Assert.AreNotEqual(const expected, actual, tolerance : double; const message : string);
 begin
   DoAssert;
-  if {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(expected, actual, tolerance) then
+  if tolerance < 0 then
+    FailFmt(SNegativeTolerance, [tolerance, message], ReturnAddress);
+  // See AreEqual(Extended): expected = actual first for Inf, and infinities equal only themselves.
+  if (expected = actual) or ((not IsInfinite(expected)) and (not IsInfinite(actual)) and
+    {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(expected, actual, tolerance)) then
     FailFmt(SEqualsErrorDbl, [expected, actual, message], ReturnAddress);
 end;
 
@@ -696,8 +723,8 @@ end;
 class procedure Assert.AreNotSame(const expected, actual : TObject; const message : string);
 begin
   DoAssert;
-  if expected.Equals(actual) then
-    FailFmt(SEqualsErrorObj, [expected.ToString, actual.ToString, message], ReturnAddress);
+  if expected = actual then
+    FailFmt(SEqualsErrorObj, [ObjectToString(expected), ObjectToString(actual), message], ReturnAddress);
 end;
 
 class procedure Assert.AreNotSame(const expected, actual : IInterface; const message : string);
@@ -717,8 +744,8 @@ end;
 class procedure Assert.AreSame(const expected, actual : TObject; const message : string);
 begin
   DoAssert;
-  if not expected.Equals(actual) then
-    FailFmt(SNotEqualErrorObj, [expected.ToString, actual.ToString, message], ReturnAddress);
+  if expected <> actual then
+    FailFmt(SNotEqualErrorObj, [ObjectToString(expected), ObjectToString(actual), message], ReturnAddress);
 end;
 
 {$IFDEF DELPHI_XE_UP}
@@ -726,13 +753,13 @@ end;
 class procedure Assert.Contains<T>(const list : IEnumerable<T>; const value : T; const message : string);
 var
   o : T;
-  comparer : IComparer<T>;
+  comparer : IEqualityComparer<T>;
 begin
   DoAssert;
-  comparer := TComparer<T>.Default;
+  comparer := TEqualityComparer<T>.Default;
   for o in list do
   begin
-    if comparer.Compare(o, value) = 0 then
+    if comparer.Equals(o, value) then
       exit;
   end;
 
@@ -742,13 +769,13 @@ end;
 class procedure Assert.Contains<T>(const arr : array of T; const value : T; const message : string = '');
 var
   o : T;
-  comparer : IComparer<T>;
+  comparer : IEqualityComparer<T>;
 begin
   DoAssert;
-  comparer := TComparer<T>.Default;
+  comparer := TEqualityComparer<T>.Default;
   for o in arr do
   begin
-    if comparer.Compare(o, value) = 0 then
+    if comparer.Equals(o, value) then
       exit;
   end;
 
@@ -761,13 +788,13 @@ end;
 class procedure Assert.DoesNotContain<T>(const list : IEnumerable<T>; const value : T; const message : string);
 var
   o : T;
-  comparer : IComparer<T>;
+  comparer : IEqualityComparer<T>;
 begin
   DoAssert;
-  comparer := TComparer<T>.Default;
+  comparer := TEqualityComparer<T>.Default;
   for o in list do
   begin
-    if comparer.Compare(o, value) = 0 then
+    if comparer.Equals(o, value) then
       FailFmt(SValueInList, [TValue.From<T>(value).ToString, message], ReturnAddress);
   end;
 end;
@@ -775,13 +802,13 @@ end;
 class procedure Assert.DoesNotContain<T>(const arr : array of T; const value : T; const message : string = '');
 var
   o : T;
-  comparer : IComparer<T>;
+  comparer : IEqualityComparer<T>;
 begin
   DoAssert;
-  comparer := TComparer<T>.Default;
+  comparer := TEqualityComparer<T>.Default;
   for o in arr do
   begin
-    if comparer.Compare(o, value) = 0 then
+    if comparer.Equals(o, value) then
       FailFmt(SValueInList, [TValue.From<T>(value).ToString, message], ReturnAddress);
   end;
 end;
@@ -827,23 +854,38 @@ var
   Buffer1 : array[0..BlockSize - 1] of byte;
   Buffer2 : array[0..BlockSize - 1] of byte;
   BufferLen : integer;
+  remaining, position1, position2 : Int64;
 begin
+  if stream1 = stream2 then
+    Exit(True);
+
   Result := False;
 
   if stream1.Size = stream2.Size then
   begin
-    stream1.Position := 0;
-    stream2.Position := 0;
+    position1 := stream1.Position;
+    position2 := stream2.Position;
+    try
+      stream1.Position := 0;
+      stream2.Position := 0;
 
-    while stream1.Position < stream1.Size do
-    begin
-      BufferLen := stream1.Read(Buffer1, BlockSize);
-      stream2.Read(Buffer2, BlockSize);
-      if not CompareMem(@Buffer1, @Buffer2, BufferLen) then
-        exit;
+      // Compare only the bytes actually read, and treat a stream that stops delivering short of its Size as
+      // unequal rather than looping for ever.
+      remaining := stream1.Size;
+      while remaining > 0 do
+      begin
+        BufferLen := stream1.Read(Buffer1, BlockSize);
+        if (BufferLen <= 0) or (stream2.Read(Buffer2, BufferLen) <> BufferLen) or
+          (not CompareMem(@Buffer1, @Buffer2, BufferLen)) then
+          exit;
+        Dec(remaining, BufferLen);
+      end;
+
+      Result := True;
+    finally
+      stream1.Position := position1;
+      stream2.Position := position2;
     end;
-
-    Result := True;
   end;
 end;
 
@@ -871,9 +913,8 @@ begin
     else
       msg := msg + parent.ClassName;
     msg := msg + '.';
-    if True then
-      if message <> '' then
-        msg := msg + ' ' + message;
+    if message <> '' then
+      msg := msg + ' ' + message;
 
     Fail(msg, ReturnAddress);
   end;
@@ -903,7 +944,7 @@ end;
 class procedure Assert.IsEmpty(const value : Variant; const message : string);
 begin
   DoAssert;
-  if VarIsEmpty(value) or VarIsNull(value) then
+  if not (VarIsEmpty(value) or VarIsNull(value)) then
     FailFmt(SVarNotEmpty, [message], ReturnAddress);
 end;
 
@@ -969,7 +1010,7 @@ end;
 class procedure Assert.IsNotEmpty(const value : Variant; const message : string);
 begin
   DoAssert;
-  if VarIsEmpty(value) then
+  if VarIsEmpty(value) or VarIsNull(value) then
     FailFmt(SVarEmpty, [message], ReturnAddress);
 end;
 
@@ -1170,10 +1211,11 @@ begin
   except
     on e : TObject do                   // For those who throw exceptions not descending from Exception.
     begin
+      // msg is an argument, never part of the format string, so '%' in it is literal.
       if e is Exception then
-        FailFmt(SUnexpectedException + AddLineBreak(msg), [e.ClassName, exception(e).message], ReturnAddress)
+        FailFmt(SUnexpectedException + '%s', [e.ClassName, exception(e).message, AddLineBreak(msg)], ReturnAddress)
       else
-        FailFmt(SUnexpectedExceptionAlt + AddLineBreak(msg), [e.ClassName], ReturnAddress);
+        FailFmt(SUnexpectedExceptionAlt + '%s', [e.ClassName, AddLineBreak(msg)], ReturnAddress);
     end;
   end;
 end;
@@ -1199,17 +1241,18 @@ begin
       if exceptionClass <> nil then
       begin
         if e is exceptionClass then
-          Fail(SMethodRaisedException + exceptionClass.ClassName + sLineBreak + e.Message + AddLineBreak(msg), ReturnAddress);
+          FailFmt(SMethodRaisedExceptionAlt, [e.ClassName, exceptionClass.ClassName, e.message, AddLineBreak(msg)], ReturnAddress);
       end
       else
-        FailFmt(SMethodRaisedExceptionAlt, [e.ClassName, exceptionClass.ClassName, e.message, AddLineBreak(msg)], ReturnAddress);
+        // nil means any exception, as in WillNotRaise.
+        FailFmt(SUnexpectedException + '%s', [e.ClassName, e.message, AddLineBreak(msg)], ReturnAddress);
     end;
   end;
 end;
 
 class procedure Assert.WillNotRaiseDescendant(const AMethod : TTestMethod; const exceptionClass : ExceptClass; const msg : string);
 begin
-  Assert.WillNotRaise(
+  Assert.WillNotRaiseDescendant(
     procedure
     begin
       AMethod;
@@ -1227,7 +1270,7 @@ begin
     begin
       if ((exceptionMsg = '') or SameStr(e.Message, exceptionMsg)) and
         (((exceptionClass <> nil) and (e.ClassType = exceptionClass)) or (exceptionClass = nil)) then
-        FailFmt(SMethodRaisedExceptionMessage, [exceptionClass.ClassName, e.Message, AddLineBreak(msg)], ReturnAddress);
+        FailFmt(SMethodRaisedExceptionMessage, [e.ClassName, e.Message, AddLineBreak(msg)], ReturnAddress);
     end;
   end;
 end;
@@ -1250,6 +1293,8 @@ begin
   except
     on E : Exception do
     begin
+      if IsUnrequestedTestOutcome(E, exceptionClass) then
+        raise;
       CheckExceptionClass(e, exceptionClass);
       Exit;
     end;
@@ -1271,7 +1316,7 @@ begin
           Fail(SMethodRaisedException + exceptionClass.ClassName + sLineBreak + e.Message + AddLineBreak(msg), ReturnAddress);
       end
       else
-        FailFmt(SUnexpectedException, [e.ClassName, e.message], ReturnAddress);
+        FailFmt(SUnexpectedException + '%s', [e.ClassName, e.message, AddLineBreak(msg)], ReturnAddress);
     end;
   end;
 end;
@@ -1294,6 +1339,8 @@ begin
   except
     on E : Exception do
     begin
+      if IsUnrequestedTestOutcome(E, nil) then
+        raise;
       Exit;
     end;
   end;
@@ -1318,6 +1365,8 @@ begin
   except
     on E : Exception do
     begin
+      if IsUnrequestedTestOutcome(E, exceptionClass) then
+        raise;
       CheckExceptionClassDescendant(e, exceptionClass);
       Exit;
     end;
@@ -1343,9 +1392,11 @@ begin
   except
     on E : Exception do
     begin
+      if IsUnrequestedTestOutcome(E, exceptionClass) then
+        raise;
       CheckExceptionClass(E, exceptionClass);
       if (exceptionMsg <> '') and (not SameStr(E.Message, exceptionMsg)) then
-        FailFmt(SUnexpectedExceptionMessage, [E.ClassName, E.Message, exceptionMsg, msg]);
+        FailFmt(SUnexpectedExceptionMessage, [E.ClassName, E.Message, exceptionMsg, msg], ReturnAddress);
       Exit;
     end;
   end;
@@ -1362,9 +1413,11 @@ begin
   except
     on E : Exception do
     begin
+      if IsUnrequestedTestOutcome(E, exceptionClass) then
+        raise;
       CheckExceptionClass(E, exceptionClass);
       if (exceptionMsgRegexPattern <> '') and (not PerformIsMatch(exceptionMsgRegexPattern, E.Message)) then
-        FailFmt(SUnexpectedExceptionMessage, [E.ClassName, E.Message, exceptionMsgRegexPattern, msg]);
+        FailFmt(SUnexpectedExceptionMessage, [E.ClassName, E.Message, exceptionMsgRegexPattern, msg], ReturnAddress);
       Exit;
     end;
   end;
@@ -1409,12 +1462,28 @@ begin
     FailFmt(SCheckExceptionClassDescError, [E.ClassName, exceptionClass.ClassName, E.message], ReturnAddress);
 end;
 
+class function Assert.IsUnrequestedTestOutcome(E : Exception; const exceptionClass : ExceptClass) : boolean;
+
+  function IsTestOutcome(const cls : TClass) : boolean;
+  begin
+    Result := ((fTestFailure <> nil) and cls.InheritsFrom(fTestFailure)) or
+      ((fTestPass <> nil) and cls.InheritsFrom(fTestPass)) or
+      ((fTestIgnored <> nil) and cls.InheritsFrom(fTestIgnored));
+  end;
+
+begin
+  // A failure, pass or ignore raised by an assertion inside the method under test is the test's own outcome, not
+  // the exception being tested for, unless the caller explicitly asked for one of DUnitX's own exceptions.
+  Result := IsTestOutcome(E.ClassType) and
+    not ((exceptionClass <> nil) and (exceptionClass.InheritsFrom(ETestFrameworkException) or IsTestOutcome(exceptionClass)));
+end;
+
 class procedure Assert.CheckExpectation(const EmptyExpectation, Message : string);
 begin
   DoAssert;
 
   if EmptyExpectation <> '' then
-    FailFmt(SCheckEmptyExpectation, [EmptyExpectation, Message]);
+    FailFmt(SCheckEmptyExpectation, [EmptyExpectation, Message], ReturnAddress);
 end;
 
 class procedure Assert.Contains(const theStrings : TStrings; const subString : string; const ignoreCase : boolean; const message : string);
@@ -1438,6 +1507,9 @@ end;
 class procedure Assert.Contains(const theString : string; const subString : string; const ignoreCase : boolean; const message : string);
 begin
   DoAssert;
+  // As StartsWith and EndsWith: every string trivially contains '', so an empty subString is a test mistake.
+  if subString = '' then
+    FailFmt(SStrCannotBeEmpty, [], ReturnAddress);
   if ignoreCase then
   begin
     if not {$IFDEF USE_NS}System.StrUtils.{$ENDIF}ContainsText(theString, subString) then
@@ -1460,13 +1532,15 @@ end;
 class procedure Assert.DoesNotContain(const theString, subString : string; const ignoreCase : boolean; const message : string);
 begin
   DoAssert;
+  if subString = '' then
+    FailFmt(SStrCannotBeEmpty, [], ReturnAddress);
   if ignoreCase then
   begin
     if {$IFDEF USE_NS}System.{$ENDIF}StrUtils.ContainsText(theString, subString) then
-      FailFmt(SStrDoesNotContain, [theString, subString, message], ReturnAddress);
+      FailFmt(SStrContains, [theString, subString, message], ReturnAddress);
   end
   else if {$IFDEF USE_NS}System.{$ENDIF}StrUtils.ContainsStr(theString, subString) then
-    FailFmt(SStrDoesNotContain, [theString, subString, message], ReturnAddress);
+    FailFmt(SStrContains, [theString, subString, message], ReturnAddress);
 end;
 
 class procedure Assert.EndsWith(const subString : string; const theString : string; const ignoreCase : boolean; const message : string);
@@ -1580,14 +1654,16 @@ var
   ignoreLinesDict : TDictionary<Integer, Boolean>;
 begin
   DoAssert;
-  IsTrue(expected <> actual, message);
+  // The same instance is identical, so equal.
+  if expected = actual then
+    Exit;
   ignoreLinesDict := TDictionary<Integer, Boolean>.Create;
   try
     if (Length(ignoreLines) > 0) then
     begin
       for index := 0 to Length(ignoreLines) - 1 do
       begin
-        ignoreLinesDict.Add(ignoreLines[index], true);
+        ignoreLinesDict.AddOrSetValue(ignoreLines[index], true);
       end;
     end;
 

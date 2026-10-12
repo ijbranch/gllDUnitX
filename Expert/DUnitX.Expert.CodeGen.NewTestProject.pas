@@ -40,26 +40,20 @@ type
     rloFastMM5
   );
 
-  TTestProjectFile = class({$IFNDEF DELPHI_SEATTLE_UP}TNewProject{$ELSE}TNewProjectEx{$ENDIF})
+  TTestProjectFile = class(TNewProjectEx)
   private
     FReportLeakOptions : TReportLeakOptions;
   protected
     function NewProjectSource(const ProjectName : string) : IOTAFile; override;
   public
-    constructor Create(const ReportLeakOptions : TReportLeakOptions); overload;
-    constructor Create(const APersonality : string; const ReportLeakOptions : TReportLeakOptions); overload;
+    constructor Create(const ReportLeakOptions : TReportLeakOptions);
   end;
 
 implementation
 
 uses
   DUnitX.Expert.CodeGen.SourceFile,
-  DunitX.Expert.CodeGen.Templates,
-{$IFDEF USE_NS}
-  System.SysUtils;
-{$ELSE}
-  SysUtils;
-{$ENDIF}
+  DunitX.Expert.CodeGen.Templates;
 
 const
   REPORT_LEAK_DECLARATION : array[TReportLeakOptions] of string = ('', '  FastMM5,'#13#10'  DUnitX.MemoryLeakMonitor.FastMM5,'#13#10);
@@ -74,30 +68,9 @@ begin
   FReportLeakOptions := ReportLeakOptions;
 end;
 
-constructor TTestProjectFile.Create(const APersonality : string; const ReportLeakOptions : TReportLeakOptions);
-begin
-  Create(ReportLeakOptions);
-{$IFDEF DELPHI_SEATTLE_UP}
-  Personality := APersonality;
-{$ENDIF}
-end;
-
 function TTestProjectFile.NewProjectSource(const ProjectName : string) : IOTAFile;
-{$IFDEF DELPHI_SEATTLE_UP}
-var
-  TestProjectCode : string;
-{$ENDIF}
 begin
-{$IFNDEF DELPHI_SEATTLE_UP}
   result := TSourceFile.Create(STestDPR, [ProjectName, REPORT_LEAK_DECLARATION[FReportLeakOptions]]);
-{$ELSE}
-  if Personality.isEmpty or SameText(Personality, sDelphiPersonality) then
-    TestProjectCode := STestDPR
-  else if SameText(Personality, sCBuilderPersonality) then
-    TestProjectCode := STestCBPROJ;
-
-  result := TSourceFile.Create(TestProjectCode, [ProjectName, REPORT_LEAK_DECLARATION[FReportLeakOptions]]);
-{$ENDIF}
 end;
 
 end.

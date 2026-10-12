@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -25,20 +25,19 @@
 {***************************************************************************}
 
 unit DUnitX.Expert.CodeGen.NewProject;
-// This is done to Warnings that I can't control, as Embarcadero has
-// deprecated the functions, but due to design you are still required to
-// to implement.
-{$WARN SYMBOL_DEPRECATED OFF}
+
 interface
 
 {$I DUnitX.inc}
 
 uses
-{$IFDEF DELPHI_XE2_UP}
   PlatformAPI,
-{$ENDIF}
   ToolsAPI;
 
+// IOTAProjectCreator still requires GetOptionFileName, NewDefaultModule and NewOptionSource, which
+// Embarcadero has deprecated. Implementing them is not optional, so W1000 is silenced for these class
+// declarations only (the compiler reports it at each class header and when it closes the section).
+{$WARN SYMBOL_DEPRECATED OFF}
 type
   TNewProject = class abstract(TNotifierObject, IOTACreator, IOTAProjectCreator, IOTAProjectCreator80)
   protected
@@ -67,31 +66,18 @@ type
     property FileName : string read GetFileName write SetFileName;
   end;
 
-{$IFDEF DELPHIX_SEATTLE_UP}
+  // Delphi personality only (inherited GetProjectPersonality); Win32 and Win64 only.
   TNewProjectEx = class(TNewProject, IOTAProjectCreator160)
-  private
-    FPersonality : string;
   protected
-    function GetProjectPersonality : string; override;
-
     // IOTAProjectCreator160
     function GetPlatforms : TArray<string>;
     function GetFrameworkType : string;
     function GetPreferredPlatform : string;
     procedure SetInitialOptions(const NewProject : IOTAProject);
-  public
-    property Personality : string read FPersonality write FPersonality;
   end;
-{$ENDIF}
 
 implementation
-
-uses
-{$IFDEF USE_NS}
-  System.SysUtils;
-{$ELSE}
-  SysUtils;
-{$ENDIF}
+{$WARN SYMBOL_DEPRECATED DEFAULT}
 
 { TNewProject }
 
@@ -162,7 +148,6 @@ begin
   FFileName := Value;
 end;
 
-{$IFDEF DELPHIX_SEATTLE_UP}
 function TNewProjectEx.GetFrameworkType : string;
 begin
   Result := '';
@@ -170,12 +155,7 @@ end;
 
 function TNewProjectEx.GetPlatforms : TArray<string>;
 begin
-  if Personality = sDelphiPersonality then
-    Result := TArray<string>.Create(cWin32Platform, cWin64Platform, cOSX32Platform, cAndroidPlatform,
-      ciOSSimulatorPlatform{$IFDEF DELPHI_XE8_UP}, ciOSDevice32Platform, ciOSDevice64Platform{$ENDIF})
-  else
-    Result := TArray<string>.Create(cWin32Platform, cWin64Platform, cOSX32Platform, cAndroidPlatform{$IFDEF DELPHI_XE8_UP},
-      ciOSDevice32Platform, ciOSDevice64Platform{$ENDIF});
+  Result := TArray<string>.Create(cWin32Platform, cWin64Platform);
 end;
 
 function TNewProjectEx.GetPreferredPlatform : string;
@@ -183,31 +163,10 @@ begin
   Result := '';
 end;
 
-function TNewProjectEx.GetProjectPersonality : string;
-begin
-  if FPersonality.IsEmpty then
-    result := sDelphiPersonality
-  else
-    result := FPersonality;
-end;
-
 procedure TNewProjectEx.SetInitialOptions(const NewProject : IOTAProject);
-var
-  LBuildConf : IOTAProjectOptionsConfigurations;
 begin
-  if Supports(NewProject.ProjectOptions, IOTAProjectOptionsConfigurations, LBuildConf) then
-  begin
-    LBuildConf.BaseConfiguration.AsBoolean['UsingDelphiRTL'] := True;
-    if FPersonality = sCBuilderPersonality then
-    begin
-      LBuildConf.BaseConfiguration.PlatformConfiguration[cAndroidPlatform].AsBoolean['ILINK_LinkwithDUnitXRuntime'] := True;
-      LBuildConf.BaseConfiguration.PlatformConfiguration[ciOSDevice32Platform].AsBoolean['ILINK_LinkwithDUnitXRuntime'] := True;
-      LBuildConf.BaseConfiguration.PlatformConfiguration[ciOSDevice64Platform].AsBoolean['ILINK_LinkwithDUnitXRuntime'] := True;
-    end;
-  end;
-
+  // Nothing to set: the C++Builder options (UsingDelphiRTL, ILINK_LinkwithDUnitXRuntime) were removed.
 end;
-{$ENDIF}
 
 end.
 

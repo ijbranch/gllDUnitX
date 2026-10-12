@@ -117,7 +117,7 @@ var
 begin
   Max := Length(value);
   i := StartIndex;
-  while i < Max do
+  while i <= Max do
   begin
     for j := 0 to Length(AnyOf) - 1 do
     begin
@@ -253,7 +253,7 @@ begin
   while ((FNext < (FText.Length - 1)) and FText.Chars[FNext].IsWhiteSpace) do
     Inc(FNext);
 {$ELSE}
-  while ((FNext < Length(Ftext)) and {$IFDEF DELPHI_XE4_UP}FText[FNext].IsWhiteSpace{$ELSE}TCharacter.IsWhiteSpace(FText[FNext]){$ENDIF}) do
+  while ((FNext <= Length(Ftext)) and {$IFDEF DELPHI_XE4_UP}FText[FNext].IsWhiteSpace{$ELSE}TCharacter.IsWhiteSpace(FText[FNext]){$ENDIF}) do
     Inc(FNext);
 {$ENDIF}
 end;

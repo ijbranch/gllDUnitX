@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -34,6 +34,7 @@ resourcestring
   STestRunComplete  = 'Test Run Complete';
 
   SUnexpectedErrorExt = 'Expected [%g] but got [%g] %s';
+  SNegativeTolerance = 'tolerance [%g] cannot be negative %s';
   SUnexpectedErrorInt = 'Expected [%d] but got [%d] %s';
   SUnexpectedErrorStr = 'Expected [%s] but got [%s] %s';
   SUnexpectedErrorDbl = 'Expected [%g] but got [%g] %s';
@@ -87,6 +88,7 @@ resourcestring
   SCheckExceptionClassError = 'Method raised [%s] was expecting [%s]. %s';
   SCheckExceptionClassDescError = 'Method raised [%s] was expecting a descendant of [%s]. %s';
   SStrDoesNotContain = '[%s] does not contain [%s] %s';
+  SStrContains      = '[%s] contains [%s] %s';
   SStrDoesNotEndWith = '[%s] does not end with [%s] %s';
   SStrDoesNotMatch  = '[%s] does not match [%s] %s';
   SStrCannotBeEmpty = 'subString cannot be empty';
@@ -117,6 +119,7 @@ resourcestring
   SImplementationAlreadyRegistered = 'An implementation for type %s with name %s is already registered with IoC';
   SNoImplementationRegistered = 'No implementation registered for type %s';
   SNoInstance       = 'The activator delegate failed to return an instance %s';
+  SNoActivator      = 'The registration for %s has no activator';
 
   SNoConsoleWriterClassRegistered =
     'No ConsoleWriter class is registered. You will need to include DUnitX.Windows.Console in your application';
@@ -165,6 +168,14 @@ resourcestring
   SFixtureTeardownError = 'Error in Fixture TearDown. Fixture: %s Error: %s';
   SNoAssertions     = 'No assertions were made during the test';
   SITestExecuteNotSupported = '%s does not support ITestExecute';
+  STestCaseValueCount = 'Test case [%s] supplies %d value(s) but the method has %d parameter(s)';
+  SParameterFileIncludesItself = 'Parameter File [%s] includes itself';
+  STestCaseValueConvert = 'Test case [%s]: value [%s] cannot be converted to parameter [%s] of type %s%s';
+  SUnknownTestCaseProvider = 'Test case provider [%s] used by %s is not registered';
+  SFixtureCreateError = 'Error creating Fixture. Fixture: %s Error: %s';
+  SSetupFixtureNotRun = '[SetupFixture] %s of fixture %s is not run: the fixture''s parameterless constructor is its fixture setup';
+  STearDownAlsoFailed = 'TearDown also failed: %s';
+  SNoTestsExecuted  = 'No tests were executed, so the run is not reported as passed.';
 
   SWeakReferenceError = 'TWeakReference can only be used with objects derived from TWeakReferencedObject';
 
@@ -175,7 +186,15 @@ resourcestring
   SCouldNotFindResultsForTest = 'Could not find results for test.';
 
   SGUIStatusIdle    = 'Idle';
-  SGUIStatusRunning = 'Running (%d of %d)';
+  SGUIStatusRunning = 'Running (%d of %d), Esc to stop';
+  SGUIStatusStopping = 'Stopping after the current test...';
+  SGUIStatusClosing = 'Stopping after the current test, then closing...';
+  SGUIResultDisplayError = 'Could not display the result of %s: %s';
+  SGUIDuplicateTestNames = '%d test(s) not listed because another test has the same full name, first: %s';
+  SGUIBeyondCompareNotFound = 'Could not find Beyond Compare in any known path.';
+  SGUIBeyondCompareNotStarted = 'Could not start Beyond Compare (%s): %s';
+  SGUICompareExpected = 'Expected';
+  SGUICompareActual = 'Actual';
 
   SNoFixtureProvider = 'No FixtureProvider registered';
 

@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -36,41 +36,21 @@ resourcestring
 
   STestDPR          = 'program %0:s;'#13#10 +
     #13#10 +
-    '{$IFDEF CI}'#13#10 +
-    '{$UNDEF TESTINSIGHT}'#13#10 +
-    '{$ENDIF}'#13#10 +
-    '{$IFNDEF TESTINSIGHT}'#13#10 +
     '{$APPTYPE CONSOLE}'#13#10 +
-    '{$ENDIF}'#13#10 +
     '{$STRONGLINKTYPES ON}'#13#10 +
     'uses'#13#10 +
     '%1:s' +
-{$IFDEF USE_NS}
-  '  System.SysUtils,'#13#10 +
-{$ELSE}
-  '  SysUtils,'#13#10 +
-{$ENDIF}
-  '{$IFDEF TESTINSIGHT}'#13#10 +
-    '  TestInsight.DUnitX,'#13#10 +
-    '{$ENDIF}'#13#10 +
-    '{$IFNDEF TESTINSIGHT}'#13#10 +
+    '  System.SysUtils,'#13#10 +
     '  DUnitX.Loggers.Console,'#13#10 +
     '  DUnitX.Loggers.Xml.NUnit,'#13#10 +
-    '{$ENDIF}'#13#10 +
     '  DUnitX.TestFramework;'#13#10 +
     #13#10 +
-    '{ keep comment here to protect the following conditional from being removed by the IDE when adding a unit }'#13#10 +
-    '{$IFNDEF TESTINSIGHT}'#13#10 +
     'var'#13#10 +
     '  runner: ITestRunner;'#13#10 +
     '  results: IRunResults;'#13#10 +
     '  logger: ITestLogger;'#13#10 +
     '  nunitLogger : ITestLogger;'#13#10 +
-    '{$ENDIF}'#13#10 +
     'begin'#13#10 +
-    '{$IFDEF TESTINSIGHT}'#13#10 +
-    '  TestInsight.DUnitX.RunRegisteredTests;'#13#10 +
-    '{$ELSE}'#13#10 +
     '  try'#13#10 +
     '    //Check command line options, will exit if invalid'#13#10 +
     '    TDUnitX.CheckCommandLine;'#13#10 +
@@ -97,19 +77,20 @@ resourcestring
     '    if not results.AllPassed then'#13#10 +
     '      System.ExitCode := EXIT_ERRORS;'#13#10 +
     #13#10 +
-    '    {$IFNDEF CI}'#13#10 +
-    '    //We don''t want this happening when running under CI.'#13#10 +
+    '    //Only pause when asked to (--exit:Pause); the default is Continue.'#13#10 +
     '    if TDUnitX.Options.ExitBehavior = TDUnitXExitBehavior.Pause then'#13#10 +
     '    begin'#13#10 +
     '      System.Write(''Done.. press <Enter> key to quit.'');'#13#10 +
     '      System.Readln;'#13#10 +
     '    end;'#13#10 +
-    '    {$ENDIF}'#13#10 +
     '  except'#13#10 +
     '    on E: Exception do'#13#10 +
+    '    begin'#13#10 +
+    '      //A run that aborts (e.g. no tests registered) must not report success.'#13#10 +
     '      System.Writeln(E.ClassName, '': '', E.Message);'#13#10 +
+    '      System.ExitCode := EXIT_ERRORS;'#13#10 +
+    '    end;'#13#10 +
     '  end;'#13#10 +
-    '{$ENDIF}'#13#10 +
     'end.'#13#10;
 
   // 0 - Unit Name
@@ -182,103 +163,39 @@ resourcestring
 
   SDefaultClassName = 'TMyTestObject';
 
-  { C++Builder template code }
+  // 0 - Class Name
+  SInvalidFixtureClassName = '''%0:s'' is not a valid TestFixture class name.'#13#10#13#10 +
+    'Enter a Delphi identifier (a letter or underscore, then letters, digits or underscores) that is not a reserved word.';
 
-  STestCBPROJ       = '#include <System.Sysutils.hpp>'#13#10 +
-    '#include <DUnitX.Loggers.Console.hpp>'#13#10 +
-    '#include <DUnitX.Loggers.Xml.NUnit.hpp>'#13#10 +
-    '#include <DUnitX.TestFramework.hpp>'#13#10 +
-    '#include <stdio.h>'#13#10 +
-    #13#10 +
-    'int main()'#13#10 +
-    '{'#13#10 +
-    '  try'#13#10 +
-    '  {'#13#10 +
-    '    TDUnitX::CheckCommandLine();'#13#10 +
-    '    _di_ITestRunner runner = TDUnitX::CreateRunner();'#13#10 +
-    '    _di_ITestLogger logger(*new TDUnitXConsoleLogger(true));'#13#10 +
-    '    runner->AddLogger(logger);'#13#10 +
-    #13#10 +
-    '    _di_ITestLogger nunitLogger(*new TDUnitXXMLNUnitFileLogger(TDUnitX::Options->XMLOutputFile));'#13#10 +
-    '    runner->AddLogger(nunitLogger);'#13#10 +
-    #13#10 +
-    '    _di_IRunResults results = runner->Execute();'#13#10 +
-    #13#10 +
-    '#if !defined(CI)'#13#10 +
-    '    if (TDUnitX::Options->ExitBehavior == TDUnitXExitBehavior::Pause)'#13#10 +
-    '    {'#13#10 +
-    '      printf("Done.. press <Enter> key to quit.");'#13#10 +
-    '      getchar();'#13#10 +
-    '    }'#13#10 +
-    '#endif'#13#10 +
-    #13#10 +
-    '    return results->AllPassed ? EXIT_SUCCESS : EXIT_FAILURE;'#13#10 +
-    '  }'#13#10 +
-    '  catch(System::Sysutils::Exception& Ex)'#13#10 +
-    '  {'#13#10 +
-    '    printf("Exception: ''''%s''''\n", AnsiString(Ex.Message).c_str());'#13#10 +
-    '  }'#13#10 +
-    '  return EXIT_FAILURE;'#13#10 +
-    '}';
-
-  STestCPPUnit      = '#include <DUnitX.TestFramework.hpp>'#13#10 +
-    '#include <stdio.h>'#13#10 +
-    #13#10 +
-    '#pragma option --xrtti'#13#10 +
-    #13#10 +
-    'class __declspec(delphirtti) %1:s : public TObject'#13#10 +
-    '{'#13#10 +
-    'public:'#13#10 +
-    '%2:s' +
-    #13#10 +
-    '__published:'#13#10 +
-    '%3:s' +
-    '};'#13#10 +
-    #13#10 +
-    #13#10 +
-    '%4:s' +
-    #13#10 +
-    '%5:s' +
-    #13#10 +
-    'static void registerTests()'#13#10 +
-    '{'#13#10 +
-    '  TDUnitX::RegisterTestFixture(__classid(%1:s));'#13#10 +
-    '}'#13#10 +
-    '#pragma startup registerTests 33';
-
-  SSetupTearDownCPPIntf =
-    '  virtual void __fastcall SetUp();'#13#10 +
-    '  virtual void __fastcall TearDown();'#13#10;
-
-  SSetupTearDownCPPImpl =
-    'void __fastcall %0:s::SetUp()'#13#10 +
-    '{'#13#10 +
-    '}'#13#10 +
-    #13#10 +
-    'void __fastcall %0:s::TearDown()'#13#10 +
-    '{'#13#10 +
-    '}'#13#10;
-
-  SSampleMethodsCPPIntf =
-    '  void __fastcall Test1();'#13#10 +
-    '  void __fastcall Test2();'#13#10;
-
-  SSampleMethodsCPPImpl =
-    'void __fastcall %0:s::Test1()'#13#10 +
-    '{'#13#10 +
-    '  // TODO'#13#10 +
-    '  String s("Hello");'#13#10 +
-    '  Dunitx::Testframework::Assert::IsTrue(s == "Hello");'#13#10 +
-    '}'#13#10 +
-    #13#10 +
-    'void __fastcall %0:s::Test2()'#13#10 +
-    '{'#13#10 +
-    '  // TODO'#13#10 +
-    '  String s("Hello");'#13#10 +
-    '  Dunitx::Testframework::Assert::IsTrue(s == "Bonjour"); // This fails for illustrative purposes'#13#10 +
-    '}'#13#10;
+// True when AName can be used as the generated fixture's class name: a valid identifier and not a reserved word.
+function IsValidFixtureClassName(const AName : string) : Boolean;
 
 implementation
+
+uses
+  System.SysUtils;
+
+const
+  // Delphi reserved words (directives such as "private" or "message" are legal identifiers).
+  CReservedWords : array[0..64] of string = (
+    'and', 'array', 'as', 'asm', 'begin', 'case', 'class', 'const', 'constructor', 'destructor',
+    'dispinterface', 'div', 'do', 'downto', 'else', 'end', 'except', 'exports', 'file', 'finalization',
+    'finally', 'for', 'function', 'goto', 'if', 'implementation', 'in', 'inherited', 'initialization', 'inline',
+    'interface', 'is', 'label', 'library', 'mod', 'nil', 'not', 'object', 'of', 'or',
+    'packed', 'procedure', 'program', 'property', 'raise', 'record', 'repeat', 'resourcestring', 'set', 'shl',
+    'shr', 'string', 'then', 'threadvar', 'to', 'try', 'type', 'unit', 'until', 'uses',
+    'var', 'while', 'with', 'xor', 'out');
+
+function IsValidFixtureClassName(const AName : string) : Boolean;
+var
+  lWord : string;
+begin
+  result := IsValidIdent(AName, False);
+  if result then
+    for lWord in CReservedWords do
+      if SameText(AName, lWord) then
+        Exit(False);
+end;
 
 end.
 

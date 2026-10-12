@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -39,48 +39,32 @@ type
   protected
     FCreateSetupTearDown : Boolean;
     FCreateSampleMethods : Boolean;
-    FTestFixureClassName : string;
+    FTestFixtureClassName : string;
     function NewImplSource(const ModuleIdent, FormIdent, AncestorIdent : string) : IOTAFile; override;
   public
-    constructor Create(const ACreateSetupTearDown : boolean; const ACreateSampleMethods : boolean; const ATestFixureClassName : string;
-      const APersonality : string = '');
+    constructor Create(const ACreateSetupTearDown : boolean; const ACreateSampleMethods : boolean; const ATestFixtureClassName : string);
   end;
-
-{$IFDEF DELPHIX_SEATTLE_UP}
-  TNewTestUnitEx = class(TNewTestUnit)
-    function NewImplSource(const ModuleIdent, FormIdent, AncestorIdent : string) : IOTAFile; override;
-  end;
-{$ENDIF}
 
 implementation
 
 uses
-{$IFDEF USE_NS}
   System.SysUtils,
-  VCL.Dialogs,
-{$ELSE}
-  SysUtils,
-  Dialogs,
-{$ENDIF}
   DUnitX.Expert.CodeGen.Templates,
   DUnitX.Expert.CodeGen.SourceFile;
 
 { TNewTestUnit }
 
-constructor TNewTestUnit.Create(const ACreateSetupTearDown : boolean; const ACreateSampleMethods : boolean; const ATestFixureClassName :
-  string; const APersonality : string = '');
+constructor TNewTestUnit.Create(const ACreateSetupTearDown : boolean; const ACreateSampleMethods : boolean; const ATestFixtureClassName :
+  string);
 begin
-  Assert(Length(ATestFixureClassName) > 0);
+  Assert(Length(ATestFixtureClassName) > 0);
   FAncestorName := '';
   FFormName := '';
   FImplFileName := '';
   FIntfFileName := '';
-  FTestFixureClassName := ATestFixureClassName;
+  FTestFixtureClassName := ATestFixtureClassName;
   FCreateSetupTearDown := ACreateSetupTearDown;
   FCreateSampleMethods := ACreateSampleMethods;
-{$IFDEF DELPHIX_SEATTLE_UP}
-  Personality := APersonality;
-{$ENDIF}
 end;
 
 function TNewTestUnit.NewImplSource(const ModuleIdent, FormIdent, AncestorIdent : string) : IOTAFile;
@@ -94,7 +78,7 @@ begin
   if FCreateSetupTearDown then
   begin
     lSetupTearDownIntf := SSetupTearDownIntf;
-    lSetupTearDownImpl := Format(SSetupTearDownImpl, [FTestFixureClassName]);
+    lSetupTearDownImpl := Format(SSetupTearDownImpl, [FTestFixtureClassName]);
   end
   else
   begin
@@ -105,7 +89,7 @@ begin
   if FCreateSampleMethods then
   begin
     lSampleIntf := SSampleMethodsIntf;
-    lSampleImpl := Format(SSampleMethodsImpl, [FTestFixureClassName]);
+    lSampleImpl := Format(SSampleMethodsImpl, [FTestFixtureClassName]);
   end
   else
   begin
@@ -113,63 +97,17 @@ begin
     lSampleImpl := '';
   end;
 
-  //ModuleIdent is blank for some reason.
+  // Use ModuleIdent when the IDE supplies it. It has been seen blank, so fall back to the method
+  // mentioned by Marco Cantu:
   // http://stackoverflow.com/questions/4196412/how-do-you-retrieve-a-new-unit-name-from-delphis-open-tools-api
-  // So using method mentioned by Marco Cantu.
-  (BorlandIDEServices as IOTAModuleServices).GetNewModuleAndClassName('', lUnitIdent, lFormName, lFileName);
-  result := TSourceFile.Create(STestUnit, [lUnitIdent, FTestFixureClassName, lSetupTearDownIntf,
+  if ModuleIdent <> '' then
+    lUnitIdent := ModuleIdent
+  else
+    (BorlandIDEServices as IOTAModuleServices).GetNewModuleAndClassName('', lUnitIdent, lFormName, lFileName);
+  result := TSourceFile.Create(STestUnit, [lUnitIdent, FTestFixtureClassName, lSetupTearDownIntf,
       lSampleIntf, lSetupTearDownImpl, lSampleImpl]);
 
 end;
-
-{$IFDEF DELPHIX_SEATTLE_UP}
-function TNewTestUnitEx.NewImplSource(const ModuleIdent, FormIdent, AncestorIdent : string) : IOTAFile;
-var
-  lSetupTearDownIntf : string;
-  lSetupTearDownImpl : string;
-  lSampleIntf : string;
-  lSampleImpl : string;
-  lUnitIdent, lFormName, lFileName, lTestUnit : string;
-begin
-  if FCreateSetupTearDown then
-    if Personality.isEmpty or SameText(Personality, sDelphiPersonality) then
-    begin
-      lTestUnit := STestUnit;
-
-      lSetupTearDownIntf := SSetupTearDownIntf;
-      lSetupTearDownImpl := Format(SSetupTearDownImpl, [FTestFixureClassName]);
-
-      lSampleIntf := SSampleMethodsIntf;
-      lSampleImpl := Format(SSampleMethodsImpl, [FTestFixureClassName]);
-    end
-    else if SameText(Personality, sCBuilderPersonality) then
-    begin
-      lTestUnit := STestCPPUnit;
-      lSetupTearDownIntf := SSetupTearDownCPPIntf;
-      lSetupTearDownImpl := Format(SSetupTearDownCPPImpl, [FTestFixureClassName]);
-      lSampleIntf := SSampleMethodsCPPIntf;
-      lSampleImpl := Format(SSampleMethodsCPPImpl, [FTestFixureClassName]);
-    end;
-
-  if not FCreateSetupTearDown then
-  begin
-    lSetupTearDownIntf := '';
-    lSetupTearDownImpl := '';
-  end;
-
-  if not FCreateSampleMethods then
-  begin
-    lSampleIntf := '';
-    lSampleImpl := '';
-  end;
-  // http://stackoverflow.com/questions/4196412/how-do-you-retrieve-a-new-unit-name-from-delphis-open-tools-api
-  // So using method mentioned by Marco Cantu.
-  (BorlandIDEServices as IOTAModuleServices).GetNewModuleAndClassName('', lUnitIdent, lFormName, lFileName);
-  result := TSourceFile.Create(lTestUnit, [lUnitIdent, FTestFixureClassName, lSetupTearDownIntf,
-      lSampleIntf, lSetupTearDownImpl, lSampleImpl]);
-
-end;
-{$ENDIF}
 
 end.
 

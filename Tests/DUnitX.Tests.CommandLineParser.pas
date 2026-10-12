@@ -1,4 +1,4 @@
-unit DUnitX.Tests.CommandLineParser;
+﻿unit DUnitX.Tests.CommandLineParser;
 {***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
@@ -98,15 +98,108 @@ type
     [Test]
     procedure Will_Generate_Error_For_Invalid_Set;
 
+    // Proves an options file that includes itself reports an error instead of recursing until the stack overflows.
+    [Test]
+    procedure Options_File_Including_Itself_Reports_An_Error;
+
+    // Proves options-file lines are trimmed and blank, '#' and ';' lines are skipped rather than reported as errors.
+    [Test]
+    procedure Options_File_Lines_Are_Trimmed_And_Comments_Skipped;
+
+    // Proves a float option is parsed with the invariant format ('1.5'), whatever the machine's decimal separator.
+    [Test]
+    procedure Float_Option_Uses_Invariant_Format;
+
   end;
 
 implementation
 
 uses
   Classes,
+  System.IOUtils,
+  System.SysUtils,
   DUnitX.CommandLine.OptionDef;
 
 { TCommandLineParserTests }
+
+procedure TCommandLineParserTests.Options_File_Including_Itself_Reports_An_Error;
+var
+  def : IOptionDefinition;
+  parseResult : ICommandLineParseResult;
+  sList : TStringList;
+  fileName : string;
+begin
+  def := TOptionsRegistry.RegisterOption<string>('options', 'opt', nil);
+  def.IsOptionFile := true;
+  fileName := TPath.Combine(TPath.GetTempPath, 'DUnitX.Tests.RecursiveOptions.txt');
+  TFile.WriteAllText(fileName, '--options:"' + fileName + '"');
+  sList := TStringList.Create;
+  try
+    sList.Add('--options:"' + fileName + '"');
+    parseResult := TOptionsRegistry.Parse(sList);
+  finally
+    sList.Free;
+    TFile.Delete(fileName);
+  end;
+  Assert.IsTrue(parseResult.HasErrors, 'recursion reported');
+end;
+
+procedure TCommandLineParserTests.Options_File_Lines_Are_Trimmed_And_Comments_Skipped;
+var
+  def : IOptionDefinition;
+  parseResult : ICommandLineParseResult;
+  sList : TStringList;
+  fileName : string;
+  test : string;
+begin
+  def := TOptionsRegistry.RegisterOption<string>('options', 'opt', nil);
+  def.IsOptionFile := true;
+  TOptionsRegistry.RegisterOption<string>('test', 't',
+    procedure(value : string)
+    begin
+      test := value;
+    end);
+  fileName := TPath.Combine(TPath.GetTempPath, 'DUnitX.Tests.CommentedOptions.txt');
+  TFile.WriteAllText(fileName, '# a comment' + sLineBreak + '; another comment' + sLineBreak + sLineBreak +
+    '   --test:abc   ' + sLineBreak);
+  sList := TStringList.Create;
+  try
+    sList.Add('--options:"' + fileName + '"');
+    parseResult := TOptionsRegistry.Parse(sList);
+  finally
+    sList.Free;
+    TFile.Delete(fileName);
+  end;
+  Assert.IsFalse(parseResult.HasErrors, parseResult.ErrorText);
+  Assert.AreEqual('abc', test, False);
+end;
+
+procedure TCommandLineParserTests.Float_Option_Uses_Invariant_Format;
+var
+  parseResult : ICommandLineParseResult;
+  sList : TStringList;
+  test : Double;
+  oldDecimalSeparator : Char;
+begin
+  test := 0;
+  TOptionsRegistry.RegisterOption<Double>('float', 'f',
+    procedure(value : Double)
+    begin
+      test := value;
+    end);
+  oldDecimalSeparator := FormatSettings.DecimalSeparator;
+  FormatSettings.DecimalSeparator := ',';
+  sList := TStringList.Create;
+  try
+    sList.Add('--float:1.5');
+    parseResult := TOptionsRegistry.Parse(sList);
+  finally
+    sList.Free;
+    FormatSettings.DecimalSeparator := oldDecimalSeparator;
+  end;
+  Assert.IsFalse(parseResult.HasErrors, parseResult.ErrorText);
+  Assert.AreEqual(1.5, test, 0);
+end;
 
 procedure TCommandLineParserTests.Can_Parse_Enum_Parameter;
 var

@@ -5,7 +5,7 @@ object frmDunitXNewProject: TfrmDunitXNewProject
   ClientHeight = 324
   ClientWidth = 284
   Color = clBtnFace
-  Constraints.MinHeight = 145
+  Constraints.MinHeight = 370
   Constraints.MinWidth = 250
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -14,6 +14,7 @@ object frmDunitXNewProject: TfrmDunitXNewProject
   Font.Style = []
   OldCreateOrder = False
   Position = poMainFormCenter
+  OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   DesignSize = (
     284
@@ -115,6 +116,7 @@ object frmDunitXNewProject: TfrmDunitXNewProject
     Top = 31
     Width = 268
     Height = 90
+    Anchors = [akLeft, akTop, akRight]
     Caption = 'Report Leak Options'
     ItemIndex = 1
     Items.Strings = (

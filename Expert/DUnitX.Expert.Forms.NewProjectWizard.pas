@@ -31,7 +31,6 @@ interface
 {$I DUnitX.inc}
 
 uses
-{$IFDEF USE_NS}
   WinAPI.Windows,
   WinAPI.Messages,
   System.SysUtils,
@@ -43,19 +42,6 @@ uses
   VCL.Dialogs,
   VCL.StdCtrls,
   Vcl.ExtCtrls,
-{$ELSE}
-  Windows,
-  Messages,
-  SysUtils,
-  Variants,
-  Classes,
-  Graphics,
-  Controls,
-  Forms,
-  Dialogs,
-  StdCtrls,
-  ExtCtrls,
-{$ENDIF}
   DUnitX.Expert.CodeGen.NewTestProject;
 
 type
@@ -72,6 +58,7 @@ type
     rgReportLeakOptions : TRadioGroup;
     procedure chkCreateTestUnitClick(Sender : TObject);
     procedure FormCreate(Sender : TObject);
+    procedure FormCloseQuery(Sender : TObject; var CanClose : Boolean);
   private
     { Private declarations }
     function GetAddToProjectGroup : boolean;
@@ -83,16 +70,13 @@ type
   public
     { Public declarations }
     // Read Only Properties to extract values without having to know control values.
-    property TestFixtureClasaName : string read GetTestFixtureClassName;
+    property TestFixtureClassName : string read GetTestFixtureClassName;
     property CreateSetupTearDownMethods : boolean read GetCreateSetupTearDownMethods;
     property CreateSampleMethods : boolean read GetCreateSampleMethods;
     property CreateTestUnit : boolean read GetCreateTestUnit;
     property AddToProjectGroup : boolean read GetAddToProjectGroup;
     property ReportLeakOption : TReportLeakOptions read GetReportLeakOption;
   end;
-
-var
-  frmDunitXNewProject : TfrmDunitXNewProject;
 
 implementation
 
@@ -106,7 +90,19 @@ begin
   gbTestUnitOpt.Enabled := chkCreateTestUnit.Checked;
   chkCreateSetupTearDown.Enabled := chkCreateTestUnit.Checked;
   chkCreateSampleMethods.Enabled := chkCreateTestUnit.Checked;
+  lblClassName.Enabled := chkCreateTestUnit.Checked;
   edtClassName.Enabled := chkCreateTestUnit.Checked;
+end;
+
+procedure TfrmDunitXNewProject.FormCloseQuery(Sender : TObject; var CanClose : Boolean);
+begin
+  // Refuse OK while the class name would generate a unit that does not compile.
+  if (ModalResult = mrOk) and CreateTestUnit and not IsValidFixtureClassName(TestFixtureClassName) then
+  begin
+    MessageDlg(Format(SInvalidFixtureClassName, [TestFixtureClassName]), mtError, [mbOK], 0);
+    edtClassName.SetFocus;
+    CanClose := False;
+  end;
 end;
 
 procedure TfrmDunitXNewProject.FormCreate(Sender : TObject);

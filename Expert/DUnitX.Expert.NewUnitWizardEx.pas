@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -32,7 +32,6 @@ interface
 
 uses
   ToolsApi,
-  VCL.Graphics,
   PlatformConst
   ;
 
@@ -47,21 +46,24 @@ implementation
 uses
   DUnitX.Expert.Forms.NewUnitWizard,
   DUnitX.Expert.CodeGen.NewTestUnit,
-  Controls,
-  Forms,
-  Windows,
+  Vcl.Controls,
+  Vcl.Dialogs,
+  Vcl.Forms,
+  WinApi.Windows,
+  System.SysUtils,
   ExpertsRepository;
 
 resourcestring
   sNewTestUnitCaption = 'DUnitX Unit';
-  sNewTestProjectHint = 'Create New DUnitX Test Unit';
+  sNewTestUnitHint = 'Create New DUnitX Test Unit';
+  sNoActiveProject = 'Open or create the project the DUnitX test unit belongs to first: there is no active project to add it to.';
 
   { TDUnitXNewUnitWizard }
 
 class procedure TDUnitXNewUnitWizard.RegisterDUnitXNewUnitWizard(const APersonality : string);
 begin
   RegisterPackageWizard(TExpertsRepositoryProjectWizardWithProc.Create(APersonality,
-      sNewTestProjectHint, sNewTestUnitCaption, 'DunitX.Wizard.NewUnitWizard', // do not localize
+      sNewTestUnitHint, sNewTestUnitCaption, 'DunitX.Wizard.NewUnitWizard', // do not localize
       'DUnitX', 'DUnitX Team - https://github.com/VSoftTechnologies/DUnitX', // do not localize
       procedure
       var
@@ -70,22 +72,33 @@ begin
         Project : IOTAProject;
         TestUnit : IOTAModule;
       begin
-        WizardForm := TfrmDunitXNewUnit.Create(Application);
+        // Nothing may escape into the IDE: report any failure instead.
         try
-          if WizardForm.ShowModal = mrOk then
+          // A test unit outside any project would be an orphan: say so instead of creating one.
+          Project := GetActiveProject;
+          if Project = nil then
           begin
-            ModuleServices := (BorlandIDEServices as IOTAModuleServices);
-            Project := GetActiveProject;
-            TestUnit := ModuleServices.CreateModule(
-              TNewTestUnit.Create(WizardForm.CreateSetupTearDownMethods,
-                WizardForm.CreateSampleMethods,
-                WizardForm.TestFixtureClasaName,
-                APersonality));
-            if Project <> nil then
-              Project.AddFile(TestUnit.FileName, true);
+            MessageDlg(sNoActiveProject, mtInformation, [mbOK], 0);
+            Exit;
           end;
-        finally
-          WizardForm.Free;
+          WizardForm := TfrmDunitXNewUnit.Create(Application);
+          try
+            if WizardForm.ShowModal = mrOk then
+            begin
+              ModuleServices := (BorlandIDEServices as IOTAModuleServices);
+              TestUnit := ModuleServices.CreateModule(
+                TNewTestUnit.Create(WizardForm.CreateSetupTearDownMethods,
+                  WizardForm.CreateSampleMethods,
+                  WizardForm.TestFixtureClassName));
+              if TestUnit <> nil then
+                Project.AddFile(TestUnit.FileName, true);
+            end;
+          finally
+            WizardForm.Free;
+          end;
+        except
+          on E : Exception do
+            Application.ShowException(E);
         end;
       end,
       // Delphi 13 declares the glyph callback with the HICON returned by
@@ -96,7 +109,7 @@ begin
       begin
         Result := LoadIcon(HInstance, 'DUnitXNewUnitIcon');
       end,
-      GetAllPlatforms,
+      TArray<string>.Create(cWin32Platform, cWin64Platform),
       nil));
 end;
 

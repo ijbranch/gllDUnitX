@@ -820,8 +820,13 @@ class function TDUnitX.CurrentRunner : ITestRunner;
 var
   ref : IWeakReference<ITestRunner>;
 begin
-  if not TDUnitXTestRunner.FActiveRunners.TryGetValue(TThread.CurrentThread.ThreadId, ref) then
-    raise Exception.Create(SNoRunner);
+  MonitorEnter(TDUnitXTestRunner.FActiveRunners);
+  try
+    if not TDUnitXTestRunner.FActiveRunners.TryGetValue(TThread.CurrentThread.ThreadId, ref) then
+      raise Exception.Create(SNoRunner);
+  finally
+    MonitorExit(TDUnitXTestRunner.FActiveRunners);
+  end;
   result := ref.Data;
 
 end;

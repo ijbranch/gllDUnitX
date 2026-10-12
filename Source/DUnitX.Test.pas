@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -100,6 +100,8 @@ type
     //ITestExecute
     procedure Execute(const context : ITestExecuteContext); virtual;
     procedure UpdateInstance(const fixtureInstance : TObject); virtual;
+    //Runs the test body; Execute times it against [MaxTime].
+    procedure ExecuteMethod; virtual;
   public
     constructor Create(const AFixture : ITestFixture; const AMethodName : string; const AName : string; const ACategory : string; const AMethod : TTestMethod;
       const AEnabled : boolean; const AIgnored : boolean = false; const AIgnoreReason : string = ''; const AMaxTime : Cardinal = 0);
@@ -110,16 +112,13 @@ type
   private
     FExpectedException : ExceptClass;
     FExceptionInheritance : TExceptionInheritance;
-    FRaiseContext : ITestExecuteContext;
   protected
-    procedure RaiseMethod;
-    procedure Execute(const context : ITestExecuteContext); override;
+    procedure ExecuteMethod; override;
   public
     constructor Create(const AFixture : ITestFixture; const AMethodName : string; const AName : string; const ACategory : string;
       const AMethod : TTestMethod; const AEnabled : boolean; const AIgnored : boolean = false;
       const AIgnoreReason : string = ''; const AMaxTime : Cardinal = 0;
       const AExpectedException : ExceptClass = nil; const AExceptionInheritance : TExceptionInheritance = exExact);
-    destructor Destroy; override;
   end;
 
   TDUnitXTestCase = class(TDUnitXTest, ITestExecute)
@@ -128,16 +127,33 @@ type
     FArgs : TValueArray;
     FRttiMethod : TRttiMethod;
     FInstance : TObject;
+    FArgError : string;
+    FExpectedException : ExceptClass;
+    FExceptionInheritance : TExceptionInheritance;
+    procedure InvokeMethod;
   protected
     function GetIsTestCase : boolean; override;
     function GetName : string; override;
-    procedure Execute(const context : ITestExecuteContext); override;
+    procedure ExecuteMethod; override;
     procedure UpdateInstance(const fixtureInstance : TObject); override;
   public
     constructor Create(const AInstance : TObject; const AFixture : ITestFixture; const AMethodName : string; const ACaseName : string; const AName : string;
       const ACategory : string; const AMethod : TRttiMethod;
-      const AEnabled : boolean; const AArgs : TValueArray); reintroduce;
+      const AEnabled : boolean; const AArgs : TValueArray; const AMaxTime : Cardinal = 0;
+      const AExpectedException : ExceptClass = nil; const AExceptionInheritance : TExceptionInheritance = exExact); reintroduce;
     destructor Destroy; override;
+  end;
+
+  //A test that reports, when it runs, a problem found while the tests were generated (such as a
+  //[TestCaseProvider] that is not registered), so the problem is not silently a missing test.
+  TDUnitXErrorTest = class(TDUnitXTest, ITestExecute)
+  private
+    FError : string;
+  protected
+    procedure ExecuteMethod; override;
+  public
+    constructor Create(const AFixture : ITestFixture; const AMethodName : string; const AName : string; const ACategory : string;
+      const AError : string); reintroduce;
   end;
 
 implementation
@@ -151,6 +167,7 @@ uses
   StrUtils,
 {$ENDIF}
   DUnitX.Timeout,
+  DUnitX.ResStrs,
   DUnitX.Utils;
 
 { TDUnitXTest }
@@ -201,9 +218,9 @@ begin
   try
     if FMaxTime > 0 then
       timeout := InitialiseTimeOut(FMaxTime);
-    FMethod();
-    //Stop the watchdog before anything else runs, so that an expiry landing after the
-    //test body finished cannot be attributed to whatever executes next, then report it.
+    ExecuteMethod;
+    //Stop timing before anything else runs, so that nothing executed afterwards is
+    //attributed to the test body, then report an overrun.
     if timeout <> nil then
     begin
       timeout.Stop;
@@ -214,6 +231,11 @@ begin
 
     FDuration := TTimeSpan.Subtract(FEndTime, FStartTime);
   end;
+end;
+
+procedure TDUnitXTest.ExecuteMethod;
+begin
+  FMethod();
 end;
 
 function TDUnitXTest.GetActive : boolean;
@@ -348,30 +370,68 @@ end;
 
 constructor TDUnitXTestCase.Create(const AInstance : TObject; const AFixture : ITestFixture; const AMethodName : string; const ACaseName : string;
   const AName : string; const ACategory : string; const AMethod : TRttiMethod; const AEnabled : boolean;
-  const AArgs : TValueArray);
+  const AArgs : TValueArray; const AMaxTime : Cardinal; const AExpectedException : ExceptClass;
+  const AExceptionInheritance : TExceptionInheritance);
 var
   len : integer;
   index : integer;
   parameters : TArray<TRttiParameter>;
   tmp : TValue;
+  args : TValueArray;
+  converted : boolean;
+  typeName : string;
+  reason : string;
 begin
-  inherited Create(AFixture, AMethodName, AName, ACategory, nil, AEnabled);
+  inherited Create(AFixture, AMethodName, AName, ACategory, nil, AEnabled, false, '', AMaxTime);
   FInstance := AInstance;
   FRttiMethod := AMethod;
   FCaseName := ACaseName;
+  FExpectedException := AExpectedException;
+  FExceptionInheritance := AExceptionInheritance;
 
   parameters := FRttiMethod.GetParameters();
 
   //Work with the params as the limiter.
   len := Length(parameters);
 
-  if len > 0 then
+  //Bad data must not silently become 0 / defaults. Raising here would abort the whole run,
+  //so the problem is stored and Execute reports it as an error for this case alone.
+  args := AArgs;
+  //[TestCase('Empty', '')] splits into no values: for a single parameter that is one empty value.
+  if (len = 1) and (Length(args) = 0) then
+    args := [TValue.From<string>('')];
+  if Length(args) <> len then
   begin
-    //Only keep as many arguments as there are params
-    SetLength(FArgs, len);
-    for index := 0 to Pred(len) do
-      if (index <= high(AArgs)) and Assigned(parameters[index].ParamType) and AArgs[index].TryConvert(parameters[index].ParamType.Handle, tmp) then
-        FArgs[index] := tmp;
+    FArgError := Format(STestCaseValueCount, [GetName, Length(args), len]);
+    Exit;
+  end;
+
+  SetLength(FArgs, len);
+  for index := 0 to Pred(len) do
+  begin
+    converted := Assigned(parameters[index].ParamType);
+    reason := '';
+    if converted then
+    begin
+      typeName := parameters[index].ParamType.Name;
+      try
+        converted := args[index].TryConvert(parameters[index].ParamType.Handle, tmp);
+      except
+        on E : Exception do
+        begin
+          converted := false;
+          reason := ' (' + E.Message + ')';
+        end;
+      end;
+    end
+    else
+      typeName := '(untyped)';
+    if not converted then
+    begin
+      FArgError := Format(STestCaseValueConvert, [GetName, args[index].ToString, parameters[index].Name, typeName, reason]);
+      Exit;
+    end;
+    FArgs[index] := tmp;
   end;
 end;
 
@@ -381,15 +441,22 @@ begin
   inherited;
 end;
 
-procedure TDUnitXTestCase.Execute(const context : ITestExecuteContext);
+procedure TDUnitXTestCase.ExecuteMethod;
 begin
-  FStartTime := Now();
-  try
-    FRttiMethod.Invoke(FInstance, FArgs);
-  finally
-    FEndTime := Now();
-    FDuration := TTimeSpan.Subtract(FEndTime, FStartTime);
-  end;
+  if FArgError <> '' then
+    raise EArgumentException.Create(FArgError);
+  //[WillRaise] applies to each case of the method, as it does to a plain test.
+  if FExpectedException = nil then
+    InvokeMethod
+  else if FExceptionInheritance = exDescendant then
+    Assert.WillRaiseDescendant(InvokeMethod, FExpectedException)
+  else
+    Assert.WillRaise(InvokeMethod, FExpectedException);
+end;
+
+procedure TDUnitXTestCase.InvokeMethod;
+begin
+  FRttiMethod.Invoke(FInstance, FArgs);
 end;
 
 function TDUnitXTestCase.GetIsTestCase : boolean;
@@ -429,24 +496,28 @@ begin
   FExceptionInheritance := AExceptionInheritance;
 end;
 
-destructor TDUnitXExceptionTest.Destroy;
+procedure TDUnitXExceptionTest.ExecuteMethod;
 begin
-  FRaiseContext := nil;
-  inherited;
-end;
-
-procedure TDUnitXExceptionTest.Execute(const context : ITestExecuteContext);
-begin
-  FRaiseContext := context;
+  //Asserted inside the timed body, so [MaxTime] also applies when the expected exception is raised.
+  //Nothing is kept from the execute context: holding it (the run results, which hold the fixture,
+  //which holds this test) made a reference cycle that leaked the whole run.
   if FExceptionInheritance = exDescendant then
-    Assert.WillRaiseDescendant(RaiseMethod, FExpectedException)
+    Assert.WillRaiseDescendant(FMethod, FExpectedException)
   else
-    Assert.WillRaise(RaiseMethod, FExpectedException);
+    Assert.WillRaise(FMethod, FExpectedException);
 end;
 
-procedure TDUnitXExceptionTest.RaiseMethod;
+{ TDUnitXErrorTest }
+
+constructor TDUnitXErrorTest.Create(const AFixture : ITestFixture; const AMethodName, AName, ACategory, AError : string);
 begin
-  inherited Execute(FRaiseContext);
+  inherited Create(AFixture, AMethodName, AName, ACategory, nil, true);
+  FError := AError;
+end;
+
+procedure TDUnitXErrorTest.ExecuteMethod;
+begin
+  raise EArgumentException.Create(FError);
 end;
 
 end.

@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -132,7 +132,8 @@ end;
 
 function TDUnitXRunResults.GetAllPassed : Boolean;
 begin
-  result := FAllPassed;
+  //A run in which no test executed (none matched, or all were ignored) has not passed.
+  result := FAllPassed and (FTotalCount - FIgnoredCount > 0);
 end;
 
 function TDUnitXRunResults.GetAllTestResults : IEnumerable<ITestResult>;
@@ -205,7 +206,7 @@ var
   successRate : integer;
 begin
   if FTotalCount <> 0 then
-    successRate := Trunc((FTotalCount - FFailureCount - FErrorCount) / FTotalCount) * 100
+    successRate := Trunc((FTotalCount - FFailureCount - FErrorCount) / FTotalCount * 100)
   else
     successRate := 100;
 

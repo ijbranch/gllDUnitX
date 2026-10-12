@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -1122,9 +1122,21 @@ begin
 end;
 
 function ConvStr2Enum(const ASource : TValue; ATarget : PTypeInfo; out AResult : TValue) : Boolean;
+var
+  LTypeData : PTypeData;
+  LValue : Integer;
 begin
-  AResult := TValue.FromOrdinal(ATarget, GetEnumValue(ATarget, ASource.AsString));
-  Result := True;
+  // GetEnumValue returns -1 for an unknown name (and raises for a non-numeric ByteBool/WordBool/LongBool name).
+  try
+    LValue := GetEnumValue(ATarget, ASource.AsString);
+  except
+    on EConvertError do
+      Exit(False);
+  end;
+  LTypeData := GetTypeData(ATarget);
+  Result := (LValue >= LTypeData.MinValue) and (LValue <= LTypeData.MaxValue);
+  if Result then
+    AResult := TValue.FromOrdinal(ATarget, LValue);
 end;
 
 function StripIso8601TimeZone(const ASource : string) : string;
@@ -1157,107 +1169,136 @@ begin
   end;
 end;
 
-function Str2DateTimeValue(const ASource : string) : TValue;
+// ISO 8601 first, then the invariant culture, so that a value has the same meaning on every machine;
+// the machine locale is the last resort, for test cases written in the local format.
+function Iso8601FormatSettings : TFormatSettings;
+begin
+  Result := TFormatSettings.Invariant();
+  Result.ShortDateFormat := 'yyyy/mm/dd';
+  Result.DateSeparator := '-';
+  Result.ShortTimeFormat := 'hh:nn:ss\.nnn';
+  Result.TimeSeparator := ':';
+end;
+
+function Str2DateTimeValue(const ASource : string; out AResult : TValue) : Boolean;
 var
   dateTime : TDateTime;
-  iso8601 : TFormatSettings;
 begin
-  if (not TryStrToDateTime(ASource, dateTime)) then
-  begin
-    iso8601 := TFormatSettings.Invariant();
-    iso8601.ShortDateFormat := 'yyyy/mm/dd';
-    iso8601.DateSeparator := '-';
-    iso8601.ShortTimeFormat := 'hh:nn:ss\.nnn';
-    iso8601.TimeSeparator := ':';
-
-    dateTime := StrToDateTimeDef(StripIso8601TimeZone(ASource), 0, iso8601);
-  end;
-
-  Result := TValue.From<TDateTime>(dateTime);
+  Result := TryStrToDateTime(StripIso8601TimeZone(ASource), dateTime, Iso8601FormatSettings)
+    or TryStrToDateTime(ASource, dateTime, TFormatSettings.Invariant)
+    or TryStrToDateTime(ASource, dateTime);
+  if Result then
+    AResult := TValue.From<TDateTime>(dateTime);
 end;
 
-function Str2TimeValue(const ASource : string) : TValue;
+function Str2TimeValue(const ASource : string; out AResult : TValue) : Boolean;
 var
   time : TDateTime;
-  iso8601 : TFormatSettings;
 begin
-  if (not TryStrToTime(ASource, time)) then
-  begin
-    iso8601 := TFormatSettings.Invariant();
-    iso8601.ShortTimeFormat := 'hh:nn:ss\.nnn';
-    iso8601.TimeSeparator := ':';
-
-    time := StrToTimeDef(ASource, 0, iso8601);
-  end;
-
-  Result := TValue.From<TDateTime>(time);
+  Result := TryStrToTime(ASource, time, Iso8601FormatSettings)
+    or TryStrToTime(ASource, time, TFormatSettings.Invariant)
+    or TryStrToTime(ASource, time);
+  if Result then
+    AResult := TValue.From<TDateTime>(time);
 end;
 
-function Str2DateValue(const ASource : string) : TValue;
+function Str2DateValue(const ASource : string; out AResult : TValue) : Boolean;
 var
   date : TDateTime;
-  iso8601 : TFormatSettings;
 begin
-  if (not TryStrToDate(ASource, date)) then
-  begin
-    iso8601 := TFormatSettings.Invariant();
-    iso8601.ShortDateFormat := 'yyyy/mm/dd';
-    iso8601.DateSeparator := '-';
-
-    date := StrToDateDef(ASource, Default(TDate), iso8601);
-  end;
-  Result := TValue.From<TDate>(date);
+  Result := TryStrToDate(ASource, date, Iso8601FormatSettings)
+    or TryStrToDate(ASource, date, TFormatSettings.Invariant)
+    or TryStrToDate(ASource, date);
+  if Result then
+    AResult := TValue.From<TDate>(date);
 end;
 
 function ConvStr2Float(const ASource : TValue; ATarget : PTypeInfo; out AResult : TValue) : Boolean;
 var
-  lFormatSettings : TFormatSettings;
   lValue : string;
+  lFloat : Extended;
 begin
-  lFormatSettings.DecimalSeparator := '.';
   lValue := StringReplace(ASource.AsString, ',', '.', [rfReplaceAll]);
 
   if ATarget = TypeInfo(TDate) then
-    AResult := Str2DateValue(lValue)
+    Result := Str2DateValue(lValue, AResult)
   else if ATarget = TypeInfo(TDateTime) then
-    AResult := Str2DateTimeValue(lValue)
+    Result := Str2DateTimeValue(lValue, AResult)
   else if ATarget = TypeInfo(TTime) then
-    AResult := Str2TimeValue(lValue)
+    Result := Str2TimeValue(lValue, AResult)
   else
-    AResult := TValue.FromFloat(ATarget, StrToFloatDef(lValue, 0, lFormatSettings));
-  Result := True;
+  begin
+    Result := TryStrToFloat(lValue, lFloat, TFormatSettings.Invariant);
+    if Result then
+      AResult := TValue.FromFloat(ATarget, lFloat);
+  end;
 end;
 
 function ConvStr2Int(const ASource : TValue; ATarget : PTypeInfo; out AResult : TValue) : Boolean;
+var
+  LTypeData : PTypeData;
+  LValue : Int64;
 begin
-  if ATarget = TypeInfo(TAlphaColor) then
-    AResult := TValue.FromOrdinal(ATarget, StringToAlphaColor(ASource.AsString))
-  else if ATarget = TypeInfo(TColor) then
-    AResult := TValue.FromOrdinal(ATarget, StringToColor(ASource.AsString))
+  try
+    if ATarget = TypeInfo(TAlphaColor) then
+      LValue := StringToAlphaColor(ASource.AsString)
+    else if ATarget = TypeInfo(TColor) then
+      LValue := StringToColor(ASource.AsString)
+    else if not TryStrToInt64(ASource.AsString, LValue) then
+      Exit(False);
+  except
+    on EConvertError do
+      Exit(False);
+  end;
+  // Range-check before FromOrdinal, which would silently truncate ('300' -> Byte 44).
+  LTypeData := GetTypeData(ATarget);
+  if LTypeData.OrdType = otULong then
+    Result := (LValue >= Cardinal(LTypeData.MinValue)) and (LValue <= Cardinal(LTypeData.MaxValue))
   else
-    AResult := TValue.FromOrdinal(ATarget, StrToInt64Def(ASource.AsString, 0));
-  Result := True;
+    Result := (LValue >= LTypeData.MinValue) and (LValue <= LTypeData.MaxValue);
+  if Result then
+    AResult := TValue.FromOrdinal(ATarget, LValue);
 end;
 
 function ConvStr2Ord(const ASource : TValue; ATarget : PTypeInfo; out AResult : TValue) : Boolean;
-begin
+var
+  LTypeData : PTypeData;
+  LValue : Int64;
 {$IFDEF DELPHI_XE6_UP}
-  if ATarget = System.TypeInfo(UInt64) then
-    AResult := TValue.FromOrdinal(ATarget, StrToUInt64Def(ASource.AsString, 0))
-  else
+  LUValue : UInt64;
 {$ENDIF}
-    AResult := TValue.FromOrdinal(ATarget, StrToInt64Def(ASource.AsString, 0));
-  Result := True;
+begin
+  LTypeData := GetTypeData(ATarget);
+{$IFDEF DELPHI_XE6_UP}
+  // An unsigned 64-bit type stores its range as signed values, so Min > Max.
+  if LTypeData.MinInt64Value > LTypeData.MaxInt64Value then
+  begin
+    Result := (not StartsStr('-', Trim(ASource.AsString))) and TryStrToUInt64(ASource.AsString, LUValue);
+    if Result then
+      AResult := TValue.FromOrdinal(ATarget, Int64(LUValue));
+    Exit;
+  end;
+{$ENDIF}
+  Result := TryStrToInt64(ASource.AsString, LValue)
+    and (LValue >= LTypeData.MinInt64Value) and (LValue <= LTypeData.MaxInt64Value);
+  if Result then
+    AResult := TValue.FromOrdinal(ATarget, LValue);
 end;
 
 function ConvStr2Set(const ASource : TValue; ATarget : PTypeInfo; out AResult : TValue) : Boolean;
 var
-  pInt : PInteger;
+  LValue : Integer;
 begin
-  AResult := TValue.From(0, ATarget);
-  pInt := AResult.GetReferenceToRawData;
-  pInt^ := StringToSet(ATarget, Asource.AsString);
-
+  // StringToSet raises for an unknown element name.
+  try
+    LValue := StringToSet(ATarget, ASource.AsString);
+  except
+    on EPropertyConvertError do
+      Exit(False);
+  end;
+  // StringToSet returns at most 32 elements as an Integer; copy only as many bytes as the set occupies.
+  TValue.Make(nil, ATarget, AResult);
+  Move(LValue, AResult.GetReferenceToRawData^, Min(SizeOfSet(ATarget), SizeOf(LValue)));
   Result := True;
 end;
 

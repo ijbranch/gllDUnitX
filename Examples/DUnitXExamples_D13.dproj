@@ -90,8 +90,8 @@
         <VerInfo_Locale>1033</VerInfo_Locale>
         <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
-        <VerInfo_Build>2</VerInfo_Build>
-        <VerInfo_Keys>CompanyName=;FileDescription=DUnitXExamples_D13;FileVersion=1.0.0.2;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=DUnitXExamples_D13;ProductVersion=1.0.0.2;Comments=</VerInfo_Keys>
+        <VerInfo_Build>4</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=;FileDescription=DUnitXExamples_D13;FileVersion=1.0.0.4;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=DUnitXExamples_D13;ProductVersion=1.0.0.4;Comments=</VerInfo_Keys>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
@@ -164,7 +164,7 @@
                 </Parameters>
                 <VersionInfo>
                     <VersionInfo Name="IncludeVerInfo">False</VersionInfo>
-                    <VersionInfo Name="AutoIncBuild">False</VersionInfo>
+                    <VersionInfo Name="AutoIncBuild">True</VersionInfo>
                     <VersionInfo Name="MajorVer">1</VersionInfo>
                     <VersionInfo Name="MinorVer">0</VersionInfo>
                     <VersionInfo Name="Release">0</VersionInfo>
@@ -201,14 +201,6 @@
                 <Platform value="Win64">True</Platform>
             </Platforms>
             <Deployment Version="5">
-                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\22.0\bin\Win32\Debug\DUnitXExamples_D11Alexandria.exe" Configuration="Debug" Class="ProjectOutput"/>
-                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\37.0\bin\Win32\Debug\DUnitXExamples_D13.exe" Configuration="Debug" Class="ProjectOutput">
-                    <Platform Name="Win32">
-                        <RemoteName>DUnitXExamples_D13.exe</RemoteName>
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
-                <DeployFile LocalName="Win64\Debug\DUnitXExamples_D11Alexandria.exe" Configuration="Debug" Class="ProjectOutput"/>
                 <DeployClass Name="AdditionalDebugSymbols">
                     <Platform Name="Win32">
                         <Operation>0</Operation>

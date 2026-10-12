@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -135,7 +135,8 @@ type
       const AEnabled : boolean = true; const AIgnored : boolean = false; const AIgnoreReason : string = ''; const AMaxTime : cardinal = 0; const
       AExpectedException : ExceptClass = nil; const AExceptionInheritance : TExceptionInheritance = exExact) : ITest;
     function AddTestCase(const AMethodName : string; const ACaseName : string; const AName : string; const ACategory : string; const AMethod : TRttiMethod;
-      const AEnabled : boolean; const AArgs : TValueArray) : ITest;
+      const AEnabled : boolean; const AArgs : TValueArray; const AMaxTime : cardinal = 0; const AExpectedException : ExceptClass = nil;
+      const AExceptionInheritance : TExceptionInheritance = exExact) : ITest;
 
     function AddChildFixture(const ATestClass : TClass; const AName : string; const ACategory : string) : ITestFixture; overload;
     function AddChildFixture(const AInstance : TObject; const AName : string; const ACategory : string) : ITestFixture; overload;
@@ -227,7 +228,14 @@ begin
     FIgnoredReason := IgnoredAttrib.Reason;
   end;
 
-  InternalInitFixtureInstance(true);
+  //A constructor that raises must not abort building every fixture. The instance stays nil, and the
+  //runner constructs it again (InitFixtureInstance) and reports the failure against this fixture's tests.
+  try
+    InternalInitFixtureInstance(true);
+  except
+    on Exception do
+      FFixtureInstance := nil;
+  end;
 end;
 
 destructor TDUnitXTestFixture.Destroy;
@@ -249,10 +257,8 @@ begin
   if Assigned(FTearDownFixtureMethod) then
   begin
     if FTearDownFixtureIsDestructor then
-    begin
-      FFixtureInstance.Free;
-      FFixtureInstance := nil;
-    end
+      //Nils the field before freeing, so a destructor that raises is not freed again by Destroy.
+      FreeAndNil(FFixtureInstance)
     else
       FTearDownFixtureMethod();
   end;
@@ -491,6 +497,15 @@ begin
       //The fixture instance has changed, need to update the tests to run on the new instance.
       for test in FTests do
         (test as ITestExecute).UpdateInstance(FFixtureInstance);
+      //So do the setup and teardown methods, which were bound to the previous (freed) instance.
+      if Assigned(FSetupMethod) then
+        TMethod(FSetupMethod).Data := FFixtureInstance;
+      if Assigned(FTearDownMethod) then
+        TMethod(FTearDownMethod).Data := FFixtureInstance;
+      if Assigned(FSetupFixtureMethod) then
+        TMethod(FSetupFixtureMethod).Data := FFixtureInstance;
+      if Assigned(FTearDownFixtureMethod) then
+        TMethod(FTearDownFixtureMethod).Data := FFixtureInstance;
     end;
   end;
 end;
@@ -531,11 +546,11 @@ end;
 
 procedure TDUnitXTestFixture.SetSetupFixtureMethod(const AMethodName : string; const AMethod : TTestMethod);
 begin
+  //The name is kept even when the constructor takes the place of the method, so the runner can say
+  //that the [SetupFixture] method is not run (SetupFixtureMethodName set, SetupFixtureMethod nil).
+  FSetupFixtureMethodName := AMethodName;
   if not FIgnoreFixtureSetup then
-  begin
-    FSetupFixtureMethodName := AMethodName;
     FSetupFixtureMethod := AMethod;
-  end;
 end;
 
 procedure TDUnitXTestFixture.SetSetupTestMethod(const AMethodName : string; const AMethod : TTestMethod);
@@ -592,9 +607,11 @@ begin
 end;
 
 function TDUnitXTestFixture.AddTestCase(const AMethodName : string; const ACaseName, AName : string; const ACategory : string; const AMethod : TRttiMethod;
-  const AEnabled : boolean; const AArgs : TValueArray) : ITest;
+  const AEnabled : boolean; const AArgs : TValueArray; const AMaxTime : cardinal; const AExpectedException : ExceptClass;
+  const AExceptionInheritance : TExceptionInheritance) : ITest;
 begin
-  result := TDUnitXTestCase.Create(FFixtureInstance, Self, AMethodName, ACaseName, AName, ACategory, AMethod, AEnabled, AArgs);
+  result := TDUnitXTestCase.Create(FFixtureInstance, Self, AMethodName, ACaseName, AName, ACategory, AMethod, AEnabled, AArgs, AMaxTime,
+    AExpectedException, AExceptionInheritance);
   result.IgnoreMemoryLeaks := GetIgnoreMemoryLeaksForMethod(AMethod);
   FTests.Add(result);
 end;

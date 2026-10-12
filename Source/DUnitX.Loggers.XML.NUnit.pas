@@ -161,6 +161,7 @@ var
   sResult : string;
   sTime : string;
   sDate : string;
+  sDuration : string;
   totalTests : integer;
 begin
 
@@ -180,10 +181,12 @@ begin
   FIndent := 0;
   sTime := FormatDateTime('hh":"nn":"ss', RunResults.StartTime);
   sDate := FormatDateTime('yyyy-MM-dd', RunResults.StartTime);
+  sDuration := Format('%.3f', [RunResults.Duration.TotalSeconds]);
 
   WriteXMLLine('<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>');
   WriteXMLLine(Format('<test-results name="%s" total="%d" errors="%d" failures="%d" ignored="%d" inconclusive="0" not-run="%d" skipped="0" invalid="0" date="%s" time="%s">',
-      [sExeName, totalTests, RunResults.ErrorCount, RunResults.FailureCount, RunResults.IgnoredCount, RunResults.IgnoredCount, sDate, sTime]));
+      [EscapeForXML(sExeName), totalTests, RunResults.ErrorCount, RunResults.FailureCount + RunResults.MemoryLeakCount, RunResults.IgnoredCount,
+      RunResults.IgnoredCount, sDate, sTime])); //a leaked test is written as result="Failure"
   sExeName := ExtractFileName(sExeName);
 
   if RunResults.AllPassed then
@@ -195,8 +198,8 @@ begin
   //TODO: Populate these properly.
 //  WriteXMLLine('<environment nunit-version="DUnitX" clr-version="2.0.0.0" os-version="6.1.0.0" platform="Windows" cwd="" machine-name="" user="" user-domain=""  />');
   WriteXMLLine('<culture-info current-culture="en" current-uiculture="en" />');
-  WriteXMLLine(Format('<test-suite type="Assembly" name="%s" executed="true" result="%s" success="%s" time="%s" asserts="0">', [sExeName, sResult,
-    BoolToStr(RunResults.AllPassed, true), sTime]));
+  WriteXMLLine(Format('<test-suite type="Assembly" name="%s" executed="true" result="%s" success="%s" time="%s" asserts="0">', [EscapeForXML(sExeName), sResult,
+    BoolToStr(RunResults.AllPassed, true), sDuration]));
   Indent;
   WriteXMLLine('<results>');
 
@@ -403,7 +406,7 @@ begin
     WriteXMLLine('<categories>');
     Indent;
     for sCategory in ACategoryList do
-      WriteXMLLine(Format('<category name="%s" />', [sCategory]));
+      WriteXMLLine(Format('<category name="%s" />', [EscapeForXML(sCategory)]));
     Outdent;
     WriteXMLLine('</categories>');
     Outdent;

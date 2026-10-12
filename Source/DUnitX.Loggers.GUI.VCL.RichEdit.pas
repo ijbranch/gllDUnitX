@@ -52,6 +52,7 @@ type
     FIndent : integer;
     FCurrColor : TColor;
     FTestBookmarkList : TTestBookmarkList;
+    FFixtureIndents : TStack<integer>;
     procedure Write(const Msg : string);
     procedure WriteBlankLine;
     procedure SetColor(const Color : TColor);
@@ -89,6 +90,7 @@ type
     procedure OnTestSuccess(const threadId : TThreadID; const Test : ITestResult);
   public
     constructor Create(const RichEdit : TRichEdit; const TestBookmarkList : TTestBookmarkList);
+    destructor Destroy; override;
   end;
 
 implementation
@@ -105,8 +107,15 @@ constructor TDUnitXGUIVCLRichEditLogger.Create(const RichEdit : TRichEdit; const
 begin
   FRichEdit := RichEdit;
   FTestBookmarkList := TestBookmarkList;
+  FFixtureIndents := TStack<integer>.Create;
 
   FIndent := 0;
+end;
+
+destructor TDUnitXGUIVCLRichEditLogger.Destroy;
+begin
+  FFixtureIndents.Free;
+  inherited;
 end;
 
 procedure TDUnitXGUIVCLRichEditLogger.Indent(const Value : integer);
@@ -116,7 +125,8 @@ end;
 
 procedure TDUnitXGUIVCLRichEditLogger.OnBeginTest(const threadId : TThreadID; const Test : ITestInfo);
 begin
-  FTestBookmarkList.Add(Test.FullName, FRichEdit.Lines.Count);
+  //A test can begin twice (a fixture teardown failure, a duplicate name): the latest output wins.
+  FTestBookmarkList.AddOrSetValue(Test.FullName, FRichEdit.Lines.Count);
 
   SetConsoleRunTestColor();
   Indent(1);
@@ -152,7 +162,11 @@ end;
 
 procedure TDUnitXGUIVCLRichEditLogger.OnEndTestFixture(const threadId : TThreadID; const results : IFixtureResult);
 begin
-  Outdent(3);
+  //Restore the indent the fixture started at: a failed fixture setup never reaches OnEndSetupFixture.
+  if FFixtureIndents.Count > 0 then
+    FIndent := FFixtureIndents.Pop
+  else
+    Outdent(3);
   WriteBlankLine;
 end;
 
@@ -193,6 +207,7 @@ end;
 
 procedure TDUnitXGUIVCLRichEditLogger.OnStartTestFixture(const threadId : TThreadID; const fixture : ITestFixtureInfo);
 begin
+  FFixtureIndents.Push(FIndent);
   SetConsoleWarningColor();
   Indent(2);
   Write(SFixture + fixture.FullName);
@@ -344,6 +359,8 @@ procedure TDUnitXGUIVCLRichEditLogger.OnTestingStarts(const threadId : TThreadID
 begin
   FRichEdit.Clear;
   FTestBookmarkList.Clear;
+  FFixtureIndents.Clear;
+  FIndent := 0;
 
   SetConsoleDefaultColor;
   Write(Format(SStartingTests, [ExtractFileName(ParamStr(0))]));
@@ -417,12 +434,17 @@ end;
 
 procedure TDUnitXGUIVCLRichEditLogger.Write(const Msg : string);
 begin
+  //Append at the end, wherever the user has put the caret.
+  FRichEdit.SelStart := FRichEdit.GetTextLen;
+  FRichEdit.SelLength := 0;
   FRichEdit.SelAttributes.Color := FCurrColor;
   FRichEdit.SelText := StringOfChar(' ', FIndent) + Msg + #13#10;
 end;
 
 procedure TDUnitXGUIVCLRichEditLogger.WriteBlankLine;
 begin
+  FRichEdit.SelStart := FRichEdit.GetTextLen;
+  FRichEdit.SelLength := 0;
   FRichEdit.SelText := #13#10;
 end;
 

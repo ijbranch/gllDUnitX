@@ -225,7 +225,8 @@ end;
 
 function TDUnitXFixtureResult.GetHasFailures : Boolean;
 begin
-  result := FFailureCount > 0;
+  //Anything but a pass or an ignore: a fixture whose tests all errored or leaked has not succeeded.
+  result := (FFailureCount > 0) or (FErrorCount > 0) or (FMemoryLeakCount > 0);
 end;
 
 function TDUnitXFixtureResult.GetIgnoredCount : Integer;
@@ -240,7 +241,7 @@ end;
 
 function TDUnitXFixtureResult.GetNamespace : string;
 begin
-  result := FName;
+  result := FNameSpace;
 end;
 
 function TDUnitXFixtureResult.GetPassCount : Integer;
@@ -355,6 +356,9 @@ begin
       Inc(FFailureCount, fixture.FailureCount);
       Inc(FIgnoredCount, fixture.IgnoredCount);
       Inc(FPassCount, fixture.PassCount);
+      //IFixtureResult has no leak count; every fixture result is one of ours.
+      if fixture is TDUnitXFixtureResult then
+        Inc(FMemoryLeakCount, TDUnitXFixtureResult(fixture).FMemoryLeakCount);
       FAllPassed := FAllPassed and (not fixture.HasFailures);
       FFinishTime := Max(FFinishTime, fixture.FinishTime);
       FDuration := FDuration.Add(fixture.Duration);

@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -71,6 +71,18 @@ type
 
     FFailsOnNoAsserts : boolean;
     FCurrentTestName : string;
+
+    //The active-runner entry this runner registered, and the one it stood in for.
+    FThreadId : TThreadID;
+    FOwnRunnerRef : IWeakReference<ITestRunner>;
+    FPreviousRunnerRef : IWeakReference<ITestRunner>;
+
+    //While a test runs, measures memory the runner itself keeps (log messages, a pass message), which
+    //the leak check then discounts. nil when not measuring.
+    FRunnerAllocationMonitor : IMemoryLeakMonitor;
+    FRunnerAllocated : Int64;
+    procedure BeginRunnerAllocation;
+    procedure EndRunnerAllocation;
   protected
     procedure CountAndFilterTests(const fixtureList : ITestFixtureList; var count, active : Cardinal);
     //Logger calls - sequence ordered
@@ -200,7 +212,151 @@ uses
   DUnitX.Utils,
   DUnitX.ServiceLocator,
   DUnitX.ResStrs,
-  DUnitX.FixtureBuilder;
+  DUnitX.FixtureBuilder,
+{$IFDEF USE_NS}
+  System.TimeSpan,
+{$ELSE}
+  TimeSpan,
+{$ENDIF}
+  DUnitX.ComparableFormat,
+  DUnitX.Test;
+
+type
+  //A test error with text appended to its message (a TearDown that also failed) and, optionally, a
+  //strong reference to its test, for a test that no fixture list holds (results hold tests weakly).
+  TDUnitXAmendedTestError = class(TInterfacedObject, IResult, ITestResult, ITestError)
+  private
+    FInner : ITestError;
+    FSuffix : string;
+    FTest : ITestInfo;
+  protected
+    //IResult
+    function GetStartTime : TDateTime;
+    function GetFinishTime : TDateTime;
+    function GetDuration : TTimeSpan;
+    //ITestResult
+    function GetTest : ITestInfo;
+    function GetResult : boolean;
+    function GetResultType : TTestResultType;
+    function GetMessage : string;
+    function GetLogMessages : TLogMessageArray;
+    function GetStackTrace : string;
+    //ITestError
+    function GetExceptionClass : ExceptClass;
+    function GetExceptionMessage : string;
+    function GetExceptionLocationInfo : string;
+    function GetExceptionAddressInfo : string;
+    function GetExceptionAddress : Pointer;
+    function GetIsComparable : boolean;
+    function GetExpected : string;
+    function GetActual : string;
+    function GetFormat : TDUnitXComparableFormatClass;
+  public
+    constructor Create(const AInner : ITestError; const ASuffix : string; const ATest : ITestInfo = nil);
+  end;
+
+{ TDUnitXAmendedTestError }
+
+constructor TDUnitXAmendedTestError.Create(const AInner : ITestError; const ASuffix : string; const ATest : ITestInfo);
+begin
+  inherited Create;
+  FInner := AInner;
+  FSuffix := ASuffix;
+  FTest := ATest;
+end;
+
+function TDUnitXAmendedTestError.GetStartTime : TDateTime;
+begin
+  result := FInner.StartTime;
+end;
+
+function TDUnitXAmendedTestError.GetFinishTime : TDateTime;
+begin
+  result := FInner.FinishTime;
+end;
+
+function TDUnitXAmendedTestError.GetDuration : TTimeSpan;
+begin
+  result := FInner.Duration;
+end;
+
+function TDUnitXAmendedTestError.GetTest : ITestInfo;
+begin
+  if FTest <> nil then
+    result := FTest
+  else
+    result := FInner.Test;
+end;
+
+function TDUnitXAmendedTestError.GetResult : boolean;
+begin
+  result := FInner.Result;
+end;
+
+function TDUnitXAmendedTestError.GetResultType : TTestResultType;
+begin
+  result := FInner.ResultType;
+end;
+
+function TDUnitXAmendedTestError.GetMessage : string;
+begin
+  result := FInner.Message + FSuffix;
+end;
+
+function TDUnitXAmendedTestError.GetLogMessages : TLogMessageArray;
+begin
+  result := FInner.LogMessages;
+end;
+
+function TDUnitXAmendedTestError.GetStackTrace : string;
+begin
+  result := FInner.StackTrace;
+end;
+
+function TDUnitXAmendedTestError.GetExceptionClass : ExceptClass;
+begin
+  result := FInner.ExceptionClass;
+end;
+
+function TDUnitXAmendedTestError.GetExceptionMessage : string;
+begin
+  result := FInner.ExceptionMessage + FSuffix;
+end;
+
+function TDUnitXAmendedTestError.GetExceptionLocationInfo : string;
+begin
+  result := FInner.ExceptionLocationInfo;
+end;
+
+function TDUnitXAmendedTestError.GetExceptionAddressInfo : string;
+begin
+  result := FInner.ExceptionAddressInfo;
+end;
+
+function TDUnitXAmendedTestError.GetExceptionAddress : Pointer;
+begin
+  result := FInner.ExceptionAddress;
+end;
+
+function TDUnitXAmendedTestError.GetIsComparable : boolean;
+begin
+  result := FInner.IsComparable;
+end;
+
+function TDUnitXAmendedTestError.GetExpected : string;
+begin
+  result := FInner.Expected;
+end;
+
+function TDUnitXAmendedTestError.GetActual : string;
+begin
+  result := FInner.Actual;
+end;
+
+function TDUnitXAmendedTestError.GetFormat : TDUnitXComparableFormatClass;
+begin
+  result := FInner.Format;
+end;
 
 { TDUnitXTestRunner }
 
@@ -294,6 +450,7 @@ var
   LSetUpMemoryAllocated : Int64;
   LTearDownMemoryAllocated : Int64;
   LTestMemoryAllocated : Int64;
+  LLeaked : Int64;
   LMsg : string;
   LMemoryAllocationProvider2 : IMemoryLeakMonitor2;
   testInfo : ITestInfo;
@@ -308,7 +465,10 @@ begin
   LTestMemoryAllocated := memoryAllocationProvider.TestMemoryAllocated;
   LTearDownMemoryAllocated := memoryAllocationProvider.TearDownMemoryAllocated;
 
-  if (LSetUpMemoryAllocated + LTestMemoryAllocated + LTearDownMemoryAllocated = 0) then
+  //Net growth, less what the runner itself kept meanwhile. Only growth is a leak: a test that frees
+  //memory allocated before it started has a negative delta.
+  LLeaked := LSetUpMemoryAllocated + LTestMemoryAllocated + LTearDownMemoryAllocated - FRunnerAllocated;
+  if (LLeaked <= 0) then
     Exit(True);
 
   if memoryAllocationProvider.QueryInterface(IMemoryLeakMonitor2, LMemoryAllocationProvider2) = 0 then
@@ -319,7 +479,7 @@ begin
   begin
     // The leak occurred in the setup/teardown
     Result := False;
-    LMsg := Format(SSetupTeardownBytesLeaked, [LSetUpMemoryAllocated + LTearDownMemoryAllocated]) + LMsg;
+    LMsg := Format(SSetupTeardownBytesLeaked, [LLeaked]) + LMsg;
 
     errorResult := TDUnitXTestResult.Create(testInfo, TTestResultType.MemoryLeak, LMsg);
   end
@@ -327,14 +487,14 @@ begin
   begin
     // The leak occurred in the test only
     Result := False;
-    LMsg := Format(STestBytesLeaked, [LTestMemoryAllocated]) + LMsg;
+    LMsg := Format(STestBytesLeaked, [LLeaked]) + LMsg;
     errorResult := TDUnitXTestResult.Create(testInfo, TTestResultType.MemoryLeak, LMsg);
   end
   else
   begin
     // The leak occurred in the setup/teardown/test
     Result := False;
-    LMsg := Format(SSetupTestTeardownBytesLeaked, [LSetUpMemoryAllocated + LTestMemoryAllocated + LTearDownMemoryAllocated]) + LMsg;
+    LMsg := Format(SSetupTestTeardownBytesLeaked, [LLeaked]) + LMsg;
     errorResult := TDUnitXTestResult.Create(testInfo, TTestResultType.MemoryLeak, LMsg);
   end;
 end;
@@ -346,9 +506,14 @@ begin
   FFixtureClasses := TDictionary<TClass, string>.Create;
   FUseRTTI := False;
   FLogMessages := TStringList.Create;
+  FThreadId := TThread.CurrentThread.ThreadID;
+  FOwnRunnerRef := TWeakReference<ITestRunner>.Create(Self);
   MonitorEnter(TDUnitXTestRunner.FActiveRunners);
   try
-    TDUnitXTestRunner.FActiveRunners.Add(TThread.CurrentThread.ThreadID, TWeakReference<ITestRunner>.Create(Self));
+    //A runner created while another is active on this thread (one driven from inside a test) stands in for it
+    //until it is destroyed, rather than failing with a duplicate key.
+    TDUnitXTestRunner.FActiveRunners.TryGetValue(FThreadId, FPreviousRunnerRef);
+    TDUnitXTestRunner.FActiveRunners.AddOrSetValue(FThreadId, FOwnRunnerRef);
   finally
     MonitorExit(TDUnitXTestRunner.FActiveRunners);
   end;
@@ -376,16 +541,23 @@ end;
 
 destructor TDUnitXTestRunner.Destroy;
 var
-  tId : TThreadID;
+  ref : IWeakReference<ITestRunner>;
 begin
   MonitorEnter(TDUnitXTestRunner.FActiveRunners);
   try
-    tId := TThread.CurrentThread.ThreadID;
-    if TDUnitXTestRunner.FActiveRunners.ContainsKey(tId) then
-      TDUnitXTestRunner.FActiveRunners.Remove(tId);
+    //Only this runner's own entry is removed, and the runner it stood in for is restored.
+    if (FOwnRunnerRef <> nil) and TDUnitXTestRunner.FActiveRunners.TryGetValue(FThreadId, ref) and (ref = FOwnRunnerRef) then
+    begin
+      if (FPreviousRunnerRef <> nil) and FPreviousRunnerRef.IsAlive then
+        TDUnitXTestRunner.FActiveRunners.AddOrSetValue(FThreadId, FPreviousRunnerRef)
+      else
+        TDUnitXTestRunner.FActiveRunners.Remove(FThreadId);
+    end;
   finally
     MonitorExit(TDUnitXTestRunner.FActiveRunners);
   end;
+  FPreviousRunnerRef := nil;
+  FOwnRunnerRef := nil;
 
   FLogMessages.Free;
   FLoggers.Free;
@@ -422,7 +594,7 @@ begin
       end;
     TTestResultType.Ignored :
       begin
-        Log(TLogLevel.Error, STestIgnored + testResult.Test.Name + ' : ' + testResult.Message);
+        Log(TLogLevel.Information, STestIgnored + testResult.Test.Name + ' : ' + testResult.Message);
         context.RecordResult(fixtureResult, testResult);
         Self.Loggers_AddIgnored(threadId, testResult);
       end;
@@ -609,6 +781,9 @@ begin
   try
     ExecuteFixtures(nil, context, threadId, fixtureList);
     context.RollupResults;              //still need this for overall time.
+    //AllPassed is False for such a run; say why.
+    if result.TestCount - result.IgnoredCount = 0 then
+      Log(TLogLevel.Warning, SNoTestsExecuted);
   finally
     Self.Loggers_TestingEnds(result);
   end;
@@ -628,8 +803,13 @@ var
   ref : IWeakReference<ITestRunner>;
 begin
   result := nil;
-  if FActiveRunners.TryGetValue(TThread.CurrentThread.ThreadId, ref) then
-    result := ref.Data;
+  MonitorEnter(FActiveRunners);
+  try
+    if FActiveRunners.TryGetValue(TThread.CurrentThread.ThreadId, ref) then
+      result := ref.Data;
+  finally
+    MonitorExit(FActiveRunners);
+  end;
 end;
 
 class function TDUnitXTestRunner.GetCurrentTestName : string;
@@ -679,10 +859,24 @@ begin
     Self.Loggers_StartTestFixture(threadId, fixture as ITestFixtureInfo);
     try
       //Initialize the fixture as it may have been destroyed in a previous run (when using gui runner).
+      //A constructor that raises fails this fixture's tests, not the whole run.
       if fixture.HasTests then
+      try
         fixture.InitFixtureInstance;
+      except
+        on e : Exception do
+        begin
+          setupOk := false;
+          InvalidateTestsInFixture(fixture, context, threadId, e, fixtureResult);
+          Log(TLogLevel.Error, Format(SFixtureCreateError, [fixture.Name, e.Message]));
+          Log(TLogLevel.Error, SSkippingFixture);
+        end;
+      end;
+      //A parameterless constructor takes the place of a [SetupFixture] method; say so rather than drop it silently.
+      if fixture.HasActiveTests and (fixture.SetupFixtureMethodName <> '') and (not Assigned(fixture.SetupFixtureMethod)) then
+        Log(TLogLevel.Warning, Format(SSetupFixtureNotRun, [fixture.SetupFixtureMethodName, fixture.Name]));
       //only run the setup method if there are actually tests
-      if fixture.HasActiveTests and Assigned(fixture.SetupFixtureMethod) then
+      if setupOk and fixture.HasActiveTests and Assigned(fixture.SetupFixtureMethod) then
         //returns false if an exception happens in the setup.
         setupOk := ExecuteSetupFixtureMethod(context, threadId, fixture, fixtureResult);
 
@@ -743,6 +937,9 @@ end;
 
 procedure TDUnitXTestRunner.ExecuteTearDownFixtureMethod(const context : ITestExecuteContext; const threadId : TThreadID; const fixture : ITestFixture; const
   fixtureResult : IFixtureResult);
+var
+  tearDownTest : ITest;
+  tearDownResult : ITestResult;
 begin
   try
     Self.Loggers_TeardownFixture(threadId, fixture as ITestFixtureInfo);
@@ -751,8 +948,16 @@ begin
   except
     on e : Exception do
     begin
-      InvalidateTestsInFixture(fixture, context, threadId, e, fixtureResult);
+      //The fixture's tests have already run and been recorded, so they are not reported again.
+      //The failure is recorded once, as an error result named after the teardown method.
+      tearDownTest := TDUnitXTest.Create(fixture, fixture.TearDownFixtureMethodName, fixture.TearDownFixtureMethodName, '', nil, true);
+      Self.Loggers_BeginTest(threadId, tearDownTest as ITestInfo);
+      //Results reference their test weakly; this test belongs to no fixture list, so the result keeps it alive.
+      tearDownResult := TDUnitXAmendedTestError.Create(ExecuteErrorResult(context, threadId, tearDownTest, e, FLogMessagesEx), '',
+        tearDownTest as ITestInfo);
       Log(TLogLevel.Error, Format(SFixtureTeardownError, [fixture.Name, e.Message]));
+      RecordResult(context, threadId, fixtureResult, tearDownResult);
+      Self.Loggers_EndTest(threadId, tearDownResult);
     end;
   end;
 end;
@@ -763,6 +968,8 @@ var
   testExecute : ITestExecute;
   assertBeforeCount : Cardinal;
   assertAfterCount : Cardinal;
+  passed : boolean;
+  passMessage : string;
 begin
   if Supports(test, ITestExecute, testExecute) then
   begin
@@ -774,12 +981,29 @@ begin
       assertBeforeCount := 0;           //to shut the compiler up;
       if FFailsOnNoAsserts then
         assertBeforeCount := TDUnitX.GetAssertCount(threadId);
+      passed := false;
       memoryAllocationProvider.PreTest;
       try
-        testExecute.Execute(context);
+        try
+          testExecute.Execute(context);
+        except
+          //Assert.Pass is handled here so that its exception object has been released by the time
+          //PostTest measures. The message is copied, and the copy is discounted as runner memory.
+          on e : ETestPass do
+          begin
+            passed := true;
+            BeginRunnerAllocation;
+            passMessage := e.Message;
+            UniqueString(passMessage);
+            EndRunnerAllocation;
+          end;
+        end;
       finally
         memoryAllocationProvider.PostTest;
       end;
+
+      if passed then
+        Exit(ExecuteSuccessfulResult(context, threadId, test, passMessage, FLogMessagesEx));
 
       if FFailsOnNoAsserts then
       begin
@@ -812,6 +1036,7 @@ var
   tearDownResult : ITestResult;
   memoryAllocationResult : ITestResult;
   memoryAllocationProvider : IMemoryLeakMonitor;
+  testError : ITestError;
 begin
   tests := fixture.Tests;
   for test in tests do
@@ -821,6 +1046,12 @@ begin
       System.Continue;
 
     memoryAllocationProvider := TDUnitXServiceLocator.DefaultContainer.Resolve<IMemoryLeakMonitor>();
+    //A second monitor measures what the runner keeps while the test runs. A singleton registration
+    //returns the same monitor, whose readings that would overwrite, so the runner then measures nothing.
+    FRunnerAllocationMonitor := TDUnitXServiceLocator.DefaultContainer.Resolve<IMemoryLeakMonitor>();
+    if FRunnerAllocationMonitor = memoryAllocationProvider then
+      FRunnerAllocationMonitor := nil;
+    FRunnerAllocated := 0;
 
     //Start a fresh for this test. If we had an exception last execute of the
     //setup or tear down that may have changed this execution. Therefore we try
@@ -867,15 +1098,24 @@ begin
           testResult := ExecuteErrorResult(context, threadId, test, e, FLogMessagesEx);
       end;
 
-      //If the tear down fails then we need to show this as the test result.
-      if Assigned(fixture.TearDownMethod) and (not test.Ignored) then
+      //TearDown does not run after a failed Setup (as in DUnit and NUnit). If it fails, that is the
+      //result of a passing test; after a failure the test's own message stays first and the TearDown
+      //error is appended.
+      if Assigned(fixture.TearDownMethod) and (not test.Ignored) and (setupResult = nil) then
         if not (ExecuteTestTearDown(context, threadId, fixture, test, tearDownResult, memoryAllocationProvider)) then
-          testResult := tearDownResult;
+        begin
+          if Supports(testResult, ITestError, testError) then
+            testResult := TDUnitXAmendedTestError.Create(testError, sLineBreak + Format(STearDownAlsoFailed, [tearDownResult.Message]))
+          else
+            testResult := tearDownResult;
+        end;
 
+      FRunnerAllocationMonitor := nil;
       if (testResult.ResultType = TTestResultType.Pass) then
         if (not CheckMemoryAllocations(test, memoryAllocationResult, memoryAllocationProvider)) then
           testResult := memoryAllocationResult;
     finally
+      FRunnerAllocationMonitor := nil;
       RecordResult(context, threadId, fixtureResult, testResult);
       Self.Loggers_EndTest(threadId, testResult);
     end;
@@ -960,7 +1200,11 @@ begin
       Continue;
 
     Self.Loggers_BeginTest(aThreadId, lTest as ITestInfo);
-    lTestResult := ExecuteErrorResult(aContext, aThreadId, lTest, aException, FLogMessagesEx);
+    //An ignored test would not have run anyway, so it stays ignored rather than becoming an error.
+    if lTest.Ignored then
+      lTestResult := ExecuteIgnoredResult(aContext, aThreadId, lTest, lTest.IgnoreReason)
+    else
+      lTestResult := ExecuteErrorResult(aContext, aThreadId, lTest, aException, FLogMessagesEx);
     RecordResult(aContext, aThreadId, aFixtureResult, lTestResult);
     Self.Loggers_EndTest(aThreadId, lTestResult);
   end;
@@ -1062,14 +1306,35 @@ var
 begin
   if logType >= TDUnitX.Options.LogLevel then
   begin
-    //TODO : Need to get this to the current test result.
-    FLogMessages.Add(msg);
-    NewIdx := Length(FLogMessagesEx);
-    SetLength(FLogMessagesEx, NewIdx + 1);
-    FLogMessagesEx[NewIdx].Level := logType;
-    FLogMessagesEx[NewIdx].Msg := msg;
-    for logger in FLoggers do
-      logger.OnLog(logType, msg);
+    //What logging keeps is the runner's memory, not the test's: the leak check discounts it.
+    BeginRunnerAllocation;
+    try
+      //TODO : Need to get this to the current test result.
+      FLogMessages.Add(msg);
+      NewIdx := Length(FLogMessagesEx);
+      SetLength(FLogMessagesEx, NewIdx + 1);
+      FLogMessagesEx[NewIdx].Level := logType;
+      FLogMessagesEx[NewIdx].Msg := msg;
+      for logger in FLoggers do
+        logger.OnLog(logType, msg);
+    finally
+      EndRunnerAllocation;
+    end;
+  end;
+end;
+
+procedure TDUnitXTestRunner.BeginRunnerAllocation;
+begin
+  if FRunnerAllocationMonitor <> nil then
+    FRunnerAllocationMonitor.PreTest;
+end;
+
+procedure TDUnitXTestRunner.EndRunnerAllocation;
+begin
+  if FRunnerAllocationMonitor <> nil then
+  begin
+    FRunnerAllocationMonitor.PostTest;
+    Inc(FRunnerAllocated, FRunnerAllocationMonitor.TestMemoryAllocated);
   end;
 end;
 

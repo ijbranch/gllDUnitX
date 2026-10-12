@@ -1,19 +1,13 @@
 ﻿program DUnitXTest_D13;
 
-{$IFNDEF TESTINSIGHT}
 {$APPTYPE CONSOLE}
-{$ENDIF}
 {$STRONGLINKTYPES ON}
 
 uses
   SysUtils,
   DUnitX.TestFramework,
-  {$IFDEF TESTINSIGHT}
-  TestInsight.DUnitX,
-  {$ELSE}
   DUnitX.Loggers.Console,
   DUnitX.Loggers.Xml.NUnit,
-  {$ENDIF}
   DunitX.Init,
   DUnitX.Tests.Assert in 'DUnitX.Tests.Assert.pas',
   DUnitX.Tests.DUnitCompatibility in 'DUnitX.Tests.DUnitCompatibility.pas',
@@ -40,17 +34,12 @@ uses
 // DUnitXTest_D13.res, so {$R *.res} would look for a DUnitXTestProject.res that does not exist.
 {$R DUnitXTest_D13.res}
 
-{$IFNDEF TESTINSIGHT}
 var
   runner: ITestRunner;
   results: IRunResults;
   logger: ITestLogger;
   nunitLogger : ITestLogger;
-{$ENDIF}
 begin
-{$IFDEF TESTINSIGHT}
-  TestInsight.DUnitX.RunRegisteredTests;
-{$ELSE}
   try
     //Check command line options, will exit if invalid
     TDUnitX.CheckCommandLine;
@@ -77,19 +66,18 @@ begin
     if not results.AllPassed then
       System.ExitCode := EXIT_ERRORS;
 
-    {$IFNDEF CI}
-    TDUnitX.Options.ExitBehavior := TDUnitXExitBehavior.Pause;
-
-    //We don't want this happening when running under CI.
+    //Pause only when asked to (--exit:Pause); the default, Continue, lets unattended runs finish.
     if TDUnitX.Options.ExitBehavior = TDUnitXExitBehavior.Pause then
     begin
       System.Write('Done.. press <Enter> key to quit.');
       System.Readln;
     end;
-    {$ENDIF}
   except
     on E: Exception do
+    begin
+      //A run that dies before or during Execute must not report success.
       System.Writeln(E.ClassName, ': ', E.Message);
+      System.ExitCode := EXIT_ERRORS;
+    end;
   end;
-{$ENDIF}
 end.

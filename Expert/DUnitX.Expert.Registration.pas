@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -37,31 +37,14 @@ implementation
 
 uses
   ToolsApi,
-{$IFDEF USE_NS}
-  Vcl.Dialogs,
-{$ELSE}
-  Dialogs,
-{$ENDIF}
-{$IFDEF DELPHIX_SEATTLE_UP}
   DUnitX.Expert.ProjectWizardEx,
   DUnitX.Expert.NewUnitWizardEx;
-{$ELSE}
-  DUnitX.Expert.ProjectWizard,
-  DUnitX.Expert.NewUnitWizard;
-{$ENDIF}
 
 procedure Register;
 begin
-{$IFDEF DELPHIX_SEATTLE_UP}
+  // Delphi personality only: C++Builder is out of scope for this fork.
   TDUnitXNewProjectWizard.RegisterDUnitXProjectWizard(sDelphiPersonality);
-  TDUnitXNewProjectWizard.RegisterDUnitXProjectWizard(sCBuilderPersonality);
-
   TDUnitXNewUnitWizard.RegisterDUnitXNewUnitWizard(sDelphiPersonality);
-  TDUnitXNewUnitWizard.RegisterDUnitXNewUnitWizard(sCBuilderPersonality);
-{$ELSE}
-  RegisterPackageWizard(TDUnitXNewProjectWizard.Create);
-  RegisterPackageWizard(TDUnitXNewUnitWizard.Create);
-{$ENDIF}
 end;
 
 end.

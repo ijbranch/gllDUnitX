@@ -78,6 +78,8 @@
     <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
         <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
+        <VerInfo_Build>1</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=;FileDescription=DUnitXTest_D13;FileVersion=1.0.0.1;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=DUnitXTest_D13;ProductVersion=1.0.0.1;Comments=</VerInfo_Keys>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
@@ -86,8 +88,8 @@
     <PropertyGroup Condition="'$(Cfg_2_Win64)'!=''">
         <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
-        <VerInfo_Build>4</VerInfo_Build>
-        <VerInfo_Keys>CompanyName=;FileDescription=DUnitXTest_D13;FileVersion=1.0.0.4;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=DUnitXTest_D13;ProductVersion=1.0.0.4;Comments=</VerInfo_Keys>
+        <VerInfo_Build>27</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=;FileDescription=DUnitXTest_D13;FileVersion=1.0.0.27;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=DUnitXTest_D13;ProductVersion=1.0.0.27;Comments=</VerInfo_Keys>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
@@ -137,7 +139,7 @@
                 <Excluded_Packages/>
                 <VersionInfo>
                     <VersionInfo Name="IncludeVerInfo">False</VersionInfo>
-                    <VersionInfo Name="AutoIncBuild">False</VersionInfo>
+                    <VersionInfo Name="AutoIncBuild">True</VersionInfo>
                     <VersionInfo Name="MajorVer">1</VersionInfo>
                     <VersionInfo Name="MinorVer">0</VersionInfo>
                     <VersionInfo Name="Release">0</VersionInfo>
@@ -173,12 +175,6 @@
                 <Platform value="Win64">True</Platform>
             </Platforms>
             <Deployment Version="5">
-                <DeployFile LocalName="$(BDS)\Redist\iossimulator\libcgunwind.1.0.dylib" Class="DependencyModule">
-                </DeployFile>
-                <DeployFile LocalName="$(BDS)\Redist\iossimulator\libpcre.dylib" Class="DependencyModule">
-                </DeployFile>
-                <DeployFile LocalName="$(BDS)\Redist\osx32\libcgunwind.1.0.dylib" Class="DependencyModule">
-                </DeployFile>
                 <DeployClass Name="AdditionalDebugSymbols">
                     <Platform Name="Win32">
                         <Operation>0</Operation>

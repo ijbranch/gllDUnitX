@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -120,6 +120,11 @@ type
 implementation
 
 uses
+{$IFDEF USE_NS}
+  System.SyncObjs,
+{$ELSE}
+  SyncObjs,
+{$ENDIF}
   DUnitX.ResStrs;
 
 { TActivator }
@@ -242,9 +247,16 @@ begin
 end;
 
 class function TDUnitXServiceLocator.DefaultContainer : TDUnitXServiceLocator;
+var
+  container : TDUnitXServiceLocator;
 begin
   if FDefault = nil then
-    FDefault := TDUnitXServiceLocator.Create;
+  begin
+    container := TDUnitXServiceLocator.Create;
+    //Another thread may have created it first; keep that one.
+    if TInterlocked.CompareExchange<TDUnitXServiceLocator>(FDefault, container, nil) <> nil then
+      container.Free;
+  end;
 
   Result := FDefault;
 end;
@@ -284,6 +296,10 @@ begin
     else
       Exit;
   end;
+
+  //Registered with a nil delegate: report it rather than calling nil.
+  if not Assigned(registration.ActivatorDelegate) then
+    raise EServiceLocatorResolutionException.CreateFmt(SNoActivator, [typeInfo.Name]);
 
   Result := registration.ActivatorDelegate();
   if Result = nil then

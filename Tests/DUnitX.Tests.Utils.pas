@@ -1,4 +1,4 @@
-unit DUnitX.Tests.Utils;
+﻿unit DUnitX.Tests.Utils;
 
 {$I DUnitX.inc}
 
@@ -104,6 +104,18 @@ type
     [TestCase('$00FF0000 = $00FF0000', '$00FF0000,$00FF0000')]
     [TestCase('$000000FF = $000000FF', '$000000FF,$000000FF')]
     procedure TestColorTestCase(const AColor : TColor; const AColorOrd : Integer);
+
+    // A [TestCase] value that does not parse must fail the conversion, not become 0 / a default.
+    [Test]
+    procedure TryConvert_Fails_For_Values_That_Do_Not_Parse;
+
+    // Valid values still convert, whatever the machine's decimal separator.
+    [Test]
+    procedure TryConvert_Accepts_Valid_Values_In_Any_Locale;
+
+    // An ambiguous numeric date has the same meaning on every machine (ISO 8601 / invariant first).
+    [Test]
+    procedure TryConvert_Date_Meaning_Does_Not_Depend_On_Locale;
   end;
 
 
@@ -115,10 +127,12 @@ uses
 {$IFDEF USE_NS}
   System.DateUtils,
   System.Rtti,
+  System.TypInfo,
   WinApi.Windows,
 {$ELSE}
   DateUtils,
   Rtti,
+  TypInfo,
   Windows,
 {$ENDIF}
   DUnitX.Utils;
@@ -205,6 +219,83 @@ procedure TValueHelperTests.TestColorTestCase(const AColor : TColor;
   const AColorOrd : Integer);
 begin
   Assert.AreEqual(AColorOrd, AColor);
+end;
+
+type
+  TConvTestEnum = (cteOne, cteTwo, cteThree);
+  TConvTestSet = set of TConvTestEnum;
+
+procedure TValueHelperTests.TryConvert_Fails_For_Values_That_Do_Not_Parse;
+
+  procedure CheckFails(const text : string; const target : PTypeInfo);
+  var
+    converted : TValue;
+    ok : Boolean;
+  begin
+    try
+      ok := TValue.From(text).TryConvert(target, converted);
+    except
+      on E : Exception do
+      begin
+        Assert.Fail(Format('[%s] -> %s raised %s: %s', [text, string(target.Name), E.ClassName, E.Message]));
+        Exit;
+      end;
+    end;
+    Assert.IsFalse(ok, Format('[%s] -> %s should not convert (got %s)', [text, string(target.Name), converted.ToString]));
+  end;
+
+begin
+  CheckFails('abc', TypeInfo(Integer));
+  CheckFails('', TypeInfo(Integer));
+  CheckFails('300', TypeInfo(Byte));
+  CheckFails('-1', TypeInfo(Cardinal));
+  CheckFails('abc', TypeInfo(Int64));
+  CheckFails('-1', TypeInfo(UInt64));
+  CheckFails('1.5x', TypeInfo(Double));
+  CheckFails('abc', TypeInfo(Single));
+  CheckFails('Bogus', TypeInfo(TConvTestEnum));
+  CheckFails('[cteOne,Bogus]', TypeInfo(TConvTestSet));
+  CheckFails('notacolour', TypeInfo(TColor));
+  CheckFails('notacolour', TypeInfo(TAlphaColor));
+  CheckFails('notadate', TypeInfo(TDateTime));
+  CheckFails('notadate', TypeInfo(TDate));
+  CheckFails('notatime', TypeInfo(TTime));
+end;
+
+procedure TValueHelperTests.TryConvert_Accepts_Valid_Values_In_Any_Locale;
+var
+  converted : TValue;
+begin
+  setFormatSettings('DE');
+  Assert.IsTrue(TValue.From('255').TryConvert(TypeInfo(Byte), converted), 'Byte');
+  Assert.AreEqual<Int64>(255, converted.AsOrdinal);
+  Assert.IsTrue(TValue.From('-5').TryConvert(TypeInfo(Integer), converted), 'Integer');
+  Assert.AreEqual(-5, converted.AsInteger);
+  Assert.IsTrue(TValue.From('4294967295').TryConvert(TypeInfo(Cardinal), converted), 'Cardinal');
+  Assert.AreEqual<Int64>(4294967295, converted.AsOrdinal);
+  Assert.IsTrue(TValue.From('1.5').TryConvert(TypeInfo(Double), converted), 'Double 1.5');
+  Assert.AreEqual(1.5, converted.AsExtended, 0);
+  Assert.IsTrue(TValue.From('2,5').TryConvert(TypeInfo(Double), converted), 'Double 2,5');
+  Assert.AreEqual(2.5, converted.AsExtended, 0);
+  Assert.IsTrue(TValue.From('cteThree').TryConvert(TypeInfo(TConvTestEnum), converted), 'enum');
+  Assert.AreEqual(Ord(cteThree), Integer(converted.AsOrdinal));
+  Assert.IsTrue(TValue.From('[cteOne,cteThree]').TryConvert(TypeInfo(TConvTestSet), converted), 'set');
+  Assert.IsTrue(converted.AsType<TConvTestSet> = [cteOne, cteThree], 'set value');
+end;
+
+procedure TValueHelperTests.TryConvert_Date_Meaning_Does_Not_Depend_On_Locale;
+var
+  converted : TValue;
+  locale : string;
+begin
+  for locale in TArray<string>.Create('EN-GB', 'EN-US') do
+  begin
+    setFormatSettings(locale);
+    Assert.IsTrue(TValue.From('01/02/2020').TryConvert(TypeInfo(TDate), converted), locale);
+    Assert.IsSameDate(EncodeDate(2020, 1, 2), converted.AsType<TDate>, locale);
+    Assert.IsTrue(TValue.From('2020-02-01 10:20:30').TryConvert(TypeInfo(TDateTime), converted), locale);
+    Assert.IsSameDateTime(EncodeDateTime(2020, 2, 1, 10, 20, 30, 0), converted.AsType<TDateTime>, locale);
+  end;
 end;
 
 procedure TValueHelperTests.TestDateConversion(const locale, text : string);

@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -52,6 +52,11 @@ type
     [Test(false)]
     procedure OnTestWarning_Adds_Warnings_To_Be_Written_Out_On_Next_Error;
     procedure OnTestWarning_Adds_Warnings_To_Be_Written_Out_On_Next_Success;
+    // Proves the JUnit output counts a leaked test as an error in the header and the fixture (as its <error> element
+    // says), writes an ISO 8601 timestamp whatever the locale's time separator, and puts the stack trace (not the
+    // message again) in the <failure> body.
+    [Test]
+    procedure OnTestingEnds_Reports_Leaks_Timestamp_And_Stack_Trace;
 {$ENDIF}
   end;
 
@@ -72,7 +77,10 @@ uses
 {$IFDEF DELPHI_XE2_UP}
   Delphi.Mocks,
 {$ENDIF}
+  System.Generics.Collections,
   DUnitX.Generics,
+  DUnitX.FixtureResult,
+  DUnitX.InternalInterfaces,
   DUnitX.RunResults;
 
 const
@@ -187,6 +195,86 @@ begin
 end;
 
 {$IFDEF DELPHI_XE2_UP}
+procedure TDUnitX_LoggerXMLJUnitTests.OnTestingEnds_Reports_Leaks_Timestamp_And_Stack_Trace;
+var
+  logger : ITestLogger;
+  stream : TStringStream;
+  categories : TList<string>;
+  mockFixture : TMock<ITestFixtureInfo>;
+  mockTest : TMock<ITestInfo>;
+  mockFailure : TMock<ITestResult>;
+  mockLeak : TMock<ITestResult>;
+  runResults : TDUnitXRunResults;
+  runResultsIntf : IRunResults;
+  context : ITestExecuteContext;
+  fixtureResult : IFixtureResult;
+  xml : string;
+  stamp : string;
+  oldTimeSeparator : Char;
+begin
+  categories := TList<string>.Create;
+  stream := TStringStream.Create('', TEncoding.UTF8);
+  oldTimeSeparator := FormatSettings.TimeSeparator;
+  try
+    mockFixture := TMock<ITestFixtureInfo>.Create;
+    mockFixture.Setup.WillReturn('LeakyFixture').When.Name;
+    mockFixture.Setup.WillReturn('My.Namespace').When.NameSpace;
+    mockFixture.Setup.WillReturn('My.Namespace.LeakyFixture').When.FullName;
+    mockFixture.Setup.WillReturn(TValue.From<TClass>(TStringList)).When.TestClass;
+    mockFixture.Setup.WillReturn(TValue.From<TList<string>>(categories)).When.Categories;
+
+    mockTest := TMock<ITestInfo>.Create;
+    mockTest.Setup.WillReturn('ATest').When.Name;
+    mockTest.Setup.WillReturn('My.Namespace.LeakyFixture.ATest').When.FullName;
+    mockTest.Setup.WillReturn(TValue.From<TList<string>>(categories)).When.Categories;
+    mockTest.Setup.WillReturn(mockFixture.InstanceAsValue).When.Fixture;
+
+    mockFailure := TMock<ITestResult>.Create;
+    mockFailure.Setup.WillReturn(TValue.From<TTestResultType>(TTestResultType.Failure)).When.ResultType;
+    mockFailure.Setup.WillReturn(mockTest.InstanceAsValue).When.Test;
+    mockFailure.Setup.WillReturn(TValue.From<TTimeSpan>(TTimeSpan.FromMilliseconds(0))).When.Duration;
+    mockFailure.Setup.WillReturn('failure message').When.Message;
+    mockFailure.Setup.WillReturn('failure stack').When.StackTrace;
+
+    mockLeak := TMock<ITestResult>.Create;
+    mockLeak.Setup.WillReturn(TValue.From<TTestResultType>(TTestResultType.MemoryLeak)).When.ResultType;
+    mockLeak.Setup.WillReturn(mockTest.InstanceAsValue).When.Test;
+    mockLeak.Setup.WillReturn(TValue.From<TTimeSpan>(TTimeSpan.FromMilliseconds(0))).When.Duration;
+    mockLeak.Setup.WillReturn('leak message').When.Message;
+    mockLeak.Setup.WillReturn('').When.StackTrace;
+
+    runResults := TDUnitXRunResults.Create;
+    runResultsIntf := runResults;
+    context := runResults;
+    fixtureResult := TDUnitXFixtureResult.Create(nil, mockFixture.Instance);
+    context.RecordFixture(fixtureResult);
+    context.RecordResult(fixtureResult, mockFailure.Instance);
+    context.RecordResult(fixtureResult, mockLeak.Instance);
+    context.RollupResults;
+
+    FormatSettings.TimeSeparator := '.';
+    logger := TDUnitXXMLJUnitLogger.Create(stream);
+    logger.OnTestingEnds(runResultsIntf);
+    xml := stream.DataString;
+
+    Assert.Contains(xml, 'tests="2" disabled="0" errors="1" failures="1"', False, 'header counts the leak as an error');
+    Assert.Contains(xml, '<testsuite name="My.Namespace" tests="2" disabled="0" errors="1" failures="1"', False,
+      'fixture counts the leak as an error');
+    Assert.Contains(xml, '<failure message="failure message">', False, 'failure message attribute');
+    Assert.Contains(xml, '<![CDATA[ failure stack ]]>', False, 'failure body is the stack trace');
+
+    stamp := Copy(xml, Pos('timestamp="', xml) + Length('timestamp="'), 19);
+    Assert.AreEqual('T', Copy(stamp, 11, 1), False, stamp);
+    Assert.AreEqual(':', Copy(stamp, 14, 1), False, 'ISO 8601 time separator: ' + stamp);
+    Assert.AreEqual(':', Copy(stamp, 17, 1), False, 'ISO 8601 time separator: ' + stamp);
+  finally
+    FormatSettings.TimeSeparator := oldTimeSeparator;
+    logger := nil;
+    stream.Free;
+    categories.Free;
+  end;
+end;
+
 procedure TDUnitX_LoggerXMLJUnitTests.OnTestWarning_Adds_Warnings_To_Be_Written_Out_On_Next_Error;
 var
   logger : ITestLogger;

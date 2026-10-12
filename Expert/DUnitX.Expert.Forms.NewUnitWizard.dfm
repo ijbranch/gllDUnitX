@@ -5,7 +5,7 @@ object frmDunitXNewUnit: TfrmDunitXNewUnit
   ClientHeight = 163
   ClientWidth = 262
   Color = clBtnFace
-  Constraints.MinHeight = 145
+  Constraints.MinHeight = 202
   Constraints.MinWidth = 250
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -14,6 +14,7 @@ object frmDunitXNewUnit: TfrmDunitXNewUnit
   Font.Style = []
   OldCreateOrder = False
   Position = poMainFormCenter
+  OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   DesignSize = (
     262

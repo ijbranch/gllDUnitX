@@ -60,6 +60,7 @@ type
   TCommandLineParser = class(TInterfacedObject, ICommandLineParser)
   private
     FUnamedIndex : integer;
+    FOpenOptionFiles : TStringList; //options files being parsed, to stop one including itself
   protected
     procedure InternalValidate(const parseErrors : IParseResultAddError);
 
@@ -119,11 +120,12 @@ end;
 constructor TCommandLineParser.Create;
 begin
   FUnamedIndex := 0;
+  FOpenOptionFiles := TStringList.Create;
 end;
 
 destructor TCommandLineParser.Destroy;
 begin
-
+  FOpenOptionFiles.Free;
   inherited;
 end;
 
@@ -270,13 +272,33 @@ end;
 procedure TCommandLineParser.InternalParseFile(const fileName : string; const parseErrors : IParseResultAddError);
 var
   sList : TStringList;
+  fullName : string;
+  line : string;
+  i : integer;
 begin
+  fullName := ExpandFileName(fileName);
+  if FOpenOptionFiles.IndexOf(fullName) >= 0 then
+  begin
+    parseErrors.AddError(Format(SParameterFileIncludesItself, [fileName]));
+    exit;
+  end;
+  FOpenOptionFiles.Add(fullName);
   sList := TStringList.Create;
   try
     sList.LoadFromFile(fileName);
+    //trim each line; skip blank lines and '#' / ';' comment lines
+    for i := sList.Count - 1 downto 0 do
+    begin
+      line := Trim(sList[i]);
+      if (line = '') or StartsStr('#', line) or StartsStr(';', line) then
+        sList.Delete(i)
+      else
+        sList[i] := line;
+    end;
     InternalParse(sList, parseErrors);
   finally
     sList.Free;
+    FOpenOptionFiles.Delete(FOpenOptionFiles.IndexOf(fullName));
   end;
 end;
 

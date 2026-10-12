@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -85,7 +85,8 @@ uses
   DUnitX.ResStrs,
   DUnitX.InternalInterfaces,
   DUnitX.InternalDataProvider,
-  DUnitX.ServiceLocator;
+  DUnitX.ServiceLocator,
+  DUnitX.Test;
 
 { TDUnitXFixtureProvider }
 
@@ -354,18 +355,18 @@ begin
         ignoredReason := STestIgnoredRepeatSet;
       end
       else if (repeatAttrib.Count > 1) then
-      begin
+        //The repetitions are tests of this fixture (named -n-of-count), so they share its instance, its
+        //Setup / TearDown (wherever declared) and its fixture setup. A child fixture used to hold them, with
+        //Setup / TearDown copied before a base class's had been seen and test cases on a second instance.
         repeatCount := repeatAttrib.Count;
-        currentFixture := fixture.AddChildFixture(fixture.TestClass, Format('%s.%s', [currentFixture.FullName, method.Name]), category);
-        //setup and teardown might have already been set.. so take them from the parent fixture.
-        currentFixture.SetSetupTestMethod(fixture.SetupMethodName, fixture.SetupMethod);
-        currentFixture.SetTearDownTestMethod(fixture.TearDownMethodName, fixture.TearDownMethod);
-        //don't assign setupfixture or teardown fixture as the parent fixture's methods will still be run.
-      end;
     end;
 
     if (not Assigned(setupFixtureMethod)) and method.TryGetAttributeOfType<SetupFixtureAttribute>(setupFixtureAttrib) then
     begin
+      //A constructor marked [SetupFixture] already ran when the fixture instance was created; it must not be
+      //called again as a method.
+      if method.IsConstructor then
+        continue;
       setupFixtureMethod := TTestMethod(meth);
       currentFixture.SetSetupFixtureMethod(method.Name, setupFixtureMethod);
       continue;
@@ -466,10 +467,20 @@ begin
                 for i := 1 to repeatCount do
                 begin
                   currentFixture.AddTestCase(method.Name, FormatCaseName(caseName, x), FormatTestName(method.Name, i, repeatCount), category, method,
-                    testEnabled, params);
+                    testEnabled, params, maxTime, willRaise, willRaiseInherit);
                 end;
               end;
               iProvider := nil;
+            end
+            else
+            begin
+              //An unregistered provider would otherwise produce no tests at all, silently.
+              if tstProviderAttrib.ProviderClass <> nil then
+                caseName := tstProviderAttrib.ProviderClass.ClassName
+              else
+                caseName := tstProviderAttrib.ProviderName;
+              currentFixture.Tests.Add(TDUnitXErrorTest.Create(currentFixture, method.Name, method.Name, category,
+                Format(SUnknownTestCaseProvider, [caseName, method.Name])));
             end;
           end;
           // Add individual test cases
@@ -482,7 +493,7 @@ begin
               else
                 caseName := testCaseAttrib.CaseInfo.Name;
               currentFixture.AddTestCase(method.Name, caseName, FormatTestName(method.Name, i, repeatCount), category, method, testEnabled,
-                testCaseAttrib.CaseInfo.Values);
+                testCaseAttrib.CaseInfo.Values, maxTime, willRaise, willRaiseInherit);
             end;
           end;
           // Add test case from test \case sources
@@ -497,7 +508,7 @@ begin
                   for i := 1 to repeatCount do
                   begin
                     currentFixture.AddTestCase(method.Name, TestCaseData.Name, FormatTestName(method.Name, i, repeatCount), category, method, testEnabled,
-                      TestCaseData.Values);
+                      TestCaseData.Values, maxTime, willRaise, willRaiseInherit);
                   end;
                 end;
               end;
@@ -530,7 +541,7 @@ begin
       for i := 1 to repeatCount do
       begin
         currentFixture.AddTest(method.Name, TTestMethod(meth), FormatTestName(method.Name, i, repeatCount), category, method, true, ignoredTest, ignoredReason,
-          maxTime);
+          maxTime, willRaise, willRaiseInherit);
       end;
     end;
   end;

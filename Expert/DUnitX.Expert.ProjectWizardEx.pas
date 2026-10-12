@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -32,7 +32,6 @@ interface
 
 uses
   ToolsApi,
-  VCL.Graphics,
   PlatformConst
   ;
 
@@ -47,6 +46,7 @@ implementation
 uses
   DccStrs,
   Vcl.Controls,
+  Vcl.Dialogs,
   Vcl.Forms,
   WinApi.Windows,
   System.SysUtils,
@@ -58,6 +58,10 @@ uses
 resourcestring
   sNewTestProjectCaption = 'DUnitX Project';
   sNewTestProjectHint = 'Create New DUnitX Test Project';
+  sNoNewProject = 'The new DUnitX project could not be located after it was created, so the $(DUnitX) unit search path ' +
+    'was not set and no test unit was added. Check the project group and set them by hand.';
+  sNoProjectOptions = 'The project options of the new DUnitX project are not available, so the $(DUnitX) unit search ' +
+    'path was not set. Add $(DUnitX) to the project''s unit search path by hand.';
 
   { TDUnitXNewProjectWizard }
 
@@ -71,37 +75,49 @@ begin
         WizardForm : TfrmDunitXNewProject;
         ModuleServices : IOTAModuleServices;
         Project : IOTAProject;
-        Config : IOTABuildConfiguration;
+        Configs : IOTAProjectOptionsConfigurations;
         TestUnit : IOTAModule;
       begin
-        WizardForm := TfrmDunitXNewProject.Create(Application);
+        // Nothing may escape into the IDE: report any failure instead.
         try
-          if WizardForm.ShowModal = mrOk then
-          begin
-            if not WizardForm.AddToProjectGroup then
-            begin
-              (BorlandIDEServices as IOTAModuleServices).CloseAll;
-            end;
+          WizardForm := TfrmDunitXNewProject.Create(Application);
+          try
+            if WizardForm.ShowModal <> mrOk then
+              Exit;
             ModuleServices := (BorlandIDEServices as IOTAModuleServices);
+            // CloseAll returns False when the user cancels its save prompt: abandon the wizard rather than
+            // adding the new project to the group the user meant to close.
+            if not WizardForm.AddToProjectGroup and not ModuleServices.CloseAll then
+              Exit;
             // Create Project Source
-            ModuleServices.CreateModule(TTestProjectFile.Create(APersonality, WizardForm.ReportLeakOption));
-            Project := GetActiveProject;
-            Config := (Project.ProjectOptions as IOTAProjectOptionsConfigurations).BaseConfiguration;
-            Config.SetValue(sUnitSearchPath, '$(DUnitX)');
+            if not Supports(ModuleServices.CreateModule(TTestProjectFile.Create(WizardForm.ReportLeakOption)),
+              IOTAProject, Project) then
+              Project := GetActiveProject;
+            if Project = nil then
+            begin
+              MessageDlg(sNoNewProject, mtWarning, [mbOK], 0);
+              Exit;
+            end;
+            if Supports(Project.ProjectOptions, IOTAProjectOptionsConfigurations, Configs) then
+              Configs.BaseConfiguration.SetValue(sUnitSearchPath, '$(DUnitX)')
+            else
+              MessageDlg(sNoProjectOptions, mtWarning, [mbOK], 0);
             // Create Test Unit
             if WizardForm.CreateTestUnit then
             begin
               TestUnit := ModuleServices.CreateModule(
                 TNewTestUnit.Create(WizardForm.CreateSetupTearDownMethods,
                   WizardForm.CreateSampleMethods,
-                  WizardForm.TestFixtureClasaName,
-                  APersonality));
-              if Project <> nil then
+                  WizardForm.TestFixtureClassName));
+              if TestUnit <> nil then
                 Project.AddFile(TestUnit.FileName, true);
             end;
+          finally
+            WizardForm.Free;
           end;
-        finally
-          WizardForm.Free;
+        except
+          on E : Exception do
+            Application.ShowException(E);
         end;
       end,
       // Delphi 13 declares the glyph callback with the HICON returned by
@@ -112,7 +128,7 @@ begin
       begin
         Result := LoadIcon(HInstance, 'DUnitXNewProjectIcon');
       end,
-      GetAllPlatforms,
+      TArray<string>.Create(cWin32Platform, cWin64Platform),
       nil));
 end;
 

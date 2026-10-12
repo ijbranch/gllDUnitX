@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -70,6 +70,11 @@ type
 
     [Test]
     procedure Test_Activator_Singleton;
+
+    // Proves that resolving a registration that has no activator (a nil delegate) raises a clear
+    // EServiceLocatorResolutionException rather than an access violation.
+    [Test]
+    procedure Test_Nil_Activator_Raises_Resolution_Exception;
   end;
 
 implementation
@@ -163,6 +168,23 @@ begin
   Assert.AreSame(foo1, foo2);
 end;
 {$ENDIF}
+
+procedure TDUnitX_IoCTests.Test_Nil_Activator_Raises_Resolution_Exception;
+var
+  container : TDUnitXServiceLocator;
+begin
+  container := TDUnitXServiceLocator.Create;
+  try
+    container.RegisterType<IFoo>(TActivatorDelegate<IFoo>(nil), 'nil_activator');
+    Assert.WillRaise(
+      procedure
+      begin
+        container.Resolve<IFoo>('nil_activator');
+      end, EServiceLocatorResolutionException);
+  finally
+    container.Free;
+  end;
+end;
 
 procedure TFoo.Bar;
 begin

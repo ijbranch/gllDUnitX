@@ -243,7 +243,7 @@ end;
 procedure TTestCase.CheckEquals(const expected, actual : UnicodeString; const msg : string);
 begin
 {$IFDEF DELPHI_XE2_UP}
-  Assert.AreEqual(expected, actual, msg);
+  Assert.AreEqual(expected, actual, false, msg);
 {$ELSE}
   Assert.IsTrue(expected = actual, msg);
 {$ENDIF}
@@ -271,18 +271,18 @@ end;
 
 procedure TTestCase.CheckEqualsString(const expected, actual : string; const msg : string);
 begin
-  Assert.AreEqual(expected, actual, true, msg);
+  Assert.AreEqual(expected, actual, false, msg);
 end;
 
 {$IFNDEF NEXTGEN}
 procedure TTestCase.CheckEquals(const expected, actual : WideString; const msg : string);
 begin
-  Assert.AreEqual(expected, actual, true, msg);
+  Assert.AreEqual(expected, actual, false, msg);
 end;
 
 procedure TTestCase.CheckEqualsWideString(const expected, actual : WideString; const msg : string);
 begin
-  Assert.AreEqual(expected, actual, true, msg);
+  Assert.AreEqual(expected, actual, false, msg);
 end;
 {$ENDIF}
 
@@ -348,23 +348,23 @@ end;
 
 procedure TTestCase.CheckNotEquals(const expected, actual : string; const msg : string);
 begin
-  Assert.AreNotEqual(expected, actual, true, msg);
+  Assert.AreNotEqual(expected, actual, false, msg);
 end;
 
 procedure TTestCase.CheckNotEqualsString(const expected, actual : string; const msg : string);
 begin
-  Assert.AreNotEqual(expected, actual, true, msg);
+  Assert.AreNotEqual(expected, actual, false, msg);
 end;
 
 {$IFNDEF NEXTGEN}
 procedure TTestCase.CheckNotEquals(const expected, actual : WideString; const msg : string);
 begin
-  Assert.AreNotEqual(expected, actual, true, msg);
+  Assert.AreNotEqual(expected, actual, false, msg);
 end;
 
 procedure TTestCase.CheckNotEqualsWideString(const expected, actual : WideString; const msg : string);
 begin
-  Assert.AreNotEqual(expected, actual, true, msg);
+  Assert.AreNotEqual(expected, actual, false, msg);
 end;
 {$ENDIF}
 
@@ -387,7 +387,7 @@ begin
 {$IFDEF DELPHI_XE2_UP}
   Assert.AreNotEqual<longword>(expected, actual, msg);
 {$ELSE}
-  Assert.IsTrue(expected = actual, msg);
+  Assert.IsFalse(expected = actual, msg);
 {$ENDIF}
 end;
 
@@ -409,7 +409,8 @@ end;
 procedure TTestCase.CheckSame(const expected, actual : IUnknown; const msg : string);
 begin
 {$IFDEF DELPHI_XE2_UP}
-  Assert.AreEqual<IInterface>(expected, actual, msg);
+  //Same object, whichever of its interfaces was passed: compare the IUnknown identities.
+  Assert.AreEqual<IInterface>(expected as IInterface, actual as IInterface, msg);
 {$ELSE}
   Assert.IsTrue(expected = actual, msg);
 {$ENDIF}
@@ -436,7 +437,11 @@ end;
 
 procedure TTestCase.CheckException(const AMethod : TTestMethod; const AExceptionClass : ExceptClass; const msg : string);
 begin
-  Assert.WillRaise(AMethod, AExceptionClass, msg);
+  //DUnit semantics: a descendant of AExceptionClass passes; with no class, any exception propagates.
+  if AExceptionClass = nil then
+    AMethod
+  else
+    Assert.WillRaiseDescendant(AMethod, AExceptionClass, msg);
 end;
 
 procedure TTestCase.CheckEquals(const expected, actual : TClass; const msg : string);
@@ -446,7 +451,8 @@ end;
 
 procedure TTestCase.CheckInherits(const expected, actual : TClass; const msg : string);
 begin
-  Assert.InheritsFrom(expected, actual, msg);
+  //DUnit checks actual.InheritsFrom(expected); Assert.InheritsFrom takes (descendant, parent).
+  Assert.InheritsFrom(actual, expected, msg);
 end;
 
 procedure TTestCase.CheckIs(const AObject : TObject; const AClass : TClass; const msg : string);

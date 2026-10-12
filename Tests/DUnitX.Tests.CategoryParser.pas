@@ -1,4 +1,4 @@
-unit DUnitX.Tests.CategoryParser;
+﻿unit DUnitX.Tests.CategoryParser;
 
 interface
 
@@ -40,6 +40,11 @@ type
 
     [Test]
     procedure PlusAndMinusCombined;
+
+    // Proves an operator in the final position is tokenised: '(Slow|Integration)' must give the category
+    // 'Integration', not 'Integration)', or --exclude:(Slow|Integration) would not exclude Integration tests.
+    [Test]
+    procedure OperatorInLastPositionIsRecognised;
 
   end;
 
@@ -121,6 +126,21 @@ begin
   catFilter := andFilter.Filters[2] as ICategoryFilter;
   Assert.IsNotNull(catFilter);
   Assert.AreEqual(catFilter.Categories[0], 'Three');
+end;
+
+procedure TCategoryParseTests.OperatorInLastPositionIsRecognised;
+var
+  filter : ITestFilter;
+  orFilter : IOrFilter;
+  catFilter : ICategoryFilter;
+begin
+  filter := TCategoryExpression.CreateFilter('(Slow|Integration)');
+  orFilter := filter as IOrFilter;
+  Assert.IsNotNull(orFilter);
+  Assert.AreEqual<NativeInt>(2, orFilter.Filters.Count);
+  catFilter := orFilter.Filters[1] as ICategoryFilter;
+  Assert.IsNotNull(catFilter);
+  Assert.AreEqual('Integration', catFilter.Categories[0], False);
 end;
 
 procedure TCategoryParseTests.CanParseSimpleCategory;

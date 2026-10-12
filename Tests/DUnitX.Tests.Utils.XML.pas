@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -28,6 +28,35 @@ unit DUnitX.Tests.Utils.XML;
 
 interface
 
+uses
+  DUnitX.TestFramework;
+
+type
+  [TestFixture]
+  TUtilsXMLTests = class
+  public
+    // Proves form feed (#$0C) is rejected: XML 1.0 forbids it, so a message containing one made ill-formed XML.
+    [Test]
+    procedure IsValidXMLChar_Rejects_Characters_XML_Forbids;
+  end;
+
 implementation
+
+uses
+  DUnitX.Utils.XML;
+
+procedure TUtilsXMLTests.IsValidXMLChar_Rejects_Characters_XML_Forbids;
+begin
+  Assert.IsFalse(IsValidXMLChar(#$0C), 'form feed');
+  Assert.IsFalse(IsValidXMLChar(#$00), 'NUL');
+  Assert.IsFalse(IsValidXMLChar(#$1F), 'unit separator');
+  Assert.IsTrue(IsValidXMLChar(#$09), 'tab');
+  Assert.IsTrue(IsValidXMLChar(#$0A), 'line feed');
+  Assert.IsTrue(IsValidXMLChar(#$0D), 'carriage return');
+  Assert.AreEqual('a b', StripInvalidXML('a'#$0C'b'), False, 'StripInvalidXML');
+end;
+
+initialization
+  TDUnitX.RegisterTestFixture(TUtilsXMLTests);
 
 end.

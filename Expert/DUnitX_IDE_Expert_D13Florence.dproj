@@ -116,8 +116,8 @@
     <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
-        <VerInfo_Build>2</VerInfo_Build>
-        <VerInfo_Keys>CompanyName=;FileDescription=DUnitX_IDE_Expert_D13Florence;FileVersion=1.0.0.2;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=DUnitX_IDE_Expert_D13Florence;ProductVersion=1.0.0.2;Comments=</VerInfo_Keys>
+        <VerInfo_Build>4</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=;FileDescription=DUnitX_IDE_Expert_D13Florence;FileVersion=1.0.0.4;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=DUnitX_IDE_Expert_D13Florence;ProductVersion=1.0.0.4;Comments=</VerInfo_Keys>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_BplOutput>$(BDSCOMMONDIR)\Bpl\$(Platform)</DCC_BplOutput>
@@ -133,8 +133,8 @@
     <PropertyGroup Condition="'$(Cfg_2_Win64)'!=''">
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
-        <VerInfo_Build>2</VerInfo_Build>
-        <VerInfo_Keys>CompanyName=;FileDescription=DUnitX_IDE_Expert_D13Florence;FileVersion=1.0.0.2;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=DUnitX_IDE_Expert_D13Florence;ProductVersion=1.0.0.2;Comments=</VerInfo_Keys>
+        <VerInfo_Build>4</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=;FileDescription=DUnitX_IDE_Expert_D13Florence;FileVersion=1.0.0.4;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=DUnitX_IDE_Expert_D13Florence;ProductVersion=1.0.0.4;Comments=</VerInfo_Keys>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
@@ -191,7 +191,7 @@
                 <Excluded_Packages/>
                 <VersionInfo>
                     <VersionInfo Name="IncludeVerInfo">True</VersionInfo>
-                    <VersionInfo Name="AutoIncBuild">False</VersionInfo>
+                    <VersionInfo Name="AutoIncBuild">True</VersionInfo>
                     <VersionInfo Name="MajorVer">1</VersionInfo>
                     <VersionInfo Name="MinorVer">0</VersionInfo>
                     <VersionInfo Name="Release">0</VersionInfo>
@@ -244,9 +244,6 @@
                 <Platform value="Win32">True</Platform>
                 <Platform value="Win64">True</Platform>
             </Platforms>
-            <UnitTesting>
-                <TestProjectName>C:\dev\DUnitX\Expert\Test\DUnitX_IDE_Expert_XE5Tests.dproj</TestProjectName>
-            </UnitTesting>
         </BorlandProject>
         <ProjectFileVersion>12</ProjectFileVersion>
     </ProjectExtensions>

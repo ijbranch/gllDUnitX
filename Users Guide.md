@@ -103,9 +103,9 @@ begin
 end.
 ```
 
-Five lines of that are load-bearing and easy to lose:
+Four of those lines are load-bearing and easy to lose; the first bullet explains why the fifth is not:
 
-- **`DUnitX.Init` in the uses clause.** Its `initialization` assigns `Assert.TestFailure`, `Assert.TestPass` and `Assert.TestIgnored` the real exception classes and registers the fixture provider. Without it the first `Assert.Fail` raises from a nil class reference.
+- **`DUnitX.Init` in the uses clause** is harmless but optional on Delphi 13. Its `initialization` assigns `Assert.TestFailure`, `Assert.TestPass` and `Assert.TestIgnored` the real exception classes and registers the fixture provider, and `DUnitX.TestFramework`'s own `initialization` already does the same on every compiler except XE3.
 - **`{$STRONGLINKTYPES ON}`**, or the linker discards fixture classes nothing references and RTTI discovery finds them.
 - **Both `[TestFixture]` and `RegisterTestFixture`.** They do not double up — the provider merges registered fixtures with `if not FFixtureClasses.ContainsKey(...)` — and leaving either one out loses tests silently. Never set `UseRTTI := False` to "stop tests running twice"; it does not, and it deletes every fixture that has no registration call.
 - **`FailsOnNoAsserts := True`**, so a test that asserts nothing is a failure rather than a green line.
@@ -158,6 +158,13 @@ Categories drive the `-i:` and `-e:` switches, so `MyTests.exe -e:slow` runs eve
 
 `[TestCase]` is `Create( ACaseName, AValues, ASeparator = ',', ATrimValues = False )` — **the first parameter is the case name**, the second is the value list. (Upstream's abandoned `dev` branch removes that first parameter; taking it would leave every existing `[TestCase]` in the estate compiling and meaning something else. See Help.md §1.) `[AutoNameTestCase]` drops the name and derives it from the values.
 
+**Bad test-case data is an error, not a zero** (fork change, 2026-10-12). Each value must convert to its parameter's type, and there must be exactly one value per parameter: RTTI cannot see Pascal default parameter values, so a trailing parameter you leave out is not defaulted. A case that breaks either rule is reported as an **Error** naming the case, parameter, value and type; before the fix it silently ran with 0, `''` or 30/12/1899. Values are read without reference to the machine's locale:
+
+- **Numbers** use `.` as the decimal point, and a `,` is also read as one. So `'1,000'` is 1.0, not one thousand: to pass a comma-containing value, use another separator (`[TestCase( 'Big', '1000|2', '|' )]`).
+- **Dates and times** are read as ISO 8601 first (`2020-02-01`, `2020-02-01T13:45:00`), then in the invariant (US, month-first) format, then the local format. Use ISO 8601 and the meaning cannot change between machines.
+- **Integers and ordinals** are range-checked: `'300'` for a `Byte` parameter is an error, not 44.
+- **Enumerations** must name a member.
+
 When the data does not belong in an attribute, implement a `TTestDataProviderBase` descendant, register it in that unit's `initialization` with `TestDataProviderManager.RegisterProvider( Name, TMyProvider )`, and point a test at it with `[TestCaseProvider( 'Name' )]`. `TestCaseProvider.md` at the repository root walks through the five methods it must supply.
 
 `[RepeatTest( 5 )]` runs the same test five times; `[MaxTime( 250 )]` fails it if it took longer than 250 ms — but note that `[MaxTime]` is checked **after** the method returns and cannot interrupt a test that never does.
@@ -168,7 +175,7 @@ When the data does not belong in an attribute, implement a `TTestDataProviderBas
 
 The full member list is in Help.md §5. Two of them change what your tests mean:
 
-**String comparisons ignore case by default.** `Assert.Create` sets `fIgnoreCaseDefault := True`, and `AreEqual`, `AreNotEqual`, `Contains`, `DoesNotContain`, `StartsWith`, `EndsWith` and `NoDiff` all forward it. A test whose subject *is* the casing cannot fail:
+**String comparisons ignore case by default.** `Assert.Create` sets `fIgnoreCaseDefault := True`, and `AreEqual`, `AreNotEqual`, `Contains`, `DoesNotContain`, `StartsWith` and `EndsWith` all forward it (`NoDiff` without an `ignoreCase` argument is the exception: it is case-sensitive). A test whose subject *is* the casing cannot fail:
 
 ```pascal
 Assert.AreEqual( 'McDonald', ProperCase( 'mcdonald' ) );          // green against 'Mcdonald'
@@ -257,7 +264,16 @@ Runner.AddLogger( TDUnitXXMLJUnitFileLogger.Create( 'junit.xml' ) );   // DUnitX
 Runner.AddLogger( TDunitXTextFileLogger.Create( 'run.log' ) );         // DUnitX.Loggers.Text
 ```
 
-NUnit XML suits Continua CI, JUnit XML suits GitLab CI. A VCL GUI runner exists in `DUnitX.Loggers.GUI.VCL` (`TGUIVCLTestRunner`, with a `Run` procedure) — it is not in the package, so add the unit to the project if you want it.
+NUnit XML suits Continua CI, JUnit XML suits GitLab CI. A VCL GUI runner exists in `DUnitX.Loggers.GUI.VCL` (`TGUIVCLTestRunner`, with a `Run` procedure) — it is not in the package, so add the unit to the project if you want it. Its behaviour since the 2026-10-12 fixes:
+
+- **Run** and **Run Selected** run exactly the ticked tests (matched by exact, case-sensitive full name through `TFullNameFilter` in `DUnitX.Filters`). Before the fix a ticked test whose name was a prefix of another fixture's name also ran that fixture.
+- **Esc stops a run** after the current test, and remaining fixtures do not start. Closing the window mid-run stops the run and then closes, with no dialog.
+- The filter box and the tick boxes are locked while a run is in progress.
+- The test list honours `--run`, `--include` and `--exclude` from the command line. Duplicate test full names are reported in the status bar.
+- The summary shows **Warnings** (tests that made no assertion) separately from Failed, and the memory-leak group shows its count.
+- **Settings** (which tests are ticked) are kept in `%LOCALAPPDATA%\DUnitX\<exe name>.ini`. An old INI beside the exe is read once as a fallback. A settings file that cannot be written never stops the window closing.
+- **Find Result in Text** is now **Alt+T** (Alt+F belongs to the Filter box).
+- **Compare** looks for Beyond Compare through its registry install path and both Program Files folders, and does not freeze the runner while it is open.
 
 ---
 
@@ -276,6 +292,8 @@ Two things not to do:
 
 - **Do not add your own `[Setup]` / `[TearDown]`** to a converted fixture. The compatibility `TTestCase` already carries them on `TestSetupMethod` / `TestTeardownMethod`, which call the virtual `SetUp` / `TearDown` you override. Adding your own gives the provider two candidates for one role.
 - **Do not write a bare `Assert( cond, msg )`.** `Assert` is a *class* here and shadows `System.Assert`. Use `Assert.IsTrue( cond, msg )` — better anyway, since `System.Assert` compiles out under `{$ASSERTIONS OFF}`.
+
+The compatibility `Check*` methods follow DUnit semantics (fixed in this fork 2026-10-12; before that several differed): `CheckEquals( string )`, `CheckEqualsString`, `CheckNotEquals( string )` and `CheckNotEqualsString` are **case-sensitive** whatever `Assert.IgnoreCaseDefault` says, `CheckInherits( expected, actual )` checks that `actual` inherits from `expected`, `CheckSame` on interfaces compares object identity, and `CheckException` accepts a descendant of the named class.
 
 When checking a conversion, diff the **test names** old against new, not the totals.
 
