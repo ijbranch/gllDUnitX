@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -37,7 +37,6 @@ uses
 type
   TReportLeakOptions = (
     rloNone,
-    rloFastMM4,
     rloFastMM5
   );
 
@@ -63,8 +62,7 @@ uses
 {$ENDIF}
 
 const
-  REPORT_LEAK_DECLARATION : array[TReportLeakOptions] of string = ('', '  FastMM4,'#13#10'  DUnitX.MemoryLeakMonitor.FastMM4,'#13#10,
-    '  FastMM5,'#13#10'  DUnitX.MemoryLeakMonitor.FastMM5,'#13#10);
+  REPORT_LEAK_DECLARATION : array[TReportLeakOptions] of string = ('', '  FastMM5,'#13#10'  DUnitX.MemoryLeakMonitor.FastMM5,'#13#10);
 
   { TProjectFile }
 

@@ -167,6 +167,14 @@ IDE expert now compiles on Win32 as well as Win64 (2026-09-10) — `DUnitX.Exper
 
 ### Changed
 
+- **The New Test Project wizard offers FastMM5 only, and selects it by default** (2026-10-12) —
+  `Expert/DUnitX.Expert.CodeGen.NewTestProject.pas`, `Expert/DUnitX.Expert.Forms.NewProjectWizard.pas`,
+  `Expert/DUnitX.Expert.Forms.NewProjectWizard.dfm`. The "Report Leak Options" group was None / FastMM 4 /
+  FastMM 5, defaulting to None. **Why:** FastMM4 is not on this estate's library path (gllFastMM5 is the standard), so
+  the FastMM 4 choice generated a project that did not compile. `rloFastMM4` is removed from `TReportLeakOptions`, the
+  group is now None / FastMM 5 with FastMM 5 selected, and `GetReportLeakOption` range-checks `ItemIndex` instead of
+  casting it blind (it falls back to FastMM5). **Divergence from upstream**, which keeps all three choices; the
+  `DUnitX.MemoryLeakMonitor.FastMM4` unit itself is untouched. Built clean in all four modes.
 - **Build auto-increment switched on for the runtime package and the IDE expert** (2026-10-12) —
   `packages/RAD Studio 13.0/VSoft.DUnitXWinR.dproj`, `packages/RAD Studio 13.0/VSoft.DUnitXWinR.res`,
   `Expert/DUnitX_IDE_Expert_D13Florence.dproj`, `Expert/DUnitX_IDE_Expert_D13Florence.res`. Same shape as

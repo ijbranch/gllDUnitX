@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -136,7 +136,10 @@ end;
 
 function TfrmDunitXNewProject.GetReportLeakOption : TReportLeakOptions;
 begin
-  Result := TReportLeakOptions(rgReportLeakOptions.ItemIndex);
+  if (rgReportLeakOptions.ItemIndex < Ord(Low(TReportLeakOptions))) or (rgReportLeakOptions.ItemIndex > Ord(High(TReportLeakOptions))) then
+    Result := rloFastMM5
+  else
+    Result := TReportLeakOptions(rgReportLeakOptions.ItemIndex);
 end;
 
 function TfrmDunitXNewProject.GetTestFixtureClassName : string;
