@@ -15,6 +15,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   not today). The overrides are removed, so both platforms inherit Base's `.\$(Platform)\$(Config)`. The 96 stale files
   left in the shared folders were moved to `Studio\37.0\_stale_gllDUnitX_2026-10-12` (not deleted); clean rebuilds
   (Tests Win64 Debug/Release, Win32 Debug; Examples Win64 Debug) write nothing there and the suite stays 297 / 288 / 0.
+  The same folder also received five orphans of a package name this fork no longer builds — `VSoft.DUnitXR.bpl` /
+  `.dcp` (root Win32 copies of 2026-04-19, `Win64` copies of 2026-05-23) and a `.rsm`: no project on `D:` or `E:`
+  builds or `requires` it and the IDE did not load it, but a stale root `.dcp` can shadow the platform one on Win32.
+  The runtime package and the test project rebuild clean without them.
   `Help.md` §7 now states the exe locations and version-resource arrangement, and its output-standard snippet is
   corrected to the per-config form adopted 2026-10-07 (it still showed the superseded `Condition=` lines).
 - **The examples project reported W1000 `Symbol 'IsType' is deprecated`** (2026-10-12) —
