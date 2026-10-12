@@ -47,7 +47,9 @@ DUnitX Planned Features
 
 This is far from a complete list, but a few planned features are listed here to help indicate future direction.
 
- * ~~GUI Test Runner~~ - Use the VCL GUI runner, `DUnitX.Loggers.GUI.VCL` (this fork does not use TestInsight)
+ * GUI Test Runner - the VCL GUI runner, `DUnitX.Loggers.GUI.VCL`, has been fixed and updated in this fork. It is
+   not maintained upstream, which recommends the **TestInsight** IDE plug-in instead; whether to use TestInsight
+   or this runner is your choice.
  * Multi-threaded tests - the ability to have test fixtures run in their own
   threads.
  * Remote logging - Simple way to run tests on remote machines (just an idea at this point) 

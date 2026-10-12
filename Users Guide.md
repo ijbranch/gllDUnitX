@@ -264,7 +264,7 @@ Runner.AddLogger( TDUnitXXMLJUnitFileLogger.Create( 'junit.xml' ) );   // DUnitX
 Runner.AddLogger( TDunitXTextFileLogger.Create( 'run.log' ) );         // DUnitX.Loggers.Text
 ```
 
-NUnit XML suits Continua CI, JUnit XML suits GitLab CI. A VCL GUI runner exists in `DUnitX.Loggers.GUI.VCL` (`TGUIVCLTestRunner`, with a `Run` procedure) — it is not in the package, so add the unit to the project if you want it. Its behaviour since the 2026-10-12 fixes:
+NUnit XML suits Continua CI, JUnit XML suits GitLab CI. A VCL GUI runner exists in `DUnitX.Loggers.GUI.VCL` (`TGUIVCLTestRunner`, with a `Run` procedure) — it is not in the package, so add the unit to the project if you want it. It has been fixed and updated in this fork. It is not maintained upstream, which recommends the **TestInsight** IDE plug-in instead; whether to use TestInsight or this runner is your choice. Its behaviour since the 2026-10-12 fixes:
 
 - **Run** and **Run Selected** run exactly the ticked tests (matched by exact, case-sensitive full name through `TFullNameFilter` in `DUnitX.Filters`). Before the fix a ticked test whose name was a prefix of another fixture's name also ran that fixture.
 - **Esc stops a run** after the current test, and remaining fixtures do not start. Closing the window mid-run stops the run and then closes, with no dialog.

@@ -160,6 +160,6 @@ We work in **Delphi 13 Florence (RAD Studio 37.0), VCL only, on Windows 11**. Re
 
 A fix may therefore behave differently on a compiler, RTL or platform we do not use.
 
-**One line to put at the end of each PR** (the paragraph above is too long for him):
+**One line to put at the end of each PR** (the paragraph above is too long for a PR description):
 
 > Tested with Delphi 13 only, Win64 Debug; not built for Win32, older compilers or non-Windows targets.

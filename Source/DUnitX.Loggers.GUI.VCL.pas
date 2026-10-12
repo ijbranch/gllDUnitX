@@ -25,6 +25,9 @@
 {                                                                           }
 {***************************************************************************}
 
+// gllDUnitX: this VCL GUI runner has been fixed and updated in this fork (2026-10-12, see CHANGELOG.md).
+// It is not maintained upstream, which recommends the TestInsight IDE plug-in instead; whether to use
+// TestInsight or this runner is the user's choice.
 unit DUnitX.Loggers.GUI.VCL;
 
 interface

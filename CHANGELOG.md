@@ -4,26 +4,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- **The VCL GUI runner: fixed here, not maintained upstream, TestInsight the user's choice** (2026-10-13) - `Source/DUnitX.Loggers.GUI.VCL.pas` (comment only), `README.md`, `Help.md`, `Users Guide.md`. Each now says the runner has been fixed and updated in this fork, that upstream does not maintain it and recommends the TestInsight IDE plug-in instead, and that which to use is the user's choice - the fork recommends neither (Ian, 2026-10-13: "We will leave it for the User to decide if they will use testinsight"). The README's feature line no longer reads "this fork does not use TestInsight", which described the estate rather than the fork. The unit compiles clean in a scratch program (it is in no project here).
+- **Docs: remarks about the upstream maintainer removed; upstream's process kept as process** (2026-10-13) - `Help.md`, `CHANGELOG.md`, `UPSTREAM-ISSUES-Batch1.md`, `UPSTREAM-REPORT-Defects-2026-10-12.md`. Ian, 2026-10-13: "remove 4" - the fourth of the internal-detail items reviewed ahead of a possible publication. What the maintainer wanted, said, does not use, or found too long is gone; what the workflow needs stays, stated as upstream's process: one issue per problem with a PR whose test fails on `upstream/master`, the VCL GUI runner not maintained upstream (so its fixes stay here), and batches sent one at a time. The formal "To: the DUnitX maintainers" headers of the two reports stay. The other three items - local paths, GITLAKMCP references, quoted rules - are kept deliberately.
+
 ### Added
-- **Attribution: every changed source file says so, and the README credits both sides** (2026-10-13) - 58 source files (53 `.pas` given a notice line under their original copyright; 3 test units and 2 `.dpr` that never had a header given one), `README.md`, `VSoft.DUnitX.dspec`. Each file this fork changed now carries "Modified (C) 2026 Ian Branch (GITLAK Software) - gllDUnitX fork" beneath its upstream copyright notice, which is kept intact; the headerless five credit "DUnitX, by Vincent Parrett & Contributors" without inventing a copyright year. `DUnitX.Timeout.pas` already carried its own line. The README's licence section now states that the fork's changes are (C) 2026 GITLAK Software under the same Apache 2.0, that upstream commits keep their authors in the history, and that the fork is not affiliated with or endorsed by VSoft Technologies; it also says plainly that the test project's `glldelphi-mocks` dependency is a private repository. The DPM spec's description no longer says "64 bit Windows only" (Win32 returned on 2026-09-10). **Why:** Apache 2.0 §4(b) requires a prominent change notice on each modified file before distribution, and only 1 of 57 changed units had one - so readers could not tell this fork's work from Vincent Parrett's, and his name stood alone on code he did not write. Done ahead of any decision to make the repository public; harmless while it is private.
+- **Attribution: every changed source file says so, and the README credits both sides** (2026-10-13) - 58 source files (53 `.pas` given a notice line under their original copyright; 3 test units and 2 `.dpr` that never had a header given one), `README.md`, `VSoft.DUnitX.dspec`. Each file this fork changed now carries "Modified (C) 2026 Ian Branch (GITLAK Software) - gllDUnitX fork" beneath its upstream copyright notice, which is kept intact; the headerless five credit "DUnitX, by Vincent Parrett & Contributors" without inventing a copyright year. `DUnitX.Timeout.pas` already carried its own line. The README's licence section now states that the fork's changes are (C) 2026 GITLAK Software under the same Apache 2.0, that upstream commits keep their authors in the history, and that the fork is not affiliated with or endorsed by VSoft Technologies; it also says plainly that the test project's `glldelphi-mocks` dependency is a private repository. The DPM spec's description no longer says "64 bit Windows only" (Win32 returned on 2026-09-10). **Why:** Apache 2.0 §4(b) requires a prominent change notice on each modified file before distribution, and only 1 of 57 changed units had one - so readers could not tell this fork's work from upstream's, and the upstream copyright stood alone on code its authors did not write. Done ahead of any decision to make the repository public; harmless while it is private.
 
 - **First batch of upstream issues and pull requests** (2026-10-12) — `UPSTREAM-ISSUES-Batch1.md`,
-  `UPSTREAM-REPORT-Defects-2026-10-12.md`. The maintainer answered #398 by asking for one issue per problem, each
-  followed by a PR with a test that shows it. He also said the VCL GUI runner is unmaintained, so its fixes (report
+  `UPSTREAM-REPORT-Defects-2026-10-12.md`. Upstream's process, given in reply to #398, is one issue per problem, each
+  followed by a PR with a test that shows it; the VCL GUI runner is not maintained upstream, so its fixes (report
   section 4) stay fork-local. Six items (1.1, 1.2, 1.3, 1.4, 1.9, 1.10) were filed as issues #399-#404, with PRs
   #405-#410. Each PR branch was rebuilt on `upstream/master` @ `1bdc297` rather than cherry-picked. Five have a test
   that failed on master on its own assertion before the fix; 1.10 is in the program's main block and was verified by
   exit code. Branches live in the worktree `D:\gllDUnitX-upstream` (remote `dunitx-fork`) and on the public GitHub
   fork `ijbranch/DUnitX`, which exists only to carry PRs. Report section 9 records the response and the batch.
-  **Why small batches:** the maintainer asked to have no long report sent, and each PR has to be re-derived against
-  upstream's tree.
+  **Why small batches:** upstream takes items one at a time rather than as a long report, and each PR has to be
+  re-derived against upstream's tree.
 - **Defect report addressed to the upstream maintainers** (2026-10-12) — `UPSTREAM-REPORT-Defects-2026-10-12.md`.
   A review of `Source\`, the VCL GUI runner and the IDE expert: 49 defects, each confirmed present in
   `upstream/master` @ `1bdc297` and cited by upstream line number (13 reproduced with probe programs, 36 traced),
   plus 8 fixes this fork already carries that are offered back. The worst make a test pass, or a run report
   success, when it should fail. States our environment (Delphi 13, VCL, Win32/Win64) and what was not built or run.
   Filed as [VSoftTechnologies/DUnitX#398](https://github.com/VSoftTechnologies/DUnitX/issues/398) on 2026-10-12;
-  the maintainer replied the same day (see the batch entry above). Issues specific to the fork were reported separately in the same review and are not in this
+  upstream responded the same day with its submission process (see the batch entry above). Issues specific to the fork were reported separately in the same review and are not in this
   file. **Later the same day:** item 3.12 was found to be a false positive and is marked withdrawn, and every other item
   was fixed in this fork (see Fixed and Changed) except 2.8, deliberately left as upstream intends; each fix is a
   divergence until upstream takes it. The file carries a per-item fork status. Two follow-up comments were posted on

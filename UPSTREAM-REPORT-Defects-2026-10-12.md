@@ -170,16 +170,16 @@ Found after filing; each confirmed in `master` @ `1bdc297` and fixed in our fork
 - **F.** `TDUnitXList<T>.ToArray` and the non-generic enumerator return nil.
 - **G.** `TValueHelper.ToVarRec` / `ToVarRecs` return dangling or mis-sized pointers.
 
-## 9. Maintainer response, and how the items are now being sent (2026-10-12)
+## 9. Upstream's response, and how the items are now being sent (2026-10-12)
 
-The maintainer replied on 2026-10-12: he does not have time for a long report, and asked for **one issue per
-problem, then a PR with tests that show it**, which he will get to when he can. He also said the **VCL GUI runner is
-unmaintained** (he does not use it) and recommended TestInsight. Consequences for this file:
+Upstream responded on 2026-10-12: items are to be sent as **one issue per problem, then a PR with tests that show
+it**, not as a long report. The **VCL GUI runner is not maintained upstream**, and TestInsight was suggested
+instead. Consequences for this file:
 
 - **Section 4 (GUI runner) will not be offered upstream.** The fixes stay fork-local.
 - **TestInsight is not taken up:** it was removed from our IDE on purpose.
 - **The remaining items go in small batches,** each as an issue plus a PR whose test fails on upstream `master`.
-  The next batch waits until he has responded to the current one.
+  The next batch waits until upstream has responded to the current one.
 
 **Batch 1**, posted 2026-10-12 against `1bdc297`. Branches were rebuilt on `upstream/master` (not cherry-picked
 from this fork) in the worktree `D:\gllDUnitX-upstream`, and pushed to the public GitHub fork
@@ -202,8 +202,8 @@ caller named a matching class other than `Exception`, which uses only the `fTest
 
 **Outside the batches: [#372](https://github.com/VSoftTechnologies/DUnitX/issues/372) (bitmask exit codes) ->
 [PR #411](https://github.com/VSoftTechnologies/DUnitX/pull/411)**, branch `feature/bitmask-exit-codes`, posted
-2026-10-12 after a reviewer pointed at it from #404. It is someone else's feature request, which the maintainer had
-said he would accept, so we sent it as goodwill. **It is deliberately NOT in this fork** (Ian, 2026-10-12): nothing
+2026-10-12 after a reviewer pointed at it from #404. It is someone else's feature request, which upstream had
+indicated it would accept, so we sent it as goodwill. **It is deliberately NOT in this fork** (Ian, 2026-10-12): nothing
 here would use it, and carrying it ourselves would add divergence for no benefit. It reaches the fork only if
 upstream merges it. The branch has two commits because the shared `pre-commit` hook stripped upstream's
 `DUnitXTest_D12.dproj` (the worktree shares this repo's `.git\hooks`); the net diff adds one `DCCReference` there.
