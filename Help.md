@@ -86,6 +86,8 @@ The last of those was rebuilt from scratch with no stray `.dcu` anywhere in `Sou
 
 It also lists DUnitX `.dcu` folders in session scratchpads, which are compile checks and harmless.
 
+**Since 2026-10-13 the script skips the first two** (Ian: "make the check script skip those two folders") and counts them on an INFO line instead, so it fails only on a copy nobody has accounted for. Scratchpad copies still fail it until their session ends.
+
 **A project that needs a unit the package does not contain** (`DUnitX.Loggers.GUI.VCL`, `DUnitX.MemoryLeakMonitor.FastMM5`, the `DUnitX.StackTrace.*` units) must name `<repo>\Source` in its own `DCC_UnitSearchPath` and have a platform-varying `DCC_DcuOutput` — read §7 first. It then compiles those units, and the rest of DUnitX, from source. `gllStaticCodeAnalyser`'s test project does this.
 
 ---
