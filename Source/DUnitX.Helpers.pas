@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -38,7 +38,16 @@ uses
 {$ENDIF}
 
 type
+  /// <summary>
+  ///   Record helper adding convenience access to the type data of a <c>TTypeInfo</c>.
+  /// </summary>
   TTypeInfoHelper = record helper for TTypeInfo
+    /// <summary>
+    ///   Returns the RTL type data for this type information record.
+    /// </summary>
+    /// <returns>
+    ///   Pointer to the <c>TTypeData</c> that follows the type name, as returned by <c>GetTypeData</c>.
+    /// </returns>
     function TypeData : PTypeData;
   end;
 

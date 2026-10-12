@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -35,7 +35,23 @@ uses
   DUnitX.Filters;
 
 type
+  /// <summary>
+  ///   Turns the run options (test names, run-list file, include and exclude category expressions) into one test filter.
+  /// </summary>
   TDUnitXFilterBuilder = class
+    /// <summary>
+    ///   Builds the combined filter: named tests from Run and RunListFile, ANDed with the Include category expression
+    ///   and with the negated Exclude expression.
+    /// </summary>
+    /// <param name="options">
+    ///   The parsed run options.
+    /// </param>
+    /// <returns>
+    ///   The combined filter, or an empty filter (which passes everything) when no option restricts the run.
+    /// </returns>
+    /// <exception cref="ECommandLineError">
+    ///   Raised when RunListFile names a file that does not exist or cannot be read.
+    /// </exception>
     class function BuildFilter(const options : TDUnitXOptions) : ITestFilter;
   end;
 

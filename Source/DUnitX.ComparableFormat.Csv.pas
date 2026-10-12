@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -34,6 +34,9 @@ uses
   DUnitX.ComparableFormat;
 
 type
+  /// <summary>
+  ///   Marker class naming the CSV comparable format; passed by class reference to select CSV comparison.
+  /// </summary>
   TDUnitXComparableFormatCsv = class abstract(TDUnitXComparableFormat);
 
 implementation

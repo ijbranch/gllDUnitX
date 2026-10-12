@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -44,10 +44,44 @@ uses
   DUnitX.TestFramework;
 
 type
+  /// <summary>
+  ///   Stack trace provider backed by madExcept 3. It is registered as the <c>IStacktraceProvider</c> only when
+  ///   <c>USE_MADEXCEPT3</c> is defined; without it every method returns an empty string.
+  /// </summary>
   TMadExcept3StackTraceProvider = class(TInterfacedObject, IStacktraceProvider)
   public
+    /// <summary>
+    ///   Builds a textual call stack starting at the exception address, using <c>madStackTrace.StackTrace</c>.
+    /// </summary>
+    /// <param name="ex">
+    ///   The exception being reported (not used by this provider).
+    /// </param>
+    /// <param name="exAddressAddress">
+    ///   The address at which the exception was raised; the stack walk starts there.
+    /// </param>
+    /// <returns>
+    ///   The formatted call stack, or an empty string when madExcept 3 support is not compiled in.
+    /// </returns>
     function GetStackTrace(const ex : Exception; const exAddressAddress : Pointer) : string;
+    /// <summary>
+    ///   Resolves a code address to madExcept's description of it (<c>StackAddrToStr</c>).
+    /// </summary>
+    /// <param name="Addrs">
+    ///   The code address to resolve.
+    /// </param>
+    /// <returns>
+    ///   The location text, or an empty string when madExcept 3 support is not compiled in.
+    /// </returns>
     function PointerToLocationInfo(const Addrs : Pointer) : string;
+    /// <summary>
+    ///   Resolves a code address to madExcept's description of it; identical to <c>PointerToLocationInfo</c>.
+    /// </summary>
+    /// <param name="Addrs">
+    ///   The code address to resolve.
+    /// </param>
+    /// <returns>
+    ///   The address text, or an empty string when madExcept 3 support is not compiled in.
+    /// </returns>
     function PointerToAddressInfo(Addrs : Pointer) : string;
   end;
 

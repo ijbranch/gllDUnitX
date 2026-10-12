@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -30,6 +30,10 @@ interface
 
 {$I DUnitX.inc}
 
+/// <summary>
+///   Writes the DUnitX copyright and licence banner to the console, in bright white, through the registered
+///   <c>IDUnitXConsoleWriter</c> when one is resolvable, otherwise through <c>System.Writeln</c>.
+/// </summary>
 procedure ShowBanner;
 
 implementation

@@ -34,34 +34,67 @@ uses
   DUnitX.TestFixture;
 
 const
+  /// <summary>Repeat count for TestRepeat3Times; TearDownFixture checks the test ran exactly this often.</summary>
   TIMES_RUN         = 3;
+  /// <summary>Repeat count for the published TestRepeat5TimesAnyWay; checked in TearDownFixture.</summary>
   TIMES_RUN_ANYWAY  = 5;
+  /// <summary>Repeat count for the Sum test case; checked in TearDownFixture.</summary>
   TIMES_RUN_TEST_CASE = 2;
 
 type
 {$M+}
+  /// <summary>
+  ///   Fixture whose [Setup] method is protected rather than public, to prove the runner finds and calls attributed
+  ///   methods of any visibility RTTI can see. It has no tests of its own.
+  /// </summary>
   [TestFixture]
   TTestClassWithNonPublicSetup = class
   private
+    /// <summary>Set when Setup runs.</summary>
     FSetupRun : Boolean;
   protected
+    /// <summary>
+    ///   Protected per-test setup; records that it ran.
+    /// </summary>
     [Setup]
     procedure Setup;
   public
+    /// <summary>
+    ///   Creates the fixture with SetupRun False.
+    /// </summary>
     constructor Create;
+    /// <summary>True once Setup has run.</summary>
     property SetupRun : Boolean read FSetupRun;
   end;
 {$M-}
 
+  /// <summary>
+  ///   Custom test-case source attribute: supplies three cases, 'DataTest0' to 'DataTest2', with values 0 to 2.
+  /// </summary>
   MockTestSourceAttribute = class(CustomTestCaseSourceAttribute)
   protected
+    /// <summary>
+    ///   Builds the three cases.
+    /// </summary>
+    /// <returns>
+    ///   Three case infos, each with one integer value equal to its index.
+    /// </returns>
     function GetCaseInfoArray : TestCaseInfoArray; override;
   end;
 
 {$M+}
+  /// <summary>
+  ///   Proves a CustomTestCaseSourceAttribute descendant generates test cases for the method it decorates.
+  /// </summary>
   [TestFixture]
   TTestClassWithTestSource = class
   public
+    /// <summary>
+    ///   Proves each case from MockTestSource runs with its own value, which must lie in 0..2.
+    /// </summary>
+    /// <param name="Value">
+    ///   The case's value from the source attribute.
+    /// </param>
     [Test]
     [MockTestSource]
     procedure DataTest(Value : Integer);
@@ -69,31 +102,69 @@ type
 {$M-}
 
 {$M+}
+  /// <summary>
+  ///   Proves [RepeatTest]: a test runs the requested number of times (plain, with a [TestCase], and published
+  ///   without [Test]), and a count of zero means the test is not run. The counts are checked in TearDownFixture.
+  /// </summary>
   [TestFixture]
   TTestRepeatAttribute = class
   public
+    /// <summary>
+    ///   Fixture setup: zeroes the run counters.
+    /// </summary>
     [SetUpFixture]
     procedure SetUpFixture;
 
+    /// <summary>
+    ///   Fixture teardown: asserts each repeated test ran exactly its requested number of times.
+    /// </summary>
+    /// <exception cref="ETestFailure">
+    ///   Raised (via Assert) when a repeat count is wrong.
+    /// </exception>
     [TearDownFixture]
     procedure TearDownFixture;
 
+    /// <summary>
+    ///   Counts its runs; proves [RepeatTest(TIMES_RUN)] runs it TIMES_RUN times.
+    /// </summary>
     [Test]
     [RepeatTest(TIMES_RUN)]
     procedure TestRepeat3Times;
 
+    /// <summary>
+    ///   Counts its runs; proves [RepeatTest] combined with a [TestCase] repeats the case, and the case's values
+    ///   still arrive (A + B = Expected).
+    /// </summary>
+    /// <param name="A">
+    ///   First addend.
+    /// </param>
+    /// <param name="B">
+    ///   Second addend.
+    /// </param>
+    /// <param name="Expected">
+    ///   Expected sum.
+    /// </param>
     [RepeatTest(TIMES_RUN_TEST_CASE)]
     [Test]
     [TestCase('Sum Case', '1,2,3')]
     procedure Sum(const A, B, Expected : Integer);
 
+    /// <summary>
+    ///   Proves [RepeatTest(0)] means the test is not run; it fails if called.
+    /// </summary>
     [Test]
     [RepeatTest(0)]
     procedure IgnoreMeWhenRepeatIsZero;
   published
+    /// <summary>
+    ///   Counts its runs; proves [RepeatTest] is honoured on a published test without [Test].
+    /// </summary>
     [RepeatTest(TIMES_RUN_ANYWAY)]
     procedure TestRepeat5TimesAnyWay;
 
+    /// <summary>
+    ///   Proves [RepeatTest(0)] is honoured on a published test too; it fails if called.
+    /// </summary>
     [Test]
     [RepeatTest(0)]
     procedure IgnoreMeAnyWayWhenRepeatIsZero;
@@ -101,132 +172,298 @@ type
 {$M-}
 
 {$M+}
+  /// <summary>
+  ///   Tests for [MaxTime] as seen from inside the suite: zero means no limit, and a fast test passes. Overruns are
+  ///   proved through a private runner in TRunnerBehaviourTests.
+  /// </summary>
   [TestFixture]
   TTestMaxTimeAttribute = class
   public
+    /// <summary>
+    ///   Proves [MaxTime(0)] means no limit: a 100 ms test passes.
+    /// </summary>
     [Test]
     [MaxTime(0)]
     procedure MaxTimeIsZero;
 
-    //We ignore the timeout test for the moment. We require a way to test timeout without calling it to fail the test itself.
+    /// <summary>
+    ///   Ignored: would prove a 150 ms test under [MaxTime(100)] times out. It is ignored because a timeout fails the
+    ///   test itself; TRunnerBehaviourTests.MaxTimeOverrunIsCaughtWhateverTheTiming proves this through a private
+    ///   runner instead.
+    /// </summary>
     [Test, Ignore]
     [MaxTime(100)]
     procedure TestTimeout;
 
+    /// <summary>
+    ///   Proves a test that finishes well inside [MaxTime(100)] passes.
+    /// </summary>
     [Test]
     [MaxTime(100)]
     procedure TestDoesNotTimeout;
   end;
 {$M-}
 
+  /// <summary>
+  ///   Not a fixture: a holder of methods with awkward signatures that the fixture tests turn into test cases by
+  ///   RTTI.
+  /// </summary>
   TTestCaseAttribute = class
   public
+    /// <summary>
+    ///   Method with an untyped parameter, which RTTI cannot describe.
+    /// </summary>
+    /// <param name="Param1">
+    ///   Untyped; never read.
+    /// </param>
     procedure ProcedureWithUntypedParameter(const Param1);
+    /// <summary>
+    ///   Method with a Byte parameter, to prove an out-of-range case value errors.
+    /// </summary>
+    /// <param name="Value">
+    ///   The case value; never read.
+    /// </param>
     procedure ProcedureWithByteParameter(const Value : Byte);
+    /// <summary>
+    ///   Method with two integer parameters, to prove too few, too many and non-numeric case values error.
+    /// </summary>
+    /// <param name="First">
+    ///   First case value; never read.
+    /// </param>
+    /// <param name="Second">
+    ///   Second case value; never read.
+    /// </param>
     procedure ProcedureWithTwoParameters(const First, Second : Integer);
   end;
 
 {$M+}
+  /// <summary>
+  ///   Tests for <c>TDUnitXTestFixture</c> built directly by RTTI: adding test cases with bad or awkward data, and
+  ///   the name filters' matching.
+  /// </summary>
   [TestFixture]
   TDUnitXTestFixtureTests = class
   public
+    /// <summary>
+    ///   Proves adding a test case for a method with an untyped parameter does not raise, so one unsupported
+    ///   signature cannot abort building the run.
+    /// </summary>
     [Test]
     procedure WhenATestCaseHasAUntypedParameterCantRaiseAnyError;
-    // Proves that bad [TestCase] data (a value that does not convert, too few or too many values) makes that case
-    // report an error naming the case, parameter and value when it runs, instead of running with 0 / defaults, and
-    // that building the case does not raise (which would abort the whole run).
+    /// <summary>
+    ///   Proves that bad [TestCase] data (a value that does not convert, too few or too many values) makes that case
+    ///   report an error naming the case, parameter and value when it runs, instead of running with 0 / defaults,
+    ///   and that building the case does not raise (which would abort the whole run).
+    /// </summary>
     [Test]
     procedure WhenATestCaseValueIsInvalidTheCaseErrors;
-    // Proves that TFullNameFilter (the GUI runner's Run / Run Selected filter) matches a test only by its exact full
-    // name: a test of another fixture whose full name merely starts with the checked test's name does not run, as it
-    // does through TNameFilter's fixture-prefix match.
+    /// <summary>
+    ///   Proves that TFullNameFilter (the GUI runner's Run / Run Selected filter) matches a test only by its exact
+    ///   full name, case-sensitively: neither a test of another fixture whose full name merely starts with the
+    ///   checked test's name, nor a test whose own name starts with it, runs.
+    /// </summary>
     [Test]
     procedure FullNameFilterMatchesOnlyTheExactTest;
   end;
 {$M-}
 
 {$M+}
+  /// <summary>
+  ///   Tests of the runner's behaviour, each driving a private TDUnitXTestRunner over the unregistered fixtures
+  ///   declared in this unit's implementation section and asserting on the results it reports.
+  /// </summary>
   [TestFixture]
   TRunnerBehaviourTests = class
   public
-    // Proves that a runner created on a thread that already has an active runner (a runner driven from inside a
-    // test) does not raise EListError, stands in as the current runner, and hands the thread back to the first runner
-    // when it is destroyed. The old registry raised, and the failing constructor's destructor removed the FIRST
-    // runner's entry.
+    /// <summary>
+    ///   Proves that a runner created on a thread that already has an active runner (a runner driven from inside a
+    ///   test) does not raise EListError, stands in as the current runner, and hands the thread back to the first
+    ///   runner when it is destroyed. The old registry raised, and the failing constructor's destructor removed the
+    ///   FIRST runner's entry.
+    /// </summary>
     [Test]
     procedure SecondRunnerOnAThreadStandsInAndRestoresTheFirst;
-    // Proves that [WillRaise] and [MaxTime] on a method with [TestCase] are enforced for each case: a case that does
-    // not raise, and a case that overruns, both fail. They were dropped when the case was created.
+    /// <summary>
+    ///   Proves that [WillRaise] and [MaxTime] on a method with [TestCase] are enforced for each case: a case that
+    ///   does not raise, and a case that overruns, both fail. They were dropped when the case was created.
+    /// </summary>
     [Test]
     procedure TestCasesKeepWillRaiseAndMaxTime;
-    // Proves that a [MaxTime(100)] test whose body takes 115 ms fails. The old watchdog polled every 20 ms (in
-    // practice up to ~31 ms) from its own thread, so an overrun that ended between two polls passed.
+    /// <summary>
+    ///   Proves that a [MaxTime(100)] test whose body takes 115 ms fails. The old watchdog polled every 20 ms (in
+    ///   practice up to ~31 ms) from its own thread, so an overrun that ended between two polls passed.
+    /// </summary>
     [Test]
     procedure MaxTimeOverrunIsCaughtWhateverTheTiming;
-    // Proves that a [WillRaise(Exception, exDescendant)] test whose body fails an assertion is reported as a failure,
-    // not as "raised as expected".
+    /// <summary>
+    ///   Proves that a [WillRaise(Exception, exDescendant)] test whose body fails an assertion is reported as a
+    ///   failure, not as "raised as expected".
+    /// </summary>
     [Test]
     procedure FailingAssertInWillRaiseTestIsAFailure;
-    // Proves that running a [WillRaise] test does not keep the run results alive once released. The test kept the
-    // execute context (the run results), which hold the fixture, which holds the test: a cycle that leaked the run.
+    /// <summary>
+    ///   Proves that running a [WillRaise] test does not keep the run results alive once released. The test kept the
+    ///   execute context (the run results), which hold the fixture, which holds the test: a cycle that leaked the
+    ///   run.
+    /// </summary>
     [Test]
     procedure ExceptionTestDoesNotKeepTheRunResultsAlive;
-    // Proves that [RepeatTest] repetitions, plain and with [TestCase], get the [Setup] declared in a base class and
-    // run it on the same instance as the test. Repetitions used to get a child fixture whose Setup was copied before
-    // the base class's [Setup] had been seen (so none ran), and test cases ran on the child's own instance.
+    /// <summary>
+    ///   Proves that [RepeatTest] repetitions, plain and with [TestCase], get the [Setup] declared in a base class and
+    ///   run it on the same instance as the test. Repetitions used to get a child fixture whose Setup was copied
+    ///   before the base class's [Setup] had been seen (so none ran), and test cases ran on the child's own instance.
+    /// </summary>
     [Test]
     procedure RepeatedTestsRunWithTheirSetupOnTheirInstance;
-    // Proves that when [SetupFixture] fails no test of the fixture runs, repetitions included, each is reported as an
-    // error, and an [Ignore]d test is still reported as ignored rather than as an error.
+    /// <summary>
+    ///   Proves that when [SetupFixture] fails no test of the fixture runs, repetitions included, each is reported as
+    ///   an error, and an [Ignore]d test is still reported as ignored rather than as an error.
+    /// </summary>
     [Test]
     procedure AfterSetupFixtureFailsNothingRunsAndIgnoredStayIgnored;
-    // Proves that a failing [TearDownFixture] is reported once, as its own error, and that the tests that already
-    // passed are not reported a second time as errors.
+    /// <summary>
+    ///   Proves that a failing [TearDownFixture] is reported once, as its own error, and that the tests that already
+    ///   passed are not reported a second time as errors.
+    /// </summary>
     [Test]
     procedure TearDownFixtureFailureIsReportedOnce;
-    // Proves that a fixture whose destructor (its implicit TearDownFixture) raises is not freed a second time when
-    // the fixture is destroyed.
+    /// <summary>
+    ///   Proves that a fixture whose destructor (its implicit TearDownFixture) raises is not freed a second time when
+    ///   the fixture is destroyed.
+    /// </summary>
     [Test]
     procedure RaisingDestructorIsNotFreedTwice;
-    // Proves that a fixture constructor that raises does not abort building the fixtures, and that the fixture's
-    // tests are then reported as errors carrying the constructor's message.
+    /// <summary>
+    ///   Proves that a fixture constructor that raises does not abort building the fixtures, and that the fixture's
+    ///   tests are then reported as errors carrying the constructor's message.
+    /// </summary>
     [Test]
     procedure RaisingConstructorErrorsOnlyItsFixture;
-    // Proves that when a parameterless constructor takes the place of a [SetupFixture] method (upstream's documented
-    // behaviour, see TExampleFixture3), the runner logs a warning naming the method instead of dropping it silently.
+    /// <summary>
+    ///   Proves that when a parameterless constructor takes the place of a [SetupFixture] method (upstream's
+    ///   documented behaviour, see TExampleFixture3), the runner logs a warning naming the method instead of dropping
+    ///   it silently.
+    /// </summary>
     [Test]
     procedure SuppressedSetupFixtureIsReported;
-    // Proves that TearDown does not run after a failed Setup, so the Setup error is the one reported.
+    /// <summary>
+    ///   Proves that TearDown does not run after a failed Setup, so the Setup error is the one reported.
+    /// </summary>
     [Test]
     procedure TearDownIsSkippedAfterSetupFails;
-    // Proves that when a test fails and its TearDown then fails too, the result stays a failure whose message
-    // starts with the test's own message and also carries the TearDown error.
+    /// <summary>
+    ///   Proves that when a test fails and its TearDown then fails too, the result stays a failure whose message
+    ///   starts with the test's own message and also carries the TearDown error.
+    /// </summary>
     [Test]
     procedure TearDownErrorDoesNotHideTestFailure;
-    // Proves that a [TestCaseProvider] naming an unregistered provider produces an error naming it, rather than
-    // silently producing no tests.
+    /// <summary>
+    ///   Proves that a [TestCaseProvider] naming an unregistered provider produces an error naming it, rather than
+    ///   silently producing no tests.
+    /// </summary>
     [Test]
     procedure UnregisteredTestCaseProviderIsAnError;
-    // Proves the leak check, with a monitor that counts simulated allocations: memory held by the runner's own log
-    // lists, and the ETestPass object raised by a pass, are not leaks; a test that frees earlier memory (a negative
-    // delta) is not a leak; a real allocation still is.
+    /// <summary>
+    ///   Proves the leak check, with a monitor that counts simulated allocations: memory held by the runner's own log
+    ///   lists, and the ETestPass object raised by a pass, are not leaks; a test that frees earlier memory (a
+    ///   negative delta) is not a leak; a real allocation still is.
+    /// </summary>
     [Test]
     procedure LeakCheckCountsOnlyTheTestsOwnGrowth;
-    // Proves the leak check measures the whole span from setup to teardown: memory that setup or the test allocates
-    // and that is freed between phases (here by a logger, standing in for the runner releasing references or another
-    // thread finishing) is not a leak; a real allocation still is, with setup and teardown present.
+    /// <summary>
+    ///   Proves the leak check measures the whole span from setup to teardown: memory that setup or the test
+    ///   allocates and that is freed between phases (here by a logger, standing in for the runner releasing
+    ///   references or another thread finishing) is not a leak; a real allocation still is, with setup and teardown
+    ///   present.
+    /// </summary>
     [Test]
     procedure LeakCheckIgnoresMemoryFreedBetweenPhases;
-    // Proves that SuccessRate is a percentage (3 of 4 passing is 75), not 0 or 100.
+    /// <summary>
+    ///   Proves that SuccessRate is a percentage (3 of 4 passing is 75), not 0 or 100.
+    /// </summary>
     [Test]
     procedure SuccessRateIsAPercentage;
-    // Proves that a run in which no test executed (none at all, or all ignored) is not reported as all passed.
+    /// <summary>
+    ///   Proves that a run in which no test executed (none at all, or all ignored) is not reported as all passed.
+    /// </summary>
     [Test]
     procedure RunWithNoExecutedTestsIsNotAllPassed;
-    // Proves that when a fixture is run again (as the GUI runner does) after its instance was freed, Setup runs on
-    // the new instance, not on the freed one.
+    /// <summary>
+    ///   Proves that when a fixture is run again (as the GUI runner does) after its instance was freed, Setup runs on
+    ///   the new instance, not on the freed one.
+    /// </summary>
     [Test]
     procedure RerunBindsSetupToTheNewInstance;
+    /// <summary>
+    ///   Proves that an override of an attributed virtual method runs, not the ancestor's code: an override of
+    ///   [Setup] and of [Test] that does not repeat the attribute is what executes, and a test overridden in a
+    ///   published section is one test, not two. The provider bound the ancestor's static code address.
+    /// </summary>
+    [Test]
+    procedure OverridesOfAttributedMethodsRunOnce;
+    /// <summary>
+    ///   Proves that a [MaxTime] test that overruns and then calls Assert.Pass fails. The ETestPass raised by
+    ///   Assert.Pass skipped the timeout check.
+    /// </summary>
+    [Test]
+    procedure MaxTimeOverrunEndingInAssertPassFails;
+    /// <summary>
+    ///   Proves that [SetupFixture] does not run when no test of the fixture will execute: the only selected test is
+    ///   ignored and the other is filtered out.
+    /// </summary>
+    [Test]
+    procedure SetupFixtureSkippedWhenNoTestWillExecute;
+    /// <summary>
+    ///   Proves that each result carries the log of its own test and setup only: a Setup failure does not carry the
+    ///   previous failing test's log, and what Setup logged is kept on the result.
+    /// </summary>
+    [Test]
+    procedure ResultsCarryOnlyTheirOwnLog;
+    /// <summary>
+    ///   Proves that what a logger keeps in its per-test callbacks (end of setup, test start, teardown start) is not
+    ///   counted as the test's leak.
+    /// </summary>
+    [Test]
+    procedure LoggerStateIsNotATestLeak;
+    /// <summary>
+    ///   Proves that TNameFilter (the command line's --run) matches a fixture name only as a whole name segment:
+    ///   naming Unit.TCustomer does not select Unit.TCustomerOrder, and naming a test method selects its test cases.
+    /// </summary>
+    [Test]
+    procedure NameFilterMatchesWholeNameSegments;
+    /// <summary>
+    ///   Proves the fixture list the runner sorts is ordered by full name at every level, children included. Sort
+    ///   reached the generic list's default comparer, which orders interface pointers, so the run order followed
+    ///   heap addresses.
+    /// </summary>
+    [Test]
+    procedure FixtureListSortsByNameAtEveryLevel;
+    /// <summary>
+    ///   Proves the run results' fixture list holds the fixture of each recorded fixture result: it returned a field
+    ///   that was never assigned, so it was always nil.
+    /// </summary>
+    [Test]
+    procedure RunResultsListTheRunFixtures;
+    /// <summary>
+    ///   Proves a fixture's ITestInfo list grows when a test is added after the list was first read: it was built once
+    ///   and then returned stale, so tests the provider added later (error tests) were missing from it.
+    /// </summary>
+    [Test]
+    procedure FixtureTestInfoListFollowsAddedTests;
+    /// <summary>
+    ///   Proves TNameFilter built from a list of names ('--run:a,,b') stores only the distinct non-empty names (read
+    ///   through RTTI, as nothing publishes them): the list overloads bypassed the single-name Add and stored empty
+    ///   and duplicate names, and an empty name matches a fixture with an empty name, which no --run asked for.
+    /// </summary>
+    [Test]
+    procedure NameFilterListDropsEmptyAndDuplicateNames;
+    /// <summary>
+    ///   Proves a test error whose result message differs from the exception's message keeps the two on separate
+    ///   lines (they used to be run together), and that an exception DESCENDED from ETestFailureStrCompare is
+    ///   comparable and carries its expected and actual values (only the exact class used to be).
+    /// </summary>
+    [Test]
+    procedure TestErrorSeparatesMessagesAndAcceptsStrCompareDescendants;
   end;
 {$M-}
 
@@ -237,10 +474,12 @@ uses
   System.Math,
   System.SysUtils,
   System.Rtti,
+  System.Generics.Collections,
 {$ELSE}
   Math,
   SysUtils,
   Rtti,
+  Generics.Collections,
 {$ENDIF}
   DUnitX.Types,
   DUnitX.Extensibility,
@@ -257,6 +496,7 @@ uses
   DUnitX.ServiceLocator,
   DUnitX.Loggers.Null,
   DUnitX.Filters,
+  DUnitX.TestResult,
   DUnitX.MemoryLeakMonitor.Default;
 
 var
@@ -419,7 +659,7 @@ begin
   TestB := FixtureB.AddTest(MyMethod.Name, nil, 'Other', '', MyMethod);
 
   filter := TNameFilter.Create(TestA.FullName);
-  Assert.IsTrue(filter.Match(TestB), 'precondition: TNameFilter matches a fixture name prefix');
+  Assert.IsFalse(filter.Match(TestB), 'TNameFilter does not match a fixture whose name merely starts with the name');
 
   filter := TFullNameFilter.Create(TestA.FullName);
   Assert.IsTrue(filter.Match(TestA), 'the named test');
@@ -497,235 +737,746 @@ end;
   registered, so the suite's own runner does not run them. }
 
 var
+  /// <summary>Simulated heap size read by TFakeLeakMonitor; fixtures and loggers add to or subtract from it.</summary>
   GFakeAllocated : Int64;
+  /// <summary>What setup allocated that TGapFreeingLogger frees before the test starts.</summary>
   GSetupGapFree : Int64;
+  /// <summary>What the test allocated that TGapFreeingLogger frees before teardown starts.</summary>
   GTestGapFree : Int64;
+  /// <summary>Set if TRunnerConstructorAndSetupFixture's suppressed [SetupFixture] ran.</summary>
   GSetupFixtureRan : boolean;
+  /// <summary>Set if TRunnerSetupFails's TearDown ran after its failed Setup.</summary>
   GTearDownRan : boolean;
+  /// <summary>Set by any test body that must not run.</summary>
   GBodyRan : boolean;
+  /// <summary>The instance TRunnerSetupSeesTestInstance's Setup ran on.</summary>
   GSetupInstance : TObject;
+  /// <summary>Warning messages collected by TWarningLogger, one per line.</summary>
   GWarnings : string;
+  /// <summary>Number of times TRunnerFixtureSetupCount's [SetupFixture] ran.</summary>
+  GSetupFixtureCalls : Integer;
+  /// <summary>Number of times TRunnerLogAttribution's Setup ran; the second call raises.</summary>
+  GLogSetupCalls : Integer;
 
 type
 {$M+}
+  /// <summary>
+  ///   Runner fixture for per-case and per-test attribute enforcement: [WillRaise] and [MaxTime] combined with
+  ///   [TestCase], a 115 ms overrun of [MaxTime(100)], and an assertion failure inside a [WillRaise] test.
+  /// </summary>
   TRunnerCaseAttributes = class
   public
+    /// <summary>
+    ///   Case that must fail: it expects EArgumentOutOfRangeException but raises nothing.
+    /// </summary>
+    /// <param name="AValue">
+    ///   The case value; unused.
+    /// </param>
     [Test]
     [TestCase('DoesNotRaise', '1')]
     [WillRaise(EArgumentOutOfRangeException)]
     procedure CaseExpectedToRaise(const AValue : Integer);
+    /// <summary>
+    ///   Case that must fail: it sleeps 150 ms under [MaxTime(100)].
+    /// </summary>
+    /// <param name="ADelay">
+    ///   Milliseconds to sleep.
+    /// </param>
     [Test]
     [TestCase('Slow', '150')]
     [MaxTime(100)]
     procedure CaseOverItsMaxTime(const ADelay : Integer);
+    /// <summary>
+    ///   Test that must fail: it sleeps 115 ms under [MaxTime(100)], an overrun the old 20 ms poll could miss.
+    /// </summary>
     [Test]
     [MaxTime(100)]
     procedure OverItsMaxTimeBetweenPolls;
+    /// <summary>
+    ///   Test that must be a failure, not an expected raise: it fails an assertion under
+    ///   [WillRaise(Exception, exDescendant)].
+    /// </summary>
     [Test]
     [WillRaise(Exception, exDescendant)]
     procedure FailingAssertIsNotTheExpectedRaise;
   end;
 
+  /// <summary>
+  ///   Runner fixture with a [WillRaise] test that raises as expected, used to check the run results are not kept
+  ///   alive by the exception-test path.
+  /// </summary>
   TRunnerRaisesAsExpected = class
   public
+    /// <summary>
+    ///   Raises the EInvalidOpException it declares, so it passes.
+    /// </summary>
+    /// <exception cref="EInvalidOpException">
+    ///   Always; the expected exception.
+    /// </exception>
     [Test]
     [WillRaise(EInvalidOpException)]
     procedure Raises;
   end;
 
+  /// <summary>
+  ///   Base class declaring the [Setup] that TRunnerRepeatWithBaseSetup's repeated tests must inherit.
+  /// </summary>
   TRunnerSetupBase = class
   protected
+    /// <summary>Set by Setup; each test asserts and clears it, so every repetition needs its own Setup.</summary>
     FSetupDone : boolean;
   public
+    /// <summary>
+    ///   Inherited per-test setup; sets FSetupDone.
+    /// </summary>
     [Setup]
     procedure Setup;
   end;
 
+  /// <summary>
+  ///   Runner fixture whose repeated tests, plain and with a [TestCase], must each see the base class's Setup run on
+  ///   their own instance.
+  /// </summary>
   TRunnerRepeatWithBaseSetup = class(TRunnerSetupBase)
   public
+    /// <summary>
+    ///   Repeated three times; fails on any repetition whose Setup did not run on this instance.
+    /// </summary>
     [Test]
     [RepeatTest(3)]
     procedure RepeatedTestSeesItsSetup;
+    /// <summary>
+    ///   A test case repeated twice; fails on any repetition whose Setup did not run on this instance.
+    /// </summary>
+    /// <param name="AValue">
+    ///   The case value; unused.
+    /// </param>
     [Test]
     [RepeatTest(2)]
     [TestCase('One', '1')]
     procedure RepeatedCaseSeesItsSetup(const AValue : Integer);
   end;
 
+  /// <summary>
+  ///   Runner fixture whose [SetupFixture] raises: no test may run, repetitions included, and the ignored test must
+  ///   still be reported as ignored.
+  /// </summary>
   TRunnerSetupFixtureFails = class
   public
+    /// <summary>
+    ///   Fixture setup that fails.
+    /// </summary>
+    /// <exception cref="Exception">
+    ///   Always ('setup fixture boom').
+    /// </exception>
     [SetupFixture]
     procedure SetupFixture;
+    /// <summary>
+    ///   Must not run; sets GBodyRan if it does.
+    /// </summary>
     [Test]
     procedure NotRun;
+    /// <summary>
+    ///   Repeated test that must not run in any repetition; sets GBodyRan if it does.
+    /// </summary>
     [Test]
     [RepeatTest(2)]
     procedure NotRunEither;
+    /// <summary>
+    ///   Ignored test that must be reported as ignored, not as an error; sets GBodyRan if it runs.
+    /// </summary>
     [Test]
     [Ignore('stays ignored')]
     procedure StaysIgnored;
   end;
 
+  /// <summary>
+  ///   Runner fixture whose [TearDownFixture] raises after two passing tests: the failure must be reported once and
+  ///   the passes must stay passes.
+  /// </summary>
   TRunnerTearDownFixtureFails = class
   public
+    /// <summary>
+    ///   Fixture teardown that fails.
+    /// </summary>
+    /// <exception cref="Exception">
+    ///   Always ('teardown fixture boom').
+    /// </exception>
     [TearDownFixture]
     procedure TearDownFixture;
+    /// <summary>
+    ///   Passes (empty body).
+    /// </summary>
     [Test]
     procedure PassesOne;
+    /// <summary>
+    ///   Passes (empty body).
+    /// </summary>
     [Test]
     procedure PassesTwo;
   end;
 
+  /// <summary>
+  ///   Runner fixture whose destructor raises, to prove the fixture instance is not freed a second time.
+  /// </summary>
   TRunnerDestructorRaises = class
   public
+    /// <summary>
+    ///   Raises without calling the inherited destructor.
+    /// </summary>
+    /// <exception cref="Exception">
+    ///   Always ('destructor boom').
+    /// </exception>
     destructor Destroy; override;
+    /// <summary>
+    ///   Passes (empty body).
+    /// </summary>
     [Test]
     procedure Passes;
   end;
 
+  /// <summary>
+  ///   Runner fixture whose constructor raises, so its tests must be reported as errors carrying that message.
+  /// </summary>
   TRunnerConstructorRaises = class
   public
+    /// <summary>
+    ///   Fails construction.
+    /// </summary>
+    /// <exception cref="Exception">
+    ///   Always ('constructor boom').
+    /// </exception>
     constructor Create;
+    /// <summary>
+    ///   Must not run; sets GBodyRan if it does.
+    /// </summary>
     [Test]
     procedure NeverRuns;
   end;
 
+  /// <summary>
+  ///   Runner fixture with both a parameterless constructor and a [SetupFixture] method, so the runner must warn that
+  ///   the method is suppressed.
+  /// </summary>
   TRunnerConstructorAndSetupFixture = class
   public
+    /// <summary>
+    ///   Parameterless constructor that takes the place of fixture setup.
+    /// </summary>
     constructor Create;
+    /// <summary>
+    ///   Suppressed by the constructor; sets GSetupFixtureRan if it runs.
+    /// </summary>
     [SetupFixture]
     procedure SetupFixture;
+    /// <summary>
+    ///   Passes (empty body); gives the fixture a test to run.
+    /// </summary>
     [Test]
     procedure ConstructorRan;
   end;
 
+  /// <summary>
+  ///   Runner fixture whose [Setup] raises: the test must not run and TearDown must be skipped.
+  /// </summary>
   TRunnerSetupFails = class
   public
+    /// <summary>
+    ///   Per-test setup that fails.
+    /// </summary>
+    /// <exception cref="Exception">
+    ///   Always ('setup boom').
+    /// </exception>
     [Setup]
     procedure Setup;
+    /// <summary>
+    ///   Must not run after the failed Setup; sets GTearDownRan and raises if it does.
+    /// </summary>
+    /// <exception cref="Exception">
+    ///   Always ('teardown boom'), so running it would replace the Setup error.
+    /// </exception>
     [TearDown]
     procedure TearDown;
+    /// <summary>
+    ///   Must not run; sets GBodyRan if it does.
+    /// </summary>
     [Test]
     procedure NeverRuns;
   end;
 
+  /// <summary>
+  ///   Runner fixture where the test fails and then TearDown raises: the result must remain the test's failure.
+  /// </summary>
   TRunnerTestAndTearDownFail = class
   public
+    /// <summary>
+    ///   Per-test teardown that fails.
+    /// </summary>
+    /// <exception cref="Exception">
+    ///   Always ('teardown boom').
+    /// </exception>
     [TearDown]
     procedure TearDown;
+    /// <summary>
+    ///   Fails with 'test boom'.
+    /// </summary>
+    /// <exception cref="ETestFailure">
+    ///   Always, via Assert.Fail.
+    /// </exception>
     [Test]
     procedure Fails;
   end;
 
+  /// <summary>
+  ///   Runner fixture naming a test-case provider that was never registered.
+  /// </summary>
   TRunnerUnknownProvider = class
   public
+    /// <summary>
+    ///   Must produce an error naming 'DUnitX.Tests.NoSuchProvider' rather than no tests.
+    /// </summary>
+    /// <param name="AValue">
+    ///   Would come from the provider; unused.
+    /// </param>
     [Test]
     [TestCaseProvider('DUnitX.Tests.NoSuchProvider')]
     procedure UsesAnUnregisteredProvider(const AValue : Integer);
   end;
 
+  /// <summary>
+  ///   Runner fixture for the leak check's arithmetic, measured by TFakeLeakMonitor over GFakeAllocated.
+  /// </summary>
   TRunnerLeakChecks = class
   public
+    /// <summary>
+    ///   Passes by raising ETestPassCounted, whose own 100 simulated bytes must not count as a leak.
+    /// </summary>
+    /// <exception cref="ETestPassCounted">
+    ///   Always; the simulated Assert.Pass.
+    /// </exception>
     [Test]
     procedure PassesWithAssertPass;
+    /// <summary>
+    ///   Logs a status line, whose storage in the runner's log list must not count as a leak.
+    /// </summary>
     [Test]
     procedure LogsWhileRunning;
+    /// <summary>
+    ///   Frees 64 simulated bytes allocated earlier; a negative delta must not count as a leak.
+    /// </summary>
     [Test]
     procedure FreesEarlierMemory;
+    /// <summary>
+    ///   Allocates 32 simulated bytes and keeps them; must be reported as a leak.
+    /// </summary>
     [Test]
     procedure LeaksForReal;
   end;
 
+  /// <summary>
+  ///   Runner fixture whose setup and test allocate memory that TGapFreeingLogger frees between phases, to prove the
+  ///   leak check spans setup to teardown as a whole.
+  /// </summary>
   TRunnerGapLeakChecks = class
   public
+    /// <summary>
+    ///   Allocates 500 simulated bytes that the logger frees before the test starts.
+    /// </summary>
     [Setup]
     procedure Setup;
+    /// <summary>
+    ///   Empty; present so the teardown phase is measured too.
+    /// </summary>
     [TearDown]
     procedure TearDown;
+    /// <summary>
+    ///   Allocates 1000 simulated bytes that the logger frees before teardown; must not be a leak.
+    /// </summary>
     [Test]
     procedure FreedBetweenPhases;
+    /// <summary>
+    ///   Allocates 32 simulated bytes and keeps them; must be reported as a leak.
+    /// </summary>
     [Test]
     procedure LeaksForReal;
   end;
 
+  /// <summary>
+  ///   Runner fixture with three passing tests and one failing, for the SuccessRate percentage.
+  /// </summary>
   TRunnerThreeOfFourPass = class
   public
+    /// <summary>Passes (empty body).</summary>
     [Test]
     procedure PassOne;
+    /// <summary>Passes (empty body).</summary>
     [Test]
     procedure PassTwo;
+    /// <summary>Passes (empty body).</summary>
     [Test]
     procedure PassThree;
+    /// <summary>
+    ///   Fails via Assert.Fail.
+    /// </summary>
+    /// <exception cref="ETestFailure">
+    ///   Always.
+    /// </exception>
     [Test]
     procedure Fails;
   end;
 
+  /// <summary>
+  ///   Runner fixture whose only test is ignored, so the run executes nothing.
+  /// </summary>
   TRunnerAllIgnored = class
   public
+    /// <summary>Ignored test (empty body).</summary>
     [Test]
     [Ignore('ignored')]
     procedure Ignored;
   end;
 
+  /// <summary>
+  ///   Runner fixture that records which instance Setup ran on, so a rerun after the instance is freed can be
+  ///   checked to bind Setup to the new instance.
+  /// </summary>
   TRunnerSetupSeesTestInstance = class
   public
+    /// <summary>
+    ///   Records Self in GSetupInstance.
+    /// </summary>
     [Setup]
     procedure Setup;
+    /// <summary>
+    ///   Fails unless Setup ran on this same instance.
+    /// </summary>
     [Test]
     procedure SetupRanOnThisInstance;
   end;
+
+  /// <summary>
+  ///   Declares the attributed, virtual methods that TRunnerVirtualDerived overrides without repeating the
+  ///   attributes; its own test bodies fail if they run.
+  /// </summary>
+  TRunnerVirtualBase = class
+  protected
+    /// <summary>Set by the overriding Setup; the overriding tests assert it.</summary>
+    FOverridingSetupRan : boolean;
+  public
+    /// <summary>
+    ///   Attributed virtual setup; clears FOverridingSetupRan.
+    /// </summary>
+    [Setup]
+    procedure Setup; virtual;
+    /// <summary>
+    ///   Attributed virtual test; fails if this ancestor body runs instead of the override.
+    /// </summary>
+    [Test]
+    procedure RunsTheOverride; virtual;
+    /// <summary>
+    ///   Attributed virtual test overridden in a published section; fails if this ancestor body runs.
+    /// </summary>
+    [Test]
+    procedure OverriddenInPublished; virtual;
+  end;
+
+  /// <summary>
+  ///   Runner fixture overriding TRunnerVirtualBase's attributed methods without the attributes: the overrides are
+  ///   what must run, once each.
+  /// </summary>
+  TRunnerVirtualDerived = class(TRunnerVirtualBase)
+  public
+    /// <summary>
+    ///   Calls the inherited Setup, then sets FOverridingSetupRan.
+    /// </summary>
+    procedure Setup; override;
+    /// <summary>
+    ///   Passes only if the overriding Setup ran.
+    /// </summary>
+    procedure RunsTheOverride; override;
+  published
+    /// <summary>
+    ///   Passes only if the overriding Setup ran; being published must not make it a second test.
+    /// </summary>
+    procedure OverriddenInPublished; override;
+  end;
+
+  /// <summary>
+  ///   Runner fixture whose test overruns [MaxTime(50)] and then calls Assert.Pass; it must still fail.
+  /// </summary>
+  TRunnerSlowPass = class
+  public
+    /// <summary>
+    ///   Sleeps 120 ms, then calls Assert.Pass.
+    /// </summary>
+    /// <exception cref="ETestPass">
+    ///   Always, via Assert.Pass.
+    /// </exception>
+    [Test]
+    [MaxTime(50)]
+    procedure OverItsMaxTimeThenPasses;
+  end;
+
+  /// <summary>
+  ///   Runner fixture whose [SetupFixture] counts its calls; run with a filter so that no test will execute.
+  /// </summary>
+  TRunnerFixtureSetupCount = class
+  public
+    /// <summary>
+    ///   Increments GSetupFixtureCalls; must not run when no test will execute.
+    /// </summary>
+    [SetupFixture]
+    procedure SetupFixture;
+    /// <summary>Excluded by the run's filter (empty body).</summary>
+    [Test]
+    procedure FilteredOut;
+    /// <summary>Selected by the filter but ignored (empty body).</summary>
+    [Test]
+    [Ignore('ignored')]
+    procedure IgnoredButSelected;
+  end;
+
+  /// <summary>
+  ///   Setup logs on every call and raises on its second, so one test fails in Setup after the other has logged.
+  /// </summary>
+  TRunnerLogAttribution = class
+  public
+    /// <summary>
+    ///   Logs 'logged in setup'; raises on its second call.
+    /// </summary>
+    /// <exception cref="EInvalidOpException">
+    ///   On the second call ('second setup fails').
+    /// </exception>
+    [Setup]
+    procedure Setup;
+    /// <summary>
+    ///   Logs, then fails.
+    /// </summary>
+    /// <exception cref="ETestFailure">
+    ///   Always, via Assert.Fail.
+    /// </exception>
+    [Test]
+    procedure TestOne;
+    /// <summary>
+    ///   Logs, then fails (if its Setup lets it run).
+    /// </summary>
+    /// <exception cref="ETestFailure">
+    ///   Always, via Assert.Fail.
+    /// </exception>
+    [Test]
+    procedure TestTwo;
+  end;
+
+  /// <summary>
+  ///   Runner fixture with empty setup and teardown and a passing test, so every per-test logger callback fires.
+  /// </summary>
+  TRunnerSetupAndTearDown = class
+  public
+    /// <summary>Empty per-test setup.</summary>
+    [Setup]
+    procedure Setup;
+    /// <summary>Empty per-test teardown.</summary>
+    [TearDown]
+    procedure TearDown;
+    /// <summary>
+    ///   Passes via Assert.Pass.
+    /// </summary>
+    /// <exception cref="ETestPass">
+    ///   Always, via Assert.Pass.
+    /// </exception>
+    [Test]
+    procedure Passes;
+  end;
 {$M-}
 
-  //Simulates the ETestPass that Assert.Pass raises, counting its own memory as a real one would.
+  /// <summary>
+  ///   Simulates the ETestPass that Assert.Pass raises, counting its own memory (100 simulated bytes) as a real one
+  ///   would.
+  /// </summary>
   ETestPassCounted = class(ETestPass)
   public
+    /// <summary>
+    ///   Creates the exception and adds 100 to GFakeAllocated.
+    /// </summary>
+    /// <param name="AMessage">
+    ///   The pass message.
+    /// </param>
     constructor Create(const AMessage : string);
+    /// <summary>
+    ///   Subtracts the 100 bytes again.
+    /// </summary>
     destructor Destroy; override;
   end;
 
-  //Measures GFakeAllocated, so a test can simulate allocations precisely.
+  /// <summary>
+  ///   Leak monitor that measures GFakeAllocated, so a test can simulate allocations precisely.
+  /// </summary>
   TFakeLeakMonitor = class(TInterfacedObject, IMemoryLeakMonitor)
   private
+    /// <summary>GFakeAllocated before setup.</summary>
     FPreSetup : Int64;
+    /// <summary>GFakeAllocated after setup.</summary>
     FPostSetup : Int64;
+    /// <summary>GFakeAllocated before the test.</summary>
     FPreTest : Int64;
+    /// <summary>GFakeAllocated after the test.</summary>
     FPostTest : Int64;
+    /// <summary>GFakeAllocated before teardown.</summary>
     FPreTearDown : Int64;
+    /// <summary>GFakeAllocated after teardown.</summary>
     FPostTearDown : Int64;
   public
+    /// <summary>Records GFakeAllocated before setup.</summary>
     procedure PreSetup;
+    /// <summary>Records GFakeAllocated after setup.</summary>
     procedure PostSetUp;
+    /// <summary>Records GFakeAllocated before the test.</summary>
     procedure PreTest;
+    /// <summary>Records GFakeAllocated after the test.</summary>
     procedure PostTest;
+    /// <summary>Records GFakeAllocated before teardown.</summary>
     procedure PreTearDown;
+    /// <summary>Records GFakeAllocated after teardown.</summary>
     procedure PostTearDown;
+    /// <summary>
+    ///   Growth across setup.
+    /// </summary>
+    /// <returns>
+    ///   Post-setup minus pre-setup simulated bytes.
+    /// </returns>
     function SetUpMemoryAllocated : Int64;
+    /// <summary>
+    ///   Growth across teardown.
+    /// </summary>
+    /// <returns>
+    ///   Post-teardown minus pre-teardown simulated bytes.
+    /// </returns>
     function TearDownMemoryAllocated : Int64;
+    /// <summary>
+    ///   Growth across the test.
+    /// </summary>
+    /// <returns>
+    ///   Post-test minus pre-test simulated bytes.
+    /// </returns>
     function TestMemoryAllocated : Int64;
   end;
 
-  //Collects warnings into GWarnings.
+  /// <summary>
+  ///   Logger that collects warnings into GWarnings.
+  /// </summary>
   TWarningLogger = class(TDUnitXNullLogger)
   protected
+    /// <summary>
+    ///   Appends warning-level messages to GWarnings; ignores the rest.
+    /// </summary>
+    /// <param name="logType">
+    ///   The message's level.
+    /// </param>
+    /// <param name="msg">
+    ///   The message text.
+    /// </param>
     procedure OnLog(const logType : TLogLevel; const msg : string); override;
   end;
 
-  //Simulates a logger whose storage grows with every message.
+  /// <summary>
+  ///   Simulates a logger whose storage grows with every message (50 simulated bytes each).
+  /// </summary>
   TFakeAllocatingLogger = class(TDUnitXNullLogger)
   protected
+    /// <summary>
+    ///   Adds 50 to GFakeAllocated for every message.
+    /// </summary>
+    /// <param name="logType">
+    ///   The message's level; ignored.
+    /// </param>
+    /// <param name="msg">
+    ///   The message text; ignored.
+    /// </param>
     procedure OnLog(const logType : TLogLevel; const msg : string); override;
   end;
 
-  //Frees, between the phases, what TRunnerGapLeakChecks allocated: setup's allocation before the test starts, the
-  //test's after it ends and before teardown starts.
-  TGapFreeingLogger = class(TDUnitXNullLogger)
+  /// <summary>
+  ///   Keeps per-test state, as a logger may, in callbacks that the runner makes inside the leak span (40 simulated
+  ///   bytes per callback).
+  /// </summary>
+  TStateKeepingLogger = class(TDUnitXNullLogger)
   protected
+    /// <summary>
+    ///   Adds 40 to GFakeAllocated at the end of setup.
+    /// </summary>
+    /// <param name="threadId">
+    ///   The running thread.
+    /// </param>
+    /// <param name="Test">
+    ///   The test whose setup ended.
+    /// </param>
+    procedure OnEndSetupTest(const threadId : TThreadID; const Test : ITestInfo); override;
+    /// <summary>
+    ///   Adds 40 to GFakeAllocated as the test starts.
+    /// </summary>
+    /// <param name="threadId">
+    ///   The running thread.
+    /// </param>
+    /// <param name="Test">
+    ///   The test starting.
+    /// </param>
     procedure OnExecuteTest(const threadId : TThreadID; const Test : ITestInfo); override;
+    /// <summary>
+    ///   Adds 40 to GFakeAllocated as teardown starts.
+    /// </summary>
+    /// <param name="threadId">
+    ///   The running thread.
+    /// </param>
+    /// <param name="Test">
+    ///   The test being torn down.
+    /// </param>
     procedure OnTeardownTest(const threadId : TThreadID; const Test : ITestInfo); override;
   end;
 
+  /// <summary>
+  ///   Frees, between the phases, what TRunnerGapLeakChecks allocated: setup's allocation before the test starts,
+  ///   the test's after it ends and before teardown starts.
+  /// </summary>
+  TGapFreeingLogger = class(TDUnitXNullLogger)
+  protected
+    /// <summary>
+    ///   Frees what setup allocated (GSetupGapFree) as the test starts.
+    /// </summary>
+    /// <param name="threadId">
+    ///   The running thread.
+    /// </param>
+    /// <param name="Test">
+    ///   The test starting.
+    /// </param>
+    procedure OnExecuteTest(const threadId : TThreadID; const Test : ITestInfo); override;
+    /// <summary>
+    ///   Frees what the test allocated (GTestGapFree) as teardown starts.
+    /// </summary>
+    /// <param name="threadId">
+    ///   The running thread.
+    /// </param>
+    /// <param name="Test">
+    ///   The test being torn down.
+    /// </param>
+    procedure OnTeardownTest(const threadId : TThreadID; const Test : ITestInfo); override;
+  end;
+
+  /// <summary>
+  ///   Cracker class exposing TDUnitXTestRunner's protected ExecuteFixtures to RunFixture.
+  /// </summary>
   TRunnerAccess = class(TDUnitXTestRunner);
+  /// <summary>
+  ///   Cracker class exposing TDUnitXFixtureProvider's protected GenerateTests to BuildFixture.
+  /// </summary>
   TProviderAccess = class(TDUnitXFixtureProvider);
+  /// <summary>
+  ///   Cracker class exposing TDUnitXRunResults' protected GetFixtures, which no interface publishes.
+  /// </summary>
+  TRunResultsAccess = class(TDUnitXRunResults);
+  /// <summary>
+  ///   A descendant of ETestFailureStrCompare, as a custom comparison assertion might raise.
+  /// </summary>
+  ETestFailureStrCompareChild = class(ETestFailureStrCompare);
 
 procedure TRunnerCaseAttributes.CaseExpectedToRaise(const AValue : Integer);
 begin
@@ -942,6 +1693,89 @@ begin
   Assert.IsTrue(GSetupInstance = Self, 'Setup ran on the instance the test runs on');
 end;
 
+procedure TRunnerVirtualBase.Setup;
+begin
+  FOverridingSetupRan := false;
+end;
+
+procedure TRunnerVirtualBase.RunsTheOverride;
+begin
+  Assert.Fail('the overridden base implementation ran');
+end;
+
+procedure TRunnerVirtualBase.OverriddenInPublished;
+begin
+  Assert.Fail('the overridden base implementation ran');
+end;
+
+procedure TRunnerVirtualDerived.Setup;
+begin
+  inherited;
+  FOverridingSetupRan := true;
+end;
+
+procedure TRunnerVirtualDerived.RunsTheOverride;
+begin
+  Assert.IsTrue(FOverridingSetupRan, 'the overriding Setup ran');
+end;
+
+procedure TRunnerVirtualDerived.OverriddenInPublished;
+begin
+  Assert.IsTrue(FOverridingSetupRan, 'the overriding Setup ran');
+end;
+
+procedure TRunnerSlowPass.OverItsMaxTimeThenPasses;
+begin
+  Sleep(120);
+  Assert.Pass('passed too late');
+end;
+
+procedure TRunnerFixtureSetupCount.SetupFixture;
+begin
+  Inc(GSetupFixtureCalls);
+end;
+
+procedure TRunnerFixtureSetupCount.FilteredOut;
+begin
+end;
+
+procedure TRunnerFixtureSetupCount.IgnoredButSelected;
+begin
+end;
+
+procedure TRunnerLogAttribution.Setup;
+begin
+  Inc(GLogSetupCalls);
+  Log('logged in setup');
+  if GLogSetupCalls = 2 then
+    raise EInvalidOpException.Create('second setup fails');
+end;
+
+procedure TRunnerLogAttribution.TestOne;
+begin
+  Log('logged by TestOne');
+  Assert.Fail('TestOne fails');
+end;
+
+procedure TRunnerLogAttribution.TestTwo;
+begin
+  Log('logged by TestTwo');
+  Assert.Fail('TestTwo fails');
+end;
+
+procedure TRunnerSetupAndTearDown.Setup;
+begin
+end;
+
+procedure TRunnerSetupAndTearDown.TearDown;
+begin
+end;
+
+procedure TRunnerSetupAndTearDown.Passes;
+begin
+  Assert.Pass;
+end;
+
 constructor ETestPassCounted.Create(const AMessage : string);
 begin
   inherited Create(AMessage);
@@ -1002,6 +1836,21 @@ end;
 procedure TFakeAllocatingLogger.OnLog(const logType : TLogLevel; const msg : string);
 begin
   Inc(GFakeAllocated, 50);
+end;
+
+procedure TStateKeepingLogger.OnEndSetupTest(const threadId : TThreadID; const Test : ITestInfo);
+begin
+  Inc(GFakeAllocated, 40);
+end;
+
+procedure TStateKeepingLogger.OnExecuteTest(const threadId : TThreadID; const Test : ITestInfo);
+begin
+  Inc(GFakeAllocated, 40);
+end;
+
+procedure TStateKeepingLogger.OnTeardownTest(const threadId : TThreadID; const Test : ITestInfo);
+begin
+  Inc(GFakeAllocated, 40);
 end;
 
 procedure TGapFreeingLogger.OnExecuteTest(const threadId : TThreadID; const Test : ITestInfo);
@@ -1323,6 +2172,169 @@ begin
   end;
 end;
 
+function CountResults(const AResults : IRunResults; const ATestName : string) : Integer;
+var
+  testResult : ITestResult;
+begin
+  Result := 0;
+  for testResult in AResults.GetAllTestResults do
+    if testResult.Test.Name = ATestName then
+      Inc(Result);
+end;
+
+function LogText(const AResult : ITestResult) : string;
+var
+  logMessage : TLogMessage;
+begin
+  Result := '';
+  for logMessage in AResult.LogMessages do
+    Result := Result + logMessage.Msg + '|';
+end;
+
+procedure TRunnerBehaviourTests.OverridesOfAttributedMethodsRunOnce;
+var
+  results : IRunResults;
+begin
+  results := RunFixture(BuildFixture(TRunnerVirtualDerived));
+  Assert.AreEqual(1, CountResults(results, 'RunsTheOverride'), 'RunsTheOverride results');
+  Assert.AreEqual(1, CountResults(results, 'OverriddenInPublished'), 'OverriddenInPublished results');
+  CheckResult(results, 'RunsTheOverride', TTestResultType.Pass);
+  CheckResult(results, 'OverriddenInPublished', TTestResultType.Pass);
+end;
+
+procedure TRunnerBehaviourTests.MaxTimeOverrunEndingInAssertPassFails;
+var
+  results : IRunResults;
+begin
+  results := RunFixture(BuildFixture(TRunnerSlowPass));
+  CheckResult(results, 'OverItsMaxTimeThenPasses', TTestResultType.Failure);
+end;
+
+procedure TRunnerBehaviourTests.SetupFixtureSkippedWhenNoTestWillExecute;
+var
+  fixture : ITestFixture;
+  test : ITest;
+begin
+  GSetupFixtureCalls := 0;
+  fixture := BuildFixture(TRunnerFixtureSetupCount);
+  for test in fixture.Tests do
+    if test.Name = 'FilteredOut' then
+      test.Enabled := false;
+  RunFixture(fixture);
+  Assert.AreEqual(0, GSetupFixtureCalls, 'SetupFixture calls');
+end;
+
+procedure TRunnerBehaviourTests.ResultsCarryOnlyTheirOwnLog;
+var
+  results : IRunResults;
+  one : string;
+  two : string;
+begin
+  GLogSetupCalls := 0;
+  results := RunFixture(BuildFixture(TRunnerLogAttribution));
+  one := LogText(FindResult(results, 'TestOne'));
+  two := LogText(FindResult(results, 'TestTwo'));
+  //Whichever test runs second fails in Setup; neither result may carry the other test's log.
+  Assert.DoesNotContain(one, 'logged by TestTwo', False, 'TestOne log: ' + one);
+  Assert.DoesNotContain(two, 'logged by TestOne', False, 'TestTwo log: ' + two);
+  Assert.Contains(one, 'logged in setup', False, 'TestOne log: ' + one);
+  Assert.Contains(two, 'logged in setup', False, 'TestTwo log: ' + two);
+end;
+
+procedure TRunnerBehaviourTests.LoggerStateIsNotATestLeak;
+var
+  results : IRunResults;
+begin
+  TDUnitXServiceLocator.DefaultContainer.RegisterType<IMemoryLeakMonitor>(
+    function : IMemoryLeakMonitor
+    begin
+      Result := TFakeLeakMonitor.Create;
+    end);
+  try
+    results := RunFixture(BuildFixture(TRunnerSetupAndTearDown), TStateKeepingLogger.Create);
+  finally
+    //The suite runs with the default monitor; put it back.
+    DUnitX.MemoryLeakMonitor.Default.RegisterDefaultProvider;
+  end;
+  CheckResult(results, 'Passes', TTestResultType.Pass);
+end;
+
+procedure TRunnerBehaviourTests.NameFilterMatchesWholeNameSegments;
+var
+  Context : TRttiContext;
+  MyClass : TRttiType;
+  MyMethod : TRttiMethod;
+  customer : ITestFixture;
+  customerOrder : ITestFixture;
+  customerTest : ITest;
+  orderTest : ITest;
+  caseTest : ITest;
+  filter : ITestFilter;
+begin
+  Context := TRttiContext.Create;
+  try
+    MyClass := Context.GetType(TTestCaseAttribute);
+    MyMethod := MyClass.GetMethod('ProcedureWithTwoParameters');
+    customer := TDUnitXTestFixture.Create('Unit.TCustomer', EmptyStr, TTestCaseAttribute, MyClass.UnitName) as ITestFixture;
+    customerTest := customer.AddTest(MyMethod.Name, nil, 'Run', '', MyMethod);
+    caseTest := customer.AddTestCase(MyMethod.Name, 'One', MyMethod.Name, '', MyMethod, true, []);
+    customerOrder := TDUnitXTestFixture.Create('Unit.TCustomerOrder', EmptyStr, TTestCaseAttribute, MyClass.UnitName) as ITestFixture;
+    orderTest := customerOrder.AddTest(MyMethod.Name, nil, 'Run', '', MyMethod);
+
+    filter := TNameFilter.Create(customer.FullName);
+    Assert.IsTrue(filter.Match(customerTest), 'a test of the named fixture');
+    Assert.IsFalse(filter.Match(orderTest), 'a test of a fixture whose name only starts with the named one');
+
+    filter := TNameFilter.Create('Unit');
+    Assert.IsTrue(filter.Match(orderTest), 'a test under the named namespace');
+    filter := TNameFilter.Create('Uni');
+    Assert.IsFalse(filter.Match(orderTest), 'a partial namespace segment');
+
+    filter := TNameFilter.Create(customer.FullName + '.' + MyMethod.Name);
+    Assert.IsTrue(filter.Match(caseTest), 'a test case of the named method');
+    Assert.IsFalse(filter.Match(customerTest), 'another test of the fixture');
+  finally
+    filter := nil;
+    customerTest := nil;
+    caseTest := nil;
+    orderTest := nil;
+    customer := nil;
+    customerOrder := nil;
+    Context.Free;
+  end;
+end;
+
+procedure TRunnerBehaviourTests.FixtureListSortsByNameAtEveryLevel;
+var
+  list : ITestFixtureList;
+  parent : ITestFixture;
+  name : string;
+
+  function Names(const AList : ITestFixtureList) : string;
+  var
+    fixture : ITestFixture;
+  begin
+    Result := '';
+    for fixture in AList do
+      Result := Result + fixture.Name + ' ';
+  end;
+
+begin
+  list := TTestFixtureList.Create;
+  //Created in reverse order, so heap addresses ascend against the names.
+  for name in ['C', 'B', 'A'] do
+  begin
+    parent := TDUnitXTestFixture.Create(name, EmptyStr, TObject, EmptyStr) as ITestFixture;
+    parent.AddChildFixture(TObject, name + 'z', EmptyStr);
+    parent.AddChildFixture(TObject, name + 'y', EmptyStr);
+    list.Add(parent);
+  end;
+  list.SortByName;
+  Assert.AreEqual('A B C ', Names(list), False, 'top level');
+  for parent in list do
+    Assert.AreEqual(parent.Name + 'y ' + parent.Name + 'z ', Names(parent.Children), False, 'children of ' + parent.Name);
+end;
+
 procedure TRunnerBehaviourTests.SecondRunnerOnAThreadStandsInAndRestoresTheFirst;
 var
   outer : ITestRunner;
@@ -1344,6 +2356,100 @@ begin
   Assert.IsTrue(IsCurrent(inner), 'the second runner is current while it lives');
   inner := nil;
   Assert.IsTrue(IsCurrent(outer), 'the first runner is current again');
+end;
+
+procedure TRunnerBehaviourTests.RunResultsListTheRunFixtures;
+var
+  fixture : ITestFixture;
+  results : IRunResults;
+  fixtures : IEnumerable<ITestFixtureInfo>;
+  info : ITestFixtureInfo;
+  count : Integer;
+begin
+  fixture := BuildFixture(TRunnerThreeOfFourPass);
+  results := RunFixture(fixture);
+  Assert.AreEqual(1, results.FixtureCount, 'precondition: one fixture result recorded');
+  fixtures := TRunResultsAccess(results as TObject).GetFixtures;
+  Assert.IsNotNull(fixtures, 'GetFixtures returned nil');
+  count := 0;
+  for info in fixtures do
+  begin
+    Inc(count);
+    Assert.AreEqual(fixture.FullName, info.FullName, False, 'the listed fixture is not the one run');
+  end;
+  Assert.AreEqual(1, count, 'one fixture listed');
+end;
+
+procedure TRunnerBehaviourTests.FixtureTestInfoListFollowsAddedTests;
+var
+  context : TRttiContext;
+  fixture : ITestFixture;
+  before : Integer;
+begin
+  fixture := BuildFixture(TRunnerThreeOfFourPass);
+  //Reading the list first is what built (and used to freeze) it.
+  before := (fixture as ITestFixtureInfo).Tests.Count;
+  Assert.AreEqual(4, before, 'precondition: the four declared tests');
+  context := TRttiContext.Create;
+  try
+    fixture.AddTest('PassOne', nil, 'AddedLater', '', context.GetType(TRunnerThreeOfFourPass).GetMethod('PassOne'));
+  finally
+    context.Free;
+  end;
+  Assert.AreEqual(before + 1, (fixture as ITestFixtureInfo).Tests.Count, 'the ITestInfo list is stale');
+end;
+
+procedure TRunnerBehaviourTests.NameFilterListDropsEmptyAndDuplicateNames;
+var
+  context : TRttiContext;
+  filter : TNameFilter;
+  filterIntf : ITestFilter;
+  names : TList<string>;
+begin
+  filter := TNameFilter.Create(TArray<string>.Create('', 'X.Y', 'X.Y', ''));
+  filterIntf := filter;
+  //No accessor publishes the stored names, so they are read through RTTI.
+  context := TRttiContext.Create;
+  try
+    names := context.GetType(TNameFilter).GetField('FNames').GetValue(filter).AsObject as TList<string>;
+    Assert.AreEqual(1, names.Count, 'empty or duplicate names were stored');
+    Assert.AreEqual('X.Y', names[0], False);
+  finally
+    context.Free;
+  end;
+end;
+
+procedure TRunnerBehaviourTests.TestErrorSeparatesMessagesAndAcceptsStrCompareDescendants;
+var
+  fixture : ITestFixture;
+  testInfo : ITestInfo;
+  error : ITestError;
+  thrown : Exception;
+begin
+  fixture := BuildFixture(TRunnerThreeOfFourPass);
+  testInfo := (fixture as ITestFixtureInfo).Tests[0];
+
+  thrown := Exception.Create('exception message');
+  try
+    error := TDUnitXTestError.Create(testInfo, TTestResultType.Error, thrown, nil, 'result message', nil);
+  finally
+    thrown.Free;
+  end;
+  Assert.AreEqual('result message' + sLineBreak + 'exception message', error.ExceptionMessage, False,
+    'the two messages were not separated by a line break');
+  Assert.IsFalse(error.IsComparable, 'a plain exception is not comparable');
+
+  thrown := ETestFailureStrCompareChild.Create('expected text', 'actual text', 'compare message', nil);
+  try
+    //The result message is the exception's own, as the runner records it, so it must appear once.
+    error := TDUnitXTestError.Create(testInfo, TTestResultType.Failure, thrown, nil, thrown.Message, nil);
+    Assert.AreEqual(thrown.Message, error.ExceptionMessage, False, 'equal messages must not be repeated');
+  finally
+    thrown.Free;
+  end;
+  Assert.IsTrue(error.IsComparable, 'a descendant of ETestFailureStrCompare is not comparable');
+  Assert.AreEqual('expected text', error.Expected, False, 'expected value not carried');
+  Assert.AreEqual('actual text', error.Actual, False, 'actual value not carried');
 end;
 
 { TTestCaseAttribute }

@@ -27,8 +27,6 @@
 
 unit DUnitX.Filters;
 
-//Filters are modelled on NUnit's Test filters
-
 interface
 
 {$I DUnitX.inc}
@@ -45,165 +43,533 @@ uses
 
 type
   /// <summary>
-  /// Interface to be implemented by filters applied to tests.
-  /// The filter applies when running the test, after it has been
-  /// loaded, since this is the only time an ITest exists.
+  ///   Interface implemented by filters applied to tests (modelled on NUnit's test filters). The filter applies when
+  ///   running the test, after it has been loaded, since that is the only time an ITest exists.
   /// </summary>
   ITestFilter = interface
     ['{FE8D59F6-E47A-4F05-BA15-0471BFCCA004}']
     /// <summary>
-    /// Indicates whether this is the EmptyFilter
+    ///   Indicates whether this is the empty filter, which matches every test.
     /// </summary>
+    /// <returns>
+    ///   True for a TEmptyFilter.
+    /// </returns>
     function IsEmpty : boolean;
     /// <summary>
-    /// Determine whether the test itself matches the filter criteria,
-    /// without examining either parents or descendants.
+    ///   Determines whether the test itself matches the filter criteria, without examining either parents or
+    ///   descendants.
     /// </summary>
-    /// <param name="test">The test to which the filter is applied</param>
-    /// <returns>True if the filter matches the any parent of the test</returns>
+    /// <param name="test">
+    ///   The test to which the filter is applied.
+    /// </param>
+    /// <returns>
+    ///   True if the test matches the filter and should run.
+    /// </returns>
     function Match(const test : ITest) : boolean;
   end;
 
   /// <summary>
-  /// Name filter selects tests based on their name
+  ///   Name filter: selects tests by name (namespace, fixture, full test name or test-case method name).
   /// </summary>
   INameFilter = interface(ITestFilter)
     ['{74E76CBC-6CC3-4393-A66C-09A14974B7EB}']
+    /// <summary>
+    ///   Adds one name to select.
+    /// </summary>
+    /// <param name="name">
+    ///   The name; empty names and duplicates are ignored.
+    /// </param>
     procedure Add(const name : string); overload;
+    /// <summary>
+    ///   Adds several names to select.
+    /// </summary>
+    /// <param name="names">
+    ///   The names, added as given.
+    /// </param>
     procedure Add(const names : TArray<string>); overload;
   end;
 
   /// <summary>
-  /// Combines multiple filters so that a test must pass all
-  /// of them in order to pass this filter.
+  ///   Combines multiple filters so that a test must pass all of them in order to pass this filter.
   /// </summary>
   IAndFilter = interface(ITestFilter)
     ['{EE95054F-06DC-47F7-BB25-77F5162A26FD}']
+    /// <summary>
+    ///   Adds one filter the test must also pass.
+    /// </summary>
+    /// <param name="filter">
+    ///   The filter to add.
+    /// </param>
     procedure Add(const filter : ITestFilter); overload;
+    /// <summary>
+    ///   Adds several filters the test must also pass.
+    /// </summary>
+    /// <param name="filters">
+    ///   The filters to add.
+    /// </param>
     procedure Add(const filters : TArray<ITestFilter>); overload;
+    /// <summary>
+    ///   The combined filters.
+    /// </summary>
+    /// <returns>
+    ///   The live list owned by the filter; do not free it.
+    /// </returns>
     function Filters : TList<ITestFilter>;
   end;
 
   /// <summary>
-  /// Combines multiple filters so that a test must pass one
-  /// of them in order to pass this filter.
+  ///   Combines multiple filters so that a test must pass one of them in order to pass this filter.
   /// </summary>
   IOrFilter = interface(ITestFilter)
     ['{617B3F85-BF00-4F1E-9454-180618E32868}']
+    /// <summary>
+    ///   Adds one alternative filter.
+    /// </summary>
+    /// <param name="filter">
+    ///   The filter to add.
+    /// </param>
     procedure Add(const filter : ITestFilter); overload;
+    /// <summary>
+    ///   Adds several alternative filters.
+    /// </summary>
+    /// <param name="filters">
+    ///   The filters to add.
+    /// </param>
     procedure Add(const filters : TArray<ITestFilter>); overload;
+    /// <summary>
+    ///   The alternative filters.
+    /// </summary>
+    /// <returns>
+    ///   The live list owned by the filter; do not free it.
+    /// </returns>
     function Filters : TList<ITestFilter>;
   end;
 
   /// <summary>
-  /// NotFilter negates the operation of another filter
+  ///   Negates the operation of another filter.
   /// </summary>
   INotFilter = interface(ITestFilter)
     ['{4F0C6588-A98A-47C4-8CD6-2AF62BBBB7E5}']
+    /// <summary>
+    ///   Getter for BaseFilter.
+    /// </summary>
+    /// <returns>
+    ///   The filter being negated.
+    /// </returns>
     function GetBaseFilter : ITestFilter;
+    /// <summary>
+    ///   Getter for TopLevel.
+    /// </summary>
+    /// <returns>
+    ///   True when this is the outermost filter of the run.
+    /// </returns>
     function GetTopLevel : boolean;
+    /// <summary>
+    ///   Setter for TopLevel.
+    /// </summary>
+    /// <param name="value">
+    ///   True to mark this as the outermost filter of the run.
+    /// </param>
     procedure SetTopLevel(const value : boolean);
 
+    /// <summary>The filter whose result is negated.</summary>
     property BaseFilter : ITestFilter read GetBaseFilter;
+    /// <summary>
+    ///   Marks the NOT filter as the outermost filter of the run (set by TDUnitXFilterBuilder for --exclude). Carried
+    ///   over from NUnit, where it governs explicit tests; Match does not consult it.
+    /// </summary>
     property TopLevel : boolean read GetTopLevel write SetTopLevel;
   end;
 
+  /// <summary>
+  ///   Category filter: selects tests that carry at least one of the listed categories.
+  /// </summary>
   ICategoryFilter = interface(ITestFilter)
     ['{3D11F89D-9E39-4E03-80AB-F1AC9C6F3065}']
+    /// <summary>
+    ///   Adds one category.
+    /// </summary>
+    /// <param name="name">
+    ///   The category name; empty names and duplicates are ignored.
+    /// </param>
     procedure Add(const name : string); overload;
+    /// <summary>
+    ///   Adds several categories.
+    /// </summary>
+    /// <param name="names">
+    ///   The category names, added as given.
+    /// </param>
     procedure Add(const names : TArray<string>); overload;
+    /// <summary>
+    ///   The categories the filter matches.
+    /// </summary>
+    /// <returns>
+    ///   The live list owned by the filter; do not free it.
+    /// </returns>
     function Categories : TList<string>;
   end;
 
+  /// <summary>
+  ///   Abstract base class of the filter implementations.
+  /// </summary>
   TTestFilter = class(TInterfacedObject, ITestFilter)
   protected
+    /// <summary>
+    ///   Indicates whether this is the empty filter.
+    /// </summary>
+    /// <returns>
+    ///   True when the instance is a TEmptyFilter.
+    /// </returns>
     function IsEmpty : Boolean;
+    /// <summary>
+    ///   Determines whether the test matches the filter; implemented by each descendant.
+    /// </summary>
+    /// <param name="test">
+    ///   The test to which the filter is applied.
+    /// </param>
+    /// <returns>
+    ///   True if the test matches.
+    /// </returns>
     function Match(const test : ITest) : Boolean; virtual; abstract;
   end;
 
+  /// <summary>
+  ///   The filter used when nothing restricts the run: it matches every test.
+  /// </summary>
   TEmptyFilter = class(TTestFilter)
   protected
+    /// <summary>
+    ///   Matches every test.
+    /// </summary>
+    /// <param name="test">
+    ///   The test to which the filter is applied (ignored).
+    /// </param>
+    /// <returns>
+    ///   Always True.
+    /// </returns>
     function Match(const test : ITest) : Boolean; override;
   end;
 
+  /// <summary>
+  ///   Selects tests by name: a name selects whatever it names whole - a namespace, a fixture, a test, or a method's
+  ///   test cases. Names compare case-insensitively.
+  /// </summary>
   TNameFilter = class(TTestFilter, ITestFilter, INameFilter)
   private
+    /// <summary>The names to select, held in a case-insensitive list.</summary>
     FNames : TList<string>;
   protected
+    /// <summary>
+    ///   Adds one name to select.
+    /// </summary>
+    /// <param name="name">
+    ///   The name; empty names and duplicates are ignored.
+    /// </param>
     procedure Add(const name : string); overload;
+    /// <summary>
+    ///   Adds several names to select, as given (no empty or duplicate check).
+    /// </summary>
+    /// <param name="names">
+    ///   The names to add.
+    /// </param>
     procedure Add(const names : TArray<string>); overload;
+    /// <summary>
+    ///   Adds every line of a string list as a name to select, as given (no empty or duplicate check).
+    /// </summary>
+    /// <param name="names">
+    ///   The names to add.
+    /// </param>
     procedure Add(const names : TStrings); overload;
+    /// <summary>
+    ///   Matches a test when a name equals its fixture's full name, prefixes its full name at a '.' boundary, equals
+    ///   its full name, or (for a test case) equals its method name.
+    /// </summary>
+    /// <param name="test">
+    ///   The test to which the filter is applied.
+    /// </param>
+    /// <returns>
+    ///   True if any name selects the test.
+    /// </returns>
+    /// <remarks>
+    ///   The '.' boundary means Unit.TCustomer does not also select Unit.TCustomerOrder.
+    /// </remarks>
     function Match(const test : ITest) : Boolean; override;
   public
+    /// <summary>
+    ///   Creates a filter with no names (which matches nothing).
+    /// </summary>
     constructor Create; overload;
+    /// <summary>
+    ///   Creates a filter selecting one name.
+    /// </summary>
+    /// <param name="AName">
+    ///   The name to select; empty adds nothing.
+    /// </param>
     constructor Create(const AName : string); overload;
+    /// <summary>
+    ///   Creates a filter selecting several names.
+    /// </summary>
+    /// <param name="ANames">
+    ///   The names to select.
+    /// </param>
     constructor Create(const ANames : TArray<string>); overload;
+    /// <summary>
+    ///   Creates a filter selecting every line of a string list.
+    /// </summary>
+    /// <param name="ANames">
+    ///   The names to select.
+    /// </param>
     constructor Create(const ANames : TStrings); overload;
+    /// <summary>
+    ///   Frees the name list.
+    /// </summary>
     destructor Destroy; override;
   end;
 
   /// <summary>
-  /// Selects tests by their exact full name only. Unlike TNameFilter it does
-  /// not treat a name as a fixture name prefix, so it runs exactly the tests
-  /// named (the GUI runner's checked tests).
+  ///   Selects tests by their exact full name only. Unlike TNameFilter it does not treat a name as a fixture name
+  ///   prefix, so it runs exactly the tests named (the GUI runner's checked tests).
   /// </summary>
   TFullNameFilter = class(TTestFilter, ITestFilter)
   private
+    /// <summary>The full test names to run, compared case-sensitively because test case names can differ only in case.</summary>
     FNames : TDictionary<string, Boolean>;
   protected
+    /// <summary>
+    ///   Matches a test whose full name is one of the names, case-sensitively.
+    /// </summary>
+    /// <param name="test">
+    ///   The test to which the filter is applied.
+    /// </param>
+    /// <returns>
+    ///   True if the test's full name is in the set.
+    /// </returns>
     function Match(const test : ITest) : Boolean; override;
   public
+    /// <summary>
+    ///   Creates a filter for one full test name.
+    /// </summary>
+    /// <param name="AName">
+    ///   The full name; empty creates an empty set (which matches nothing).
+    /// </param>
     constructor Create(const AName : string); overload;
+    /// <summary>
+    ///   Creates a filter for every non-empty line of a string list.
+    /// </summary>
+    /// <param name="ANames">
+    ///   The full test names.
+    /// </param>
     constructor Create(const ANames : TStrings); overload;
+    /// <summary>
+    ///   Frees the name set.
+    /// </summary>
     destructor Destroy; override;
   end;
 
+  /// <summary>
+  ///   Selects tests that carry at least one of the listed categories; reuses TNameFilter's name list as the category
+  ///   list.
+  /// </summary>
   TCategoryFilter = class(TNameFilter, ITestFilter, ICategoryFilter)
   protected
+    /// <summary>
+    ///   Matches a test whose categories contain any of the filter's categories.
+    /// </summary>
+    /// <param name="test">
+    ///   The test to which the filter is applied.
+    /// </param>
+    /// <returns>
+    ///   True if the test has at least one listed category; False for an uncategorised test.
+    /// </returns>
     function Match(const test : ITest) : Boolean; override;
+    /// <summary>
+    ///   The categories the filter matches.
+    /// </summary>
+    /// <returns>
+    ///   The live list owned by the filter; do not free it.
+    /// </returns>
     function Categories : TList<string>;
   end;
 
+  /// <summary>
+  ///   Matches a test only when every contained filter matches it.
+  /// </summary>
   TAndFilter = class(TTestFilter, ITestFilter, IAndFilter)
   private
+    /// <summary>The filters that must all match.</summary>
     FFilters : TList<ITestFilter>;
   protected
+    /// <summary>
+    ///   Adds one filter the test must also pass.
+    /// </summary>
+    /// <param name="filter">
+    ///   The filter to add.
+    /// </param>
     procedure Add(const filter : ITestFilter); overload;
+    /// <summary>
+    ///   Adds several filters the test must also pass.
+    /// </summary>
+    /// <param name="filters">
+    ///   The filters to add.
+    /// </param>
     procedure Add(const filters : TArray<ITestFilter>); overload;
+    /// <summary>
+    ///   Matches when every contained filter matches, stopping at the first that does not.
+    /// </summary>
+    /// <param name="test">
+    ///   The test to which the filter is applied.
+    /// </param>
+    /// <returns>
+    ///   True if all filters match (True when the list is empty).
+    /// </returns>
     function Match(const test : ITest) : Boolean; override;
+    /// <summary>
+    ///   The combined filters.
+    /// </summary>
+    /// <returns>
+    ///   The live list owned by the filter; do not free it.
+    /// </returns>
     function Filters : TList<ITestFilter>;
   public
+    /// <summary>
+    ///   Creates an AND filter starting with one filter.
+    /// </summary>
+    /// <param name="filter">
+    ///   The first filter.
+    /// </param>
     constructor Create(const filter : ITestFilter); overload;
+    /// <summary>
+    ///   Creates an AND filter over several filters.
+    /// </summary>
+    /// <param name="filters">
+    ///   The filters that must all match.
+    /// </param>
     constructor Create(const filters : TArray<ITestFilter>); overload;
+    /// <summary>
+    ///   Frees the filter list (releasing the contained filters).
+    /// </summary>
     destructor Destroy; override;
   end;
 
+  /// <summary>
+  ///   Matches a test when any contained filter matches it.
+  /// </summary>
   TOrFilter = class(TTestFilter, ITestFilter, IOrFilter)
   private
+    /// <summary>The alternative filters.</summary>
     FFilters : TList<ITestFilter>;
   protected
+    /// <summary>
+    ///   Adds one alternative filter.
+    /// </summary>
+    /// <param name="filter">
+    ///   The filter to add.
+    /// </param>
     procedure Add(const filter : ITestFilter); overload;
+    /// <summary>
+    ///   Adds several alternative filters.
+    /// </summary>
+    /// <param name="filters">
+    ///   The filters to add.
+    /// </param>
     procedure Add(const filters : TArray<ITestFilter>); overload;
+    /// <summary>
+    ///   Matches when any contained filter matches, stopping at the first that does.
+    /// </summary>
+    /// <param name="test">
+    ///   The test to which the filter is applied.
+    /// </param>
+    /// <returns>
+    ///   True if at least one filter matches (False when the list is empty).
+    /// </returns>
     function Match(const test : ITest) : Boolean; override;
+    /// <summary>
+    ///   The alternative filters.
+    /// </summary>
+    /// <returns>
+    ///   The live list owned by the filter; do not free it.
+    /// </returns>
     function Filters : TList<ITestFilter>;
   public
+    /// <summary>
+    ///   Creates an OR filter starting with one filter.
+    /// </summary>
+    /// <param name="filter">
+    ///   The first alternative.
+    /// </param>
     constructor Create(const filter : ITestFilter); overload;
+    /// <summary>
+    ///   Creates an OR filter over several filters.
+    /// </summary>
+    /// <param name="filters">
+    ///   The alternatives.
+    /// </param>
     constructor Create(const filters : TArray<ITestFilter>); overload;
+    /// <summary>
+    ///   Frees the filter list (releasing the contained filters).
+    /// </summary>
     destructor Destroy; override;
   end;
 
+  /// <summary>
+  ///   Matches a test exactly when its base filter does not.
+  /// </summary>
   TNotFilter = class(TTestFilter, ITestFilter, INotFilter)
   private
+    /// <summary>Backing field for TopLevel.</summary>
     FTopLevel : boolean;
+    /// <summary>The filter being negated.</summary>
     FBaseFilter : ITestFilter;
   protected
+    /// <summary>
+    ///   Getter for BaseFilter.
+    /// </summary>
+    /// <returns>
+    ///   The filter being negated.
+    /// </returns>
     function GetBaseFilter : ITestFilter;
+    /// <summary>
+    ///   Getter for TopLevel.
+    /// </summary>
+    /// <returns>
+    ///   True when this is the outermost filter of the run.
+    /// </returns>
     function GetTopLevel : Boolean;
+    /// <summary>
+    ///   Setter for TopLevel.
+    /// </summary>
+    /// <param name="value">
+    ///   True to mark this as the outermost filter of the run.
+    /// </param>
     procedure SetTopLevel(const value : boolean);
+    /// <summary>
+    ///   Negates the base filter's result.
+    /// </summary>
+    /// <param name="test">
+    ///   The test to which the filter is applied.
+    /// </param>
+    /// <returns>
+    ///   True if the base filter does not match the test.
+    /// </returns>
     function Match(const test : ITest) : Boolean; override;
 
   public
+    /// <summary>
+    ///   Creates a NOT filter that is not top level.
+    /// </summary>
+    /// <param name="baseFilter">
+    ///   The filter to negate.
+    /// </param>
     constructor Create(const baseFilter : ITestFilter); overload;
+    /// <summary>
+    ///   Creates a NOT filter with an explicit TopLevel value.
+    /// </summary>
+    /// <param name="baseFilter">
+    ///   The filter to negate.
+    /// </param>
+    /// <param name="topLevel">
+    ///   True to mark it as the outermost filter of the run.
+    /// </param>
     constructor Create(const baseFilter : ITestFilter; const topLevel : boolean); overload;
   end;
 
@@ -240,8 +606,9 @@ procedure TNameFilter.Add(const names : TArray<string>);
 var
   name : string;
 begin
+  //Through the single-name Add, which drops empty and duplicate names ('--run:a,,b').
   for name in names do
-    FNames.Add(name);
+    Add(name);
 end;
 
 constructor TNameFilter.Create;
@@ -267,8 +634,9 @@ procedure TNameFilter.Add(const names : TStrings);
 var
   name : string;
 begin
+  //Through the single-name Add, which drops empty and duplicate names.
   for name in names do
-    FNames.Add(name);
+    Add(name);
 end;
 
 constructor TNameFilter.Create(const ANames : TStrings);
@@ -300,9 +668,11 @@ var
   name : string;
 begin
   result := false;
+  //A name selects whatever it names whole: a namespace, a fixture, a test, or a method's test cases. It matches only
+  //at a '.' boundary, so Unit.TCustomer does not also select Unit.TCustomerOrder.
   for name in FNames do
   begin
-    result := StartsText(name, test.Fixture.FullName);
+    result := SameText(name, test.Fixture.FullName) or StartsText(name + '.', test.FullName);
     if result then
       exit;
   end;

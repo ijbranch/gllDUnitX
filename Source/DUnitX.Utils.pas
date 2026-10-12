@@ -82,37 +82,189 @@ uses
 {$ENDIF}
 
 type
+  /// <summary>
+  ///   Class reference to an attribute class, used to search attribute arrays by exact class.
+  /// </summary>
   TCustomAttributeClass = class of TCustomAttribute;
 
+  /// <summary>
+  ///   Static helpers that search an array of attributes (as returned by RTTI) for a given attribute class.
+  /// </summary>
+  /// <remarks>
+  ///   Matching is by EXACT class (<c>ClassType = AttributeClass</c>); descendants of the class are not matched.
+  /// </remarks>
   TAttributeUtils = class
   public
+    /// <summary>
+    ///   Reports whether the array holds an attribute of exactly the given class.
+    /// </summary>
+    /// <param name="attributes">
+    ///   The attributes to search.
+    /// </param>
+    /// <param name="AttributeClass">
+    ///   The attribute class to look for; descendants do not match.
+    /// </param>
+    /// <returns>
+    ///   True when at least one attribute's class is exactly <c>AttributeClass</c>.
+    /// </returns>
     class function ContainsAttribute(const attributes : TArray<TCustomAttribute>; const AttributeClass : TCustomAttributeClass) : boolean;
+    /// <summary>
+    ///   Returns the first attribute of exactly the given class.
+    /// </summary>
+    /// <param name="attributes">
+    ///   The attributes to search.
+    /// </param>
+    /// <param name="AttributeClass">
+    ///   The attribute class to look for; descendants do not match.
+    /// </param>
+    /// <returns>
+    ///   The first matching attribute, or nil when there is none.
+    /// </returns>
     class function FindAttribute(const attributes : TArray<TCustomAttribute>; const AttributeClass : TCustomAttributeClass) : TCustomAttribute; overload;
+    /// <summary>
+    ///   Finds the next attribute of exactly the given class at or after a start index, so a caller can iterate
+    ///   through every match by passing the previous result plus one.
+    /// </summary>
+    /// <param name="attributes">
+    ///   The attributes to search.
+    /// </param>
+    /// <param name="AttributeClass">
+    ///   The attribute class to look for; descendants do not match.
+    /// </param>
+    /// <param name="attribute">
+    ///   Receives the matching attribute, or nil when none is found.
+    /// </param>
+    /// <param name="startIndex">
+    ///   Zero-based index at which the search starts.
+    /// </param>
+    /// <returns>
+    ///   The zero-based index of the match, or -1 when there is none.
+    /// </returns>
     class function FindAttribute(const attributes : TArray<TCustomAttribute>; const AttributeClass : TCustomAttributeClass;
       var attribute : TCustomAttribute; const startIndex : integer = 0) : integer; overload;
+    /// <summary>
+    ///   Returns every attribute of exactly the given class, in array order.
+    /// </summary>
+    /// <param name="attributes">
+    ///   The attributes to search.
+    /// </param>
+    /// <param name="AttributeClass">
+    ///   The attribute class to look for; descendants do not match.
+    /// </param>
+    /// <returns>
+    ///   The matching attributes; an empty array when there are none.
+    /// </returns>
     class function FindAttributes(const attributes : TArray<TCustomAttribute>; const AttributeClass : TCustomAttributeClass) : TArray<TCustomAttribute>;
   end;
 
 {$IFDEF DELPHI_2010}
 const
+  /// <summary>Number of TTimeSpan ticks (100 ns units) in one millisecond; Delphi 2010 only.</summary>
   TicksPerMillisecond = 10000;
 
 type
+  /// <summary>
+  ///   Back-fills <c>TTimeSpan.Subtract</c> for Delphi 2010, whose RTL lacks it.
+  /// </summary>
   TTimeSpanHelper = record helper for TTimeSpan
   public
+    /// <summary>
+    ///   Returns the time span between two date-times, to millisecond precision.
+    /// </summary>
+    /// <param name="D1">
+    ///   The later date-time.
+    /// </param>
+    /// <param name="D2">
+    ///   The earlier date-time, subtracted from <c>D1</c>.
+    /// </param>
+    /// <returns>
+    ///   <c>D1 - D2</c> as a TTimeSpan (negative when D2 is later).
+    /// </returns>
     class function Subtract(const D1, D2 : TDateTime) : TTimeSpan; static;
   end;
 {$ENDIF}
 
 type
+  /// <summary>
+  ///   Static string helpers used by the framework's loggers and runners.
+  /// </summary>
   TStrUtils = class
+    /// <summary>
+    ///   Pads a string with a fill character up to a minimum length.
+    /// </summary>
+    /// <param name="s">
+    ///   The string to pad.
+    /// </param>
+    /// <param name="totalLength">
+    ///   The length to pad up to; a longer string is returned unchanged, never truncated.
+    /// </param>
+    /// <param name="padLeft">
+    ///   True to add the fill characters on the left (right-align), False to add them on the right.
+    /// </param>
+    /// <param name="padChr">
+    ///   The fill character.
+    /// </param>
+    /// <returns>
+    ///   The padded string.
+    /// </returns>
     class function PadString(const s : string; const totalLength : integer; const padLeft : boolean = True; padChr : Char = ' ') : string;
+    /// <summary>
+    ///   Splits a string at every occurrence of any of the delimiter characters.
+    /// </summary>
+    /// <param name="S">
+    ///   The string to split.
+    /// </param>
+    /// <param name="Delimiters">
+    ///   The set of delimiter characters; each character is a delimiter on its own.
+    /// </param>
+    /// <returns>
+    ///   The parts. Adjacent delimiters, and a leading or trailing delimiter, produce empty parts; an empty
+    ///   <c>S</c> produces an empty array.
+    /// </returns>
     class function SplitString(const S, Delimiters : string) : TArray<string>;
+    /// <summary>
+    ///   Concatenates strings with a delimiter between them.
+    /// </summary>
+    /// <param name="values">
+    ///   The strings to join.
+    /// </param>
+    /// <param name="delim">
+    ///   The delimiter placed between values.
+    /// </param>
+    /// <returns>
+    ///   The joined string.
+    /// </returns>
+    /// <remarks>
+    ///   The delimiter is only added once the result is non-empty, so leading empty values vanish without a
+    ///   delimiter (<c>['', 'a']</c> gives <c>'a'</c>).
+    /// </remarks>
     class function Join(const values : TArray<string>; const delim : string) : string; overload;
+    /// <summary>
+    ///   Renders a string as a Pascal-style literal so control characters are visible: printable runs are quoted
+    ///   and each character below #32 becomes <c>#nn</c> (e.g. <c>'ab'#13#10'cd'</c>).
+    /// </summary>
+    /// <param name="S">
+    ///   The string to encode.
+    /// </param>
+    /// <returns>
+    ///   The encoded string; an empty <c>S</c> gives an empty result.
+    /// </returns>
     class function EncodeWhitespace(const S : string) : string;
   end;
 
+  /// <summary>
+  ///   Static helpers for <c>TList&lt;string&gt;</c>.
+  /// </summary>
   TListStringUtils = class
+    /// <summary>
+    ///   Copies a string list into a new dynamic array.
+    /// </summary>
+    /// <param name="values">
+    ///   The list to copy; it is not modified.
+    /// </param>
+    /// <returns>
+    ///   A new array holding the list's items in order.
+    /// </returns>
     class function ToArray(const values : TList<string>) : TArray<string>;
   end;
 
@@ -130,6 +282,9 @@ type
     ///	<summary>
     ///	  Returns a list of all fields of the object.
     ///	</summary>
+    ///	<returns>
+    ///	  The object's RTTI fields; nil when Self is nil or has no RTTI type.
+    ///	</returns>
 {$ENDREGION}
     function GetFields : TArray<TRttiField>;
 
@@ -140,6 +295,9 @@ type
     ///	<param name="AName">
     ///	  Name of the field to find
     ///	</param>
+    ///	<returns>
+    ///	  The field, or nil when the object has no field of that name.
+    ///	</returns>
 {$ENDREGION}
     function GetField(const AName : string) : TRttiField;
 
@@ -150,6 +308,9 @@ type
     ///	<param name="AName">
     ///	  Name of the member to find
     ///	</param>
+    ///	<returns>
+    ///	  The property, field or method of that name (searched in that order), or nil when there is none.
+    ///	</returns>
 {$ENDREGION}
     function GetMember(const AName : string) : TRttiMember;
 
@@ -157,6 +318,9 @@ type
     ///	<summary>
     ///	  Returns a list of all methods of the object.
     ///	</summary>
+    ///	<returns>
+    ///	  The object's RTTI methods, inherited ones included; nil when Self is nil or has no RTTI type.
+    ///	</returns>
 {$ENDREGION}
     function GetMethods : TArray<TRttiMethod>;
 
@@ -168,6 +332,9 @@ type
     ///	<param name="ACodeAddress">
     ///	  Code address of the method to find.
     ///	</param>
+    ///	<returns>
+    ///	  The method whose code address matches, or nil when there is none.
+    ///	</returns>
 {$ENDREGION}
     function GetMethod(ACodeAddress : Pointer) : TRttiMethod; overload;
 
@@ -179,6 +346,10 @@ type
     ///	<param name="AName">
     ///	  Name of the method to find
     ///	</param>
+    ///	<returns>
+    ///	  The method, or nil when there is none; an exception from the RTTI lookup (e.g. an ambiguous overloaded
+    ///	  name) is swallowed and also gives nil.
+    ///	</returns>
 {$ENDREGION}
     function GetMethod(const AName : string) : TRttiMethod; overload;
 
@@ -186,6 +357,9 @@ type
     ///	<summary>
     ///	  Returns a list of all properties of the object.
     ///	</summary>
+    ///	<returns>
+    ///	  The object's RTTI properties; nil when Self is nil or has no RTTI type.
+    ///	</returns>
 {$ENDREGION}
     function GetProperties : TArray<TRttiProperty>;
 
@@ -197,6 +371,10 @@ type
     ///	<param name="AName">
     ///	  Name of the property to find
     ///	</param>
+    ///	<returns>
+    ///	  The property, or nil when there is none. Properties registered through
+    ///	  <see cref="TRttiPropertyExtension" /> are found too.
+    ///	</returns>
 {$ENDREGION}
     function GetProperty(const AName : string) : TRttiProperty;
 
@@ -204,6 +382,12 @@ type
     ///	<summary>
     ///	  Returns the type of the object; nil if nothing is found.
     ///	</summary>
+    ///	<returns>
+    ///	  The RTTI type of the object's class.
+    ///	</returns>
+    ///	<remarks>
+    ///	  Returns nil when Self is nil.
+    ///	</remarks>
 {$ENDREGION}
     function GetType : TRttiType;
 
@@ -214,6 +398,9 @@ type
     ///	<param name="AName">
     ///	  Name of the field to find
     ///	</param>
+    ///	<returns>
+    ///	  True when the field exists.
+    ///	</returns>
 {$ENDREGION}
     function HasField(const AName : string) : Boolean;
 
@@ -221,6 +408,12 @@ type
     ///	<summary>
     ///	  Returns if the object contains a method with the given name.
     ///	</summary>
+    ///	<param name="AName">
+    ///	  Name of the method to find
+    ///	</param>
+    ///	<returns>
+    ///	  True when the method exists.
+    ///	</returns>
 {$ENDREGION}
     function HasMethod(const AName : string) : Boolean;
 
@@ -228,12 +421,18 @@ type
     ///	<summary>
     ///	  Returns if the object contains a property with the given name.
     ///	</summary>
+    ///	<param name="AName">
+    ///	  Name of the property to find
+    ///	</param>
+    ///	<returns>
+    ///	  True when the property exists.
+    ///	</returns>
 {$ENDREGION}
     function HasProperty(const AName : string) : Boolean;
 
 {$REGION 'Documentation'}
     ///	<summary>
-    ///	  Retrieves the method with the given name and returns if this was
+    ///	  Retrieves the field with the given name and returns if this was
     ///	  successful.
     ///	</summary>
     ///	<param name="AName">
@@ -242,16 +441,25 @@ type
     ///	<param name="AField">
     ///	  Field that was found when Result is <b>True</b>
     ///	</param>
+    ///	<returns>
+    ///	  True when the field was found.
+    ///	</returns>
 {$ENDREGION}
     function TryGetField(const AName : string; out AField : TRttiField) : Boolean;
 
 {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Retrieves the property, field or method with the given name and returns if this was successful.
+    ///	</summary>
     ///	<param name="AName">
     ///	  Name of the member to find
     ///	</param>
     ///	<param name="AMember">
     ///	  Member that was found when Result is <b>True</b>
     ///	</param>
+    ///	<returns>
+    ///	  True when a member was found.
+    ///	</returns>
 {$ENDREGION}
     function TryGetMember(const AName : string; out AMember : TRttiMember) : Boolean;
 
@@ -266,6 +474,9 @@ type
     ///	<param name="AMethod">
     ///	  Method that was found when Result is <b>True</b>
     ///	</param>
+    ///	<returns>
+    ///	  True when a method was found.
+    ///	</returns>
 {$ENDREGION}
     function TryGetMethod(ACodeAddress : Pointer; out AMethod : TRttiMethod) : Boolean; overload;
 
@@ -280,6 +491,9 @@ type
     ///	<param name="AMethod">
     ///	  Method that was found when Result is <b>True</b>
     ///	</param>
+    ///	<returns>
+    ///	  True when a method was found.
+    ///	</returns>
 {$ENDREGION}
     function TryGetMethod(const AName : string; out AMethod : TRttiMethod) : Boolean; overload;
 
@@ -294,6 +508,9 @@ type
     ///	<param name="AProperty">
     ///	  Property that was found when Result is <b>True</b>
     ///	</param>
+    ///	<returns>
+    ///	  True when a property was found.
+    ///	</returns>
 {$ENDREGION}
     function TryGetProperty(const AName : string; out AProperty : TRttiProperty) : Boolean;
 
@@ -302,12 +519,21 @@ type
     ///	  Retrieves the type of the object and returns if this was successful.
     ///	</summary>
     ///	<param name="AType">
-    ///	  Type of the object when Result is <b>True</b>
+    ///	  Type of the object when Result is <b>True</b>; nil when Self is nil.
     ///	</param>
+    ///	<returns>
+    ///	  True when Self is assigned and its class has an RTTI type.
+    ///	</returns>
 {$ENDREGION}
     function TryGetType(out AType : TRttiType) : Boolean;
 
 {$IF CompilerVersion < 23}
+    /// <summary>
+    ///   Back-fills <c>TObject.QualifiedClassName</c> for compilers before XE2.
+    /// </summary>
+    /// <returns>
+    ///   <c>UnitName.ClassName</c>, or just the class name when the unit name is empty.
+    /// </returns>
     class function QualifiedClassName : string;
 {$IFEND}
   end;
@@ -330,6 +556,9 @@ type
     ///	<param name="Value">
     ///	  Value of the field when Result is <b>True</b>
     ///	</param>
+    ///	<returns>
+    ///	  True when the value was read; False (with Value empty) when reading raised, the exception being swallowed.
+    ///	</returns>
 {$ENDREGION}
     function TryGetValue(Instance : Pointer; out Value : TValue) : Boolean;
   end;
@@ -344,7 +573,20 @@ type
 {$ENDREGION}
   TRttiInstanceTypeHelper = class helper for TRttiInstanceType
   public
+    /// <summary>
+    ///   Back-fills the interfaces declared directly by this class (read from its VMT interface table), for
+    ///   compilers before XE2.
+    /// </summary>
+    /// <returns>
+    ///   The interfaces this class itself declares; ancestors' interfaces are not included.
+    /// </returns>
     function GetDeclaredImplementedInterfaces : TArray<TRttiInterfaceType>;
+    /// <summary>
+    ///   Back-fills the interfaces implemented by this class and all its ancestors, for compilers before XE2.
+    /// </summary>
+    /// <returns>
+    ///   The declared interfaces of this class followed by those of each ancestor in turn.
+    /// </returns>
     function GetImplementedInterfaces : TArray<TRttiInterfaceType>;
   end;
 {$IFEND}
@@ -359,8 +601,17 @@ type
 {$ENDREGION}
   TRttiInvokableTypeHelper = class helper for TRttiInvokableType
   private
+    /// <summary>
+    ///   Reader for <see cref="ParameterCount" />.
+    /// </summary>
+    /// <returns>
+    ///   The length of <c>GetParameters</c>.
+    /// </returns>
     function GetParameterCount : Integer;
   public
+    /// <summary>
+    ///   Number of parameters the procedural or method type declares.
+    /// </summary>
     property ParameterCount : Integer read GetParameterCount;
   end;
 {$ENDIF}
@@ -373,12 +624,39 @@ type
 {$ENDREGION}
   TRttiMemberHelper = class helper for TRttiMember
   private
+    /// <summary>
+    ///   Reader for <see cref="IsReadable" />.
+    /// </summary>
+    /// <returns>
+    ///   True for fields, methods and any other member; a property's own <c>IsReadable</c> for properties.
+    /// </returns>
     function GetMemberIsReadable : Boolean;
+    /// <summary>
+    ///   Reader for <see cref="IsWritable" />.
+    /// </summary>
+    /// <returns>
+    ///   True for fields; a property's own <c>IsWritable</c> for properties; False for anything else.
+    /// </returns>
     function GetMemberIsWritable : Boolean;
+    /// <summary>
+    ///   Reader for <see cref="RttiType" />.
+    /// </summary>
+    /// <returns>
+    ///   The field type, property type or method return type; nil for other members or a procedure.
+    /// </returns>
     function GetMemberRttiType : TRttiType;
   public
+    /// <summary>
+    ///   Whether the member's value can be read, whatever kind of member it is.
+    /// </summary>
     property IsReadable : Boolean read GetMemberIsReadable;
+    /// <summary>
+    ///   Whether the member's value can be written (fields and writable properties only).
+    /// </summary>
     property IsWritable : Boolean read GetMemberIsWritable;
+    /// <summary>
+    ///   The member's value type: field type, property type or method return type (nil when there is none).
+    /// </summary>
     property RttiType : TRttiType read GetMemberRttiType;
   end;
 
@@ -390,9 +668,35 @@ type
 {$ENDREGION}
   TRttiMethodHelper = class helper for TRttiMethod
   private
+    /// <summary>
+    ///   Reader for <see cref="ParameterCount" />.
+    /// </summary>
+    /// <returns>
+    ///   The length of <c>GetParameters</c>.
+    /// </returns>
     function GetParameterCount : Integer;
   public
+    /// <summary>
+    ///   Formats a call of this method for display, as <c>Type.Method(argument)</c> with the unit prefix
+    ///   <c>System.</c> stripped from the type name.
+    /// </summary>
+    /// <param name="Args">
+    ///   The call's argument values, with the instance (Self) first.
+    /// </param>
+    /// <param name="SkipSelf">
+    ///   True to skip <c>Args[0]</c> as Self; False to treat it as the first argument.
+    /// </param>
+    /// <returns>
+    ///   The formatted call.
+    /// </returns>
+    /// <remarks>
+    ///   Only ONE argument is ever shown: <c>Args[1]</c> when SkipSelf is True, otherwise <c>Args[0]</c>; none
+    ///   when that argument is absent.
+    /// </remarks>
     function Format(const Args : array of TValue; SkipSelf : Boolean = True) : string;
+    /// <summary>
+    ///   Number of parameters the method declares (Self not counted).
+    /// </summary>
     property ParameterCount : Integer read GetParameterCount;
   end;
 
@@ -404,11 +708,38 @@ type
 {$ENDREGION}
   TRttiObjectHelper = class helper for TRttiObject
   public
+    /// <summary>
+    ///   Returns the first attribute on this RTTI object that is a T or a descendant of T.
+    /// </summary>
+    /// <returns>
+    ///   The first matching attribute, or nil when there is none.
+    /// </returns>
     function GetAttributeOfType<T : TCustomAttribute> : T;
+    /// <summary>
+    ///   Returns every attribute on this RTTI object that is a T or a descendant of T.
+    /// </summary>
+    /// <returns>
+    ///   The matching attributes in declaration order; an empty array when there are none.
+    /// </returns>
     function GetAttributesOfType<T : TCustomAttribute> : TArray<T>;
 
+    /// <summary>
+    ///   Reports whether this RTTI object carries an attribute that is a T or a descendant of T.
+    /// </summary>
+    /// <returns>
+    ///   True when at least one such attribute exists.
+    /// </returns>
     function HasAttributeOfType<T : TCustomAttribute> : Boolean;
 
+    /// <summary>
+    ///   Retrieves the first attribute that is a T or a descendant of T and returns if this was successful.
+    /// </summary>
+    /// <param name="AAttribute">
+    ///   The attribute found, or nil.
+    /// </param>
+    /// <returns>
+    ///   True when an attribute was found.
+    /// </returns>
     function TryGetAttributeOfType<T : TCustomAttribute>(out AAttribute : T) : Boolean;
   end;
 
@@ -420,6 +751,18 @@ type
 {$ENDREGION}
   TRttiParameterHelper = class helper for TRttiParameter
   public
+    /// <summary>
+    ///   Compares two parameter lists by count and by each parameter's type (names and flags are ignored).
+    /// </summary>
+    /// <param name="Left">
+    ///   The first parameter list.
+    /// </param>
+    /// <param name="Right">
+    ///   The second parameter list.
+    /// </param>
+    /// <returns>
+    ///   True when both lists have the same length and pairwise identical parameter types.
+    /// </returns>
     class function Equals(const Left, Right : TArray<TRttiParameter>) : Boolean; //overload;
   end;
 
@@ -442,6 +785,10 @@ type
     ///	<param name="Value">
     ///	  Value of the field when Result is <b>True</b>
     ///	</param>
+    ///	<returns>
+    ///	  True when the property is readable and was read; False when it is write-only or reading raised (the
+    ///	  exception is swallowed and Value is empty).
+    ///	</returns>
 {$ENDREGION}
     function TryGetValue(Instance : Pointer; out Value : TValue) : Boolean;
 
@@ -455,6 +802,13 @@ type
     ///	<param name="Value">
     ///	  Value the field should be set to
     ///	</param>
+    ///	<returns>
+    ///	  True when Value could be converted (via <c>TValue.TryConvert</c>) to the property type and was assigned;
+    ///	  False when the conversion failed, in which case nothing is assigned.
+    ///	</returns>
+    ///	<remarks>
+    ///	  Only the conversion is guarded: an exception raised by the property setter itself propagates.
+    ///	</remarks>
 {$ENDREGION}
     function TrySetValue(Instance : Pointer; Value : TValue) : Boolean;
   end;
@@ -466,15 +820,79 @@ type
 {$ENDREGION}
   TRttiTypeHelper = class helper for TRttiType
   private
+    /// <summary>
+    ///   Reader for <see cref="AsInterface" />.
+    /// </summary>
+    /// <returns>
+    ///   Self cast to TRttiInterfaceType.
+    /// </returns>
+    /// <exception cref="EInvalidCast">
+    ///   Self is not an interface type.
+    /// </exception>
     function GetAsInterface : TRttiInterfaceType;
+    /// <summary>
+    ///   Reader for <see cref="IsInterface" />.
+    /// </summary>
+    /// <returns>
+    ///   True when Self is a TRttiInterfaceType.
+    /// </returns>
     function GetIsInterface : Boolean;
+    /// <summary>
+    ///   Reader for <see cref="MethodCount" />.
+    /// </summary>
+    /// <returns>
+    ///   The length of <c>GetMethods</c>, inherited methods included.
+    /// </returns>
     function GetMethodCount : Integer;
+    /// <summary>
+    ///   Reports whether this type is, or descends from, the given type by walking the BaseType chain.
+    /// </summary>
+    /// <param name="OtherType">
+    ///   Type information of the candidate ancestor.
+    /// </param>
+    /// <returns>
+    ///   True when this type or one of its ancestors has the handle <c>OtherType</c>.
+    /// </returns>
     function InheritsFrom(OtherType : PTypeInfo) : Boolean;
   public
+    /// <summary>
+    ///   Returns every attribute that is a T or a descendant of T on this type AND on each of its ancestors.
+    /// </summary>
+    /// <returns>
+    ///   This type's matching attributes followed by its ancestors', nearest ancestor first.
+    /// </returns>
     function GetAttributesOfType<T : TCustomAttribute> : TArray<T>;
+    /// <summary>
+    ///   Resolves the type arguments of a constructed generic type, parsed from the text between the angle
+    ///   brackets of its type name.
+    /// </summary>
+    /// <returns>
+    ///   One entry per type argument, nil for an argument whose name cannot be found; an empty array for a
+    ///   non-generic type.
+    /// </returns>
     function GetGenericArguments : TArray<TRttiType>;
+    /// <summary>
+    ///   Returns the open generic definition of a constructed generic type, with its arguments renamed to
+    ///   <c>T</c> (one argument) or <c>T1</c>, <c>T2</c>... (several), e.g. <c>System.Generics.Collections.TList&lt;T&gt;</c>.
+    /// </summary>
+    /// <param name="AIncludeUnitName">
+    ///   True to use the qualified name (public types only); False for the bare type name.
+    /// </param>
+    /// <returns>
+    ///   The generic definition name. Upstream calls the renaming "naive": nested generic arguments are not
+    ///   handled.
+    /// </returns>
     function GetGenericTypeDefinition(const AIncludeUnitName : Boolean = True) : string;
 
+    /// <summary>
+    ///   Returns the member with the given name, looking for a property first, then a field, then a method.
+    /// </summary>
+    /// <param name="AName">
+    ///   Name of the member to find.
+    /// </param>
+    /// <returns>
+    ///   The member found, or nil when there is none.
+    /// </returns>
     function GetMember(const AName : string) : TRttiMember;
 
 {$REGION 'Documentation'}
@@ -485,23 +903,108 @@ type
     ///	<param name="ACodeAddress">
     ///	  Code address of the method to find
     ///	</param>
+    ///	<returns>
+    ///	  The first method (inherited ones included) whose CodeAddress matches, or nil.
+    ///	</returns>
 {$ENDREGION}
     function GetMethod(ACodeAddress : Pointer) : TRttiMethod; overload;
+    /// <summary>
+    ///   Returns the property with the given name, falling back to properties registered through
+    ///   <see cref="TRttiPropertyExtension" /> on this type or an ancestor.
+    /// </summary>
+    /// <param name="AName">
+    ///   Name of the property to find.
+    /// </param>
+    /// <returns>
+    ///   The property, or nil when there is none.
+    /// </returns>
     function GetProperty(const AName : string) : TRttiProperty;
 
+    /// <summary>
+    ///   Returns the first constructor (inherited ones included) that takes no parameters.
+    /// </summary>
+    /// <returns>
+    ///   The parameterless constructor, or nil when there is none.
+    /// </returns>
     function GetStandardConstructor : TRttiMethod;
 
+    /// <summary>
+    ///   Reports whether a value of this type can be used where the given class is expected.
+    /// </summary>
+    /// <param name="OtherClass">
+    ///   The target class.
+    /// </param>
+    /// <returns>
+    ///   False when OtherClass is nil; otherwise the result of the PTypeInfo overload for its class info.
+    /// </returns>
     function IsCovariantTo(OtherClass : TClass) : Boolean; overload;
+    /// <summary>
+    ///   Reports whether a value of this type can be used where the given type is expected: for generic types,
+    ///   the same generic definition with each type argument inheriting from the target's (an ancestor's
+    ///   generic base is also tried); otherwise plain inheritance.
+    /// </summary>
+    /// <param name="OtherType">
+    ///   Type information of the target type.
+    /// </param>
+    /// <returns>
+    ///   True when this type is covariant to <c>OtherType</c>.
+    /// </returns>
     function IsCovariantTo(OtherType : PTypeInfo) : Boolean; overload;
+    /// <summary>
+    ///   Reports whether this type, or any ancestor, is a constructed generic type (its name carries type
+    ///   arguments).
+    /// </summary>
+    /// <returns>
+    ///   True when this type or an ancestor has generic arguments.
+    /// </returns>
     function IsGenericTypeDefinition : Boolean;
+    /// <summary>
+    ///   Reports whether this type's name is <c>BaseTypeName&lt;...&gt;</c>, i.e. a construction of the named
+    ///   generic type.
+    /// </summary>
+    /// <param name="BaseTypeName">
+    ///   The unqualified generic type name without its argument list, e.g. <c>TList</c>. Compared case-sensitively.
+    /// </param>
+    /// <returns>
+    ///   True when the name starts with <c>BaseTypeName&lt;</c> and ends with <c>&gt;</c>.
+    /// </returns>
     function IsGenericTypeOf(const BaseTypeName : string) : Boolean;
+    /// <summary>
+    ///   Reports whether this type is the given type or descends from it.
+    /// </summary>
+    /// <param name="OtherType">
+    ///   The candidate ancestor; must not be nil.
+    /// </param>
+    /// <returns>
+    ///   True when this type or one of its ancestors has the same handle as <c>OtherType</c>.
+    /// </returns>
     function IsInheritedFrom(OtherType : TRttiType) : Boolean; overload;
+    /// <summary>
+    ///   Reports whether this type is, or descends from, a type with the given name.
+    /// </summary>
+    /// <param name="OtherTypeName">
+    ///   The ancestor's bare or qualified name, compared case-insensitively.
+    /// </param>
+    /// <returns>
+    ///   True when this type or an ancestor matches the name.
+    /// </returns>
     function IsInheritedFrom(const OtherTypeName : string) : Boolean; overload;
+    /// <summary>
+    ///   Finds the construction of this (public) generic type with the given type arguments, e.g. turns
+    ///   <c>TList&lt;T&gt;</c> plus <c>Integer</c> into <c>TList&lt;Integer&gt;</c>.
+    /// </summary>
+    /// <param name="TypeArguments">
+    ///   Type information for each type argument, in order; there must be at least as many as the type has.
+    /// </param>
+    /// <returns>
+    ///   The constructed type, or nil when this type is not public or that construction has no RTTI in the
+    ///   application.
+    /// </returns>
     function MakeGenericType(const TypeArguments : array of PTypeInfo) : TRttiType;
 
 {$REGION 'Documentation'}
     ///	<summary>
-    ///	  Retrieves the method with the given name and returns if this was
+    ///	  Retrieves the field with the given name and returns if this was
     ///	  successful.
     ///	</summary>
     ///	<param name="AName">
@@ -510,6 +1013,9 @@ type
     ///	<param name="AField">
     ///	  Field that was found when Result is <b>True</b>
     ///	</param>
+    ///	<returns>
+    ///	  True when the field was found.
+    ///	</returns>
 {$ENDREGION}
     function TryGetField(const AName : string; out AField : TRttiField) : Boolean;
 
@@ -524,6 +1030,9 @@ type
     ///	<param name="AMember">
     ///	  Member that was found when Result is <b>True</b>
     ///	</param>
+    ///	<returns>
+    ///	  True when a property, field or method of that name was found.
+    ///	</returns>
 {$ENDREGION}
     function TryGetMember(const AName : string; out AMember : TRttiMember) : Boolean;
 
@@ -538,12 +1047,15 @@ type
     ///	<param name="AMethod">
     ///	  Method that was found when Result is <b>True</b>
     ///	</param>
+    ///	<returns>
+    ///	  True when a method was found.
+    ///	</returns>
 {$ENDREGION}
     function TryGetMethod(ACodeAddress : Pointer; out AMethod : TRttiMethod) : Boolean; overload;
 
 {$REGION 'Documentation'}
     ///	<summary>
-    ///	  Retrieves the method with the given code address and returns if this
+    ///	  Retrieves the method with the given name and returns if this
     ///	  was successful.
     ///	</summary>
     ///	<param name="AName">
@@ -552,12 +1064,33 @@ type
     ///	<param name="AMethod">
     ///	  Method that was found when Result is <b>True</b>
     ///	</param>
+    ///	<returns>
+    ///	  True when a method was found.
+    ///	</returns>
 {$ENDREGION}
     function TryGetMethod(const AName : string; out AMethod : TRttiMethod) : Boolean; overload;
 
-    //will get the first declated constructor it finds
+    /// <summary>
+    ///   Finds the first parameterless constructor DECLARED by this type or, failing that, by the nearest
+    ///   ancestor below TObject that declares one.
+    /// </summary>
+    /// <param name="AMethod">
+    ///   The constructor found; left unassigned when the result is False.
+    /// </param>
+    /// <returns>
+    ///   True when a parameterless constructor was found before reaching TObject.
+    /// </returns>
     function TryGetConstructor(out AMethod : TRttiMethod) : boolean;
 
+    /// <summary>
+    ///   Finds the first destructor declared by this type itself; ancestors are not searched.
+    /// </summary>
+    /// <param name="AMethod">
+    ///   The destructor found; left unassigned when the result is False.
+    /// </param>
+    /// <returns>
+    ///   True when this type declares a destructor.
+    /// </returns>
     function TryGetDestructor(out AMethod : TRttiMethod) : boolean;
 
 {$REGION 'Documentation'}
@@ -571,16 +1104,42 @@ type
     ///	<param name="AProperty">
     ///	  Property that was found when Result is <b>True</b>
     ///	</param>
+    ///	<returns>
+    ///	  True when a property (extension properties included) was found.
+    ///	</returns>
 {$ENDREGION}
     function TryGetProperty(const AName : string; out AProperty : TRttiProperty) : Boolean;
 
+    /// <summary>
+    ///   Retrieves the first parameterless constructor (inherited ones included) and returns if this was
+    ///   successful.
+    /// </summary>
+    /// <param name="AMethod">
+    ///   The constructor found, or nil.
+    /// </param>
+    /// <returns>
+    ///   True when a parameterless constructor exists.
+    /// </returns>
     function TryGetStandardConstructor(out AMethod : TRttiMethod) : Boolean;
 
+    /// <summary>
+    ///   This type as an interface type; raises EInvalidCast when it is not one (check IsInterface first).
+    /// </summary>
     property AsInterface : TRttiInterfaceType read GetAsInterface;
+    /// <summary>
+    ///   Whether this type is an interface type.
+    /// </summary>
     property IsInterface : Boolean read GetIsInterface;
+    /// <summary>
+    ///   Number of methods of the type, inherited ones included.
+    /// </summary>
     property MethodCount : Integer read GetMethodCount;
   end;
 
+  /// <summary>
+  ///   Re-exports <c>System.Rtti.TValue</c> so units using DUnitX.Utils see the TValueHelper-extended type
+  ///   without also naming System.Rtti.
+  /// </summary>
   TValue = {$IFDEF USE_NS}System.{$ENDIF}Rtti.TValue;
 
 {$REGION 'Documentation'}
@@ -590,161 +1149,868 @@ type
 {$ENDREGION}
   TValueHelper = record helper for TValue
   private
+    /// <summary>
+    ///   Reader for <see cref="RttiType" />.
+    /// </summary>
+    /// <returns>
+    ///   The RTTI type for the value's TypeInfo; nil for an empty value.
+    /// </returns>
     function GetRttiType : TRttiType;
+    /// <summary>
+    ///   Builds a TValue of the specific floating-point type described by ATypeInfo (Single, Double, Extended,
+    ///   Comp or Currency).
+    /// </summary>
+    /// <param name="ATypeInfo">
+    ///   Type information of a tkFloat type; its FloatType selects the result type.
+    /// </param>
+    /// <param name="AValue">
+    ///   The value to store, narrowed to the target type.
+    /// </param>
+    /// <returns>
+    ///   The value typed as the requested float type.
+    /// </returns>
     class function FromFloat(ATypeInfo : PTypeInfo; AValue : Extended) : TValue; static;
   public
+    /// <summary>
+    ///   Reports whether the value is of a floating-point kind (tkFloat, which includes TDateTime and Currency).
+    /// </summary>
+    /// <returns>
+    ///   True when Kind is tkFloat.
+    /// </returns>
     function IsFloat : Boolean;
+    /// <summary>
+    ///   Reports whether the value is of a kind that holds a number.
+    /// </summary>
+    /// <returns>
+    ///   True for tkInteger, tkInt64, tkFloat, tkChar, tkWChar and tkEnumeration (so Boolean and characters count
+    ///   as numeric).
+    /// </returns>
     function IsNumeric : Boolean;
+    /// <summary>
+    ///   Reports whether the value is a typed or untyped pointer.
+    /// </summary>
+    /// <returns>
+    ///   True when Kind is tkPointer.
+    /// </returns>
     function IsPointer : Boolean;
+    /// <summary>
+    ///   Reports whether the value is a string or a single character of any width.
+    /// </summary>
+    /// <returns>
+    ///   True for tkChar, tkWChar, tkString, tkLString, tkWString and tkUString.
+    /// </returns>
     function IsString : Boolean;
 
+    /// <summary>
+    ///   Reports whether the value holds an object or interface reference.
+    /// </summary>
+    /// <returns>
+    ///   True when Kind is tkClass or tkInterface.
+    /// </returns>
     function IsInstance : Boolean;
+    /// <summary>
+    ///   Reports whether the value holds an interface reference.
+    /// </summary>
+    /// <returns>
+    ///   True when the value has TypeInfo and its kind is tkInterface.
+    /// </returns>
     function IsInterface : Boolean;
 
-    // conversion for almost all standard types
+    /// <summary>
+    ///   Converts the value to the given type, covering almost all standard types (ordinals, floats, strings,
+    ///   enumerations, sets, classes, interfaces, dynamic arrays and Spring-style nullable records).
+    /// </summary>
+    /// <param name="ATypeInfo">
+    ///   Type information of the target type; TypeInfo(TValue) returns the value unchanged.
+    /// </param>
+    /// <param name="AResult">
+    ///   The converted value when the result is True.
+    /// </param>
+    /// <returns>
+    ///   True when the conversion succeeded; False when ATypeInfo is nil or no conversion applies.
+    /// </returns>
+    /// <remarks>
+    ///   Between numeric kinds the converters' decision is final: a value that does not fit the target ordinal
+    ///   type is refused rather than passed to TValue.TryCast, which would truncate it (Integer 300 to Byte 44).
+    /// </remarks>
     function TryConvert(ATypeInfo : PTypeInfo; out AResult : TValue) : Boolean; overload;
+    /// <summary>
+    ///   Converts the value to type T; see the PTypeInfo overload for the rules.
+    /// </summary>
+    /// <param name="AResult">
+    ///   The converted value when the result is True.
+    /// </param>
+    /// <returns>
+    ///   True when the conversion succeeded.
+    /// </returns>
     function TryConvert<T>(out AResult : TValue) : Boolean; overload;
 
+    /// <summary>
+    ///   Returns the value as a Byte.
+    /// </summary>
+    /// <returns>
+    ///   The value cast through <c>AsType&lt;Byte&gt;</c>.
+    /// </returns>
+    /// <exception cref="EInvalidCast">
+    ///   The value cannot be cast to Byte.
+    /// </exception>
     function AsByte : Byte;
+    /// <summary>
+    ///   Returns the value as a Cardinal.
+    /// </summary>
+    /// <returns>
+    ///   The value cast through <c>AsType&lt;Cardinal&gt;</c>.
+    /// </returns>
+    /// <exception cref="EInvalidCast">
+    ///   The value cannot be cast to Cardinal.
+    /// </exception>
     function AsCardinal : Cardinal;
+    /// <summary>
+    ///   Returns the value as a Currency.
+    /// </summary>
+    /// <returns>
+    ///   The value cast through <c>AsType&lt;Currency&gt;</c>.
+    /// </returns>
+    /// <exception cref="EInvalidCast">
+    ///   The value cannot be cast to Currency.
+    /// </exception>
     function AsCurrency : Currency;
+    /// <summary>
+    ///   Returns the value as a TDate.
+    /// </summary>
+    /// <returns>
+    ///   The value cast through <c>AsType&lt;TDate&gt;</c>.
+    /// </returns>
+    /// <exception cref="EInvalidCast">
+    ///   The value cannot be cast to TDate.
+    /// </exception>
     function AsDate : TDate;
+    /// <summary>
+    ///   Returns the value as a TDateTime.
+    /// </summary>
+    /// <returns>
+    ///   The value cast through <c>AsType&lt;TDateTime&gt;</c>.
+    /// </returns>
+    /// <exception cref="EInvalidCast">
+    ///   The value cannot be cast to TDateTime.
+    /// </exception>
     function AsDateTime : TDateTime;
+    /// <summary>
+    ///   Returns the value as a Double.
+    /// </summary>
+    /// <returns>
+    ///   The value cast through <c>AsType&lt;Double&gt;</c>.
+    /// </returns>
+    /// <exception cref="EInvalidCast">
+    ///   The value cannot be cast to Double.
+    /// </exception>
     function AsDouble : Double;
+    /// <summary>
+    ///   Returns the value as an Extended.
+    /// </summary>
+    /// <returns>
+    ///   The value cast through <c>AsType&lt;Extended&gt;</c>.
+    /// </returns>
+    /// <exception cref="EInvalidCast">
+    ///   The value cannot be cast to Extended.
+    /// </exception>
     function AsFloat : Extended;
+    /// <summary>
+    ///   Returns a pointer for the value: the object itself for a class or interface value, otherwise a pointer
+    ///   to the value's raw data inside this TValue.
+    /// </summary>
+    /// <returns>
+    ///   The object reference, or the address of the raw data (valid only while this TValue is alive and
+    ///   unchanged).
+    /// </returns>
     function AsPointer : Pointer;
+    /// <summary>
+    ///   Returns the value as a ShortInt.
+    /// </summary>
+    /// <returns>
+    ///   The value cast through <c>AsType&lt;ShortInt&gt;</c>.
+    /// </returns>
+    /// <exception cref="EInvalidCast">
+    ///   The value cannot be cast to ShortInt.
+    /// </exception>
     function AsShortInt : ShortInt;
+    /// <summary>
+    ///   Returns the value as a Single.
+    /// </summary>
+    /// <returns>
+    ///   The value cast through <c>AsType&lt;Single&gt;</c>.
+    /// </returns>
+    /// <exception cref="EInvalidCast">
+    ///   The value cannot be cast to Single.
+    /// </exception>
     function AsSingle : Single;
+    /// <summary>
+    ///   Returns the value as a SmallInt.
+    /// </summary>
+    /// <returns>
+    ///   The value cast through <c>AsType&lt;SmallInt&gt;</c>.
+    /// </returns>
+    /// <exception cref="EInvalidCast">
+    ///   The value cannot be cast to SmallInt.
+    /// </exception>
     function AsSmallInt : SmallInt;
+    /// <summary>
+    ///   Returns the value as a TTime.
+    /// </summary>
+    /// <returns>
+    ///   The value cast through <c>AsType&lt;TTime&gt;</c>.
+    /// </returns>
+    /// <exception cref="EInvalidCast">
+    ///   The value cannot be cast to TTime.
+    /// </exception>
     function AsTime : TTime;
+    /// <summary>
+    ///   Returns the value as a UInt64.
+    /// </summary>
+    /// <returns>
+    ///   The value cast through <c>AsType&lt;UInt64&gt;</c>.
+    /// </returns>
+    /// <exception cref="EInvalidCast">
+    ///   The value cannot be cast to UInt64.
+    /// </exception>
     function AsUInt64 : UInt64;
+    /// <summary>
+    ///   Returns the value as a Word.
+    /// </summary>
+    /// <returns>
+    ///   The value cast through <c>AsType&lt;Word&gt;</c>.
+    /// </returns>
+    /// <exception cref="EInvalidCast">
+    ///   The value cannot be cast to Word.
+    /// </exception>
     function AsWord : Word;
 
+    /// <summary>
+    ///   Returns the object behind an object or interface value.
+    /// </summary>
+    /// <returns>
+    ///   For an interface, the implementing object (<c>as TObject</c>); otherwise <c>AsObject</c>.
+    /// </returns>
     function ToObject : TObject;
     ///	<summary>
     ///	  Converts the value to a TVarRec. A TVarRec cannot own memory, so its
     ///	  pointers refer into AStorage, which must outlive the result unchanged.
     ///	</summary>
+    ///	<param name="AStorage">
+    ///	  Receives a copy of the value (strings, objects and floats re-boxed as needed) that the result's pointers
+    ///	  refer into.
+    ///	</param>
+    ///	<returns>
+    ///	  The TVarRec: integers and non-Boolean enumerations as vtInteger, Boolean as vtBoolean, Int64 as vtInt64,
+    ///	  Currency as vtCurrency, other floats widened to vtExtended, strings and objects (as their ToString) as
+    ///	  vtUnicodeString.
+    ///	</returns>
+    ///	<exception cref="EInvalidCast">
+    ///	  The value's kind (e.g. a record, set, array or method) has no TVarRec form.
+    ///	</exception>
     function ToVarRec(var AStorage : TValue) : TVarRec;
 
+    /// <summary>
+    ///   Formats one value for display.
+    /// </summary>
+    /// <param name="Value">
+    ///   The value to format.
+    /// </param>
+    /// <returns>
+    ///   Dates, date-times and times through the locale's DateToStr/DateTimeToStr/TimeToStr; an object as
+    ///   <c>ClassName($address)</c>; an interface as <c>ClassName($address) as IIntf</c>; anything else through
+    ///   <c>TValue.ToString</c>; a nil object or interface as <c>nil</c>.
+    /// </returns>
     class function ToString(const Value : TValue) : string; overload; static;
+    /// <summary>
+    ///   Formats several values as a comma-separated list, quoting string values with single quotes.
+    /// </summary>
+    /// <param name="Values">
+    ///   The values to format.
+    /// </param>
+    /// <returns>
+    ///   The values joined with <c>', '</c>; an empty string for no values.
+    /// </returns>
     class function ToString(const Values : array of TValue) : string; overload; static;
     ///	<summary>
     ///	  Converts the values to TVarRecs whose pointers refer into AStorage,
     ///	  which must outlive the result unchanged.
     ///	</summary>
+    ///	<param name="Values">
+    ///	  The values to convert.
+    ///	</param>
+    ///	<param name="AStorage">
+    ///	  Receives one storage TValue per value; keep it alive for as long as the result is used.
+    ///	</param>
+    ///	<returns>
+    ///	  One TVarRec per value, as produced by <see cref="ToVarRec" />, suitable for <c>Format</c>.
+    ///	</returns>
+    ///	<exception cref="EInvalidCast">
+    ///	  A value's kind has no TVarRec form.
+    ///	</exception>
     class function ToVarRecs(const Values : array of TValue; out AStorage : TArray<TValue>) : TArray<TVarRec>; static;
+    /// <summary>
+    ///   Compares two value arrays element by element with <see cref="SameValue" />.
+    /// </summary>
+    /// <param name="Left">
+    ///   The first array.
+    /// </param>
+    /// <param name="Right">
+    ///   The second array.
+    /// </param>
+    /// <returns>
+    ///   True when both arrays have the same length and every pair is the same value.
+    /// </returns>
     class function Equals(const Left, Right : TArray<TValue>) : Boolean; overload; static;
+    /// <summary>
+    ///   Compares two values of type T with the default equality comparer for T.
+    /// </summary>
+    /// <param name="Left">
+    ///   The first value.
+    /// </param>
+    /// <param name="Right">
+    ///   The second value.
+    /// </param>
+    /// <returns>
+    ///   True when <c>TEqualityComparer&lt;T&gt;.Default</c> considers them equal.
+    /// </returns>
     class function Equals<T>(const Left, Right : T) : Boolean; overload; static;
 
+    /// <summary>
+    ///   Builds a TValue by copying a value of the given type from a buffer.
+    /// </summary>
+    /// <param name="ABuffer">
+    ///   Address of the source data, laid out as ATypeInfo describes.
+    /// </param>
+    /// <param name="ATypeInfo">
+    ///   Type information of the value in the buffer.
+    /// </param>
+    /// <returns>
+    ///   A TValue holding a copy of the data.
+    /// </returns>
     class function From(ABuffer : Pointer; ATypeInfo : PTypeInfo) : TValue; overload; static;
+    /// <summary>
+    ///   Builds a TValue of the given type from a pointer-sized raw value (via <c>TValue.Make</c>).
+    /// </summary>
+    /// <param name="AValue">
+    ///   The raw pointer-sized data, e.g. an ordinal or a reference.
+    /// </param>
+    /// <param name="ATypeInfo">
+    ///   Type information the value is to carry.
+    /// </param>
+    /// <returns>
+    ///   The typed value.
+    /// </returns>
     class function From(AValue : NativeInt; ATypeInfo : PTypeInfo) : TValue; overload; static;
+    /// <summary>
+    ///   Builds a TValue holding an object reference typed as the given class rather than the object's own.
+    /// </summary>
+    /// <param name="AObject">
+    ///   The object reference (may be nil).
+    /// </param>
+    /// <param name="AClass">
+    ///   The class whose type information the value carries; must not be nil.
+    /// </param>
+    /// <returns>
+    ///   A tkClass value typed as AClass.
+    /// </returns>
     class function From(AObject : TObject; AClass : TClass) : TValue; overload; static;
+    /// <summary>
+    ///   Builds a TValue typed as Boolean.
+    /// </summary>
+    /// <param name="Value">
+    ///   The Boolean to store.
+    /// </param>
+    /// <returns>
+    ///   The Boolean value.
+    /// </returns>
     class function FromBoolean(const Value : Boolean) : TValue; static;
+    /// <summary>
+    ///   Builds a TValue typed as string.
+    /// </summary>
+    /// <param name="Value">
+    ///   The string to store.
+    /// </param>
+    /// <returns>
+    ///   The string value.
+    /// </returns>
     class function FromString(const Value : string) : TValue; static;
+    /// <summary>
+    ///   Builds a TValue from a TVarRec (an <c>array of const</c> element); character, PChar, short, ANSI and wide
+    ///   strings all become string values.
+    /// </summary>
+    /// <param name="Value">
+    ///   The TVarRec to read.
+    /// </param>
+    /// <returns>
+    ///   The equivalent TValue; empty for a VType this routine does not handle.
+    /// </returns>
     class function FromVarRec(const Value : TVarRec) : TValue; static;
 
+    /// <summary>
+    ///   Reports whether the value's type is exactly Boolean.
+    /// </summary>
+    /// <returns>
+    ///   True when TypeInfo is TypeInfo(Boolean).
+    /// </returns>
     function IsBoolean : Boolean;
+    /// <summary>
+    ///   Reports whether the value's type is exactly Byte.
+    /// </summary>
+    /// <returns>
+    ///   True when TypeInfo is TypeInfo(Byte).
+    /// </returns>
     function IsByte : Boolean;
+    /// <summary>
+    ///   Reports whether the value's type is Cardinal (or, on Win32, NativeUInt).
+    /// </summary>
+    /// <returns>
+    ///   True when TypeInfo is TypeInfo(Cardinal), or TypeInfo(NativeUInt) on 32-bit targets.
+    /// </returns>
     function IsCardinal : Boolean;
+    /// <summary>
+    ///   Reports whether the value's type is exactly Currency.
+    /// </summary>
+    /// <returns>
+    ///   True when TypeInfo is TypeInfo(Currency).
+    /// </returns>
     function IsCurrency : Boolean;
+    /// <summary>
+    ///   Reports whether the value's type is exactly TDate.
+    /// </summary>
+    /// <returns>
+    ///   True when TypeInfo is TypeInfo(TDate).
+    /// </returns>
     function IsDate : Boolean;
+    /// <summary>
+    ///   Reports whether the value's type is exactly TDateTime.
+    /// </summary>
+    /// <returns>
+    ///   True when TypeInfo is TypeInfo(TDateTime).
+    /// </returns>
     function IsDateTime : Boolean;
+    /// <summary>
+    ///   Reports whether the value's type is exactly Double.
+    /// </summary>
+    /// <returns>
+    ///   True when TypeInfo is TypeInfo(Double).
+    /// </returns>
     function IsDouble : Boolean;
+    /// <summary>
+    ///   Reports whether the value's type is Integer (or, on Win32, NativeInt).
+    /// </summary>
+    /// <returns>
+    ///   True when TypeInfo is TypeInfo(Integer), or TypeInfo(NativeInt) on 32-bit targets.
+    /// </returns>
     function IsInteger : Boolean;
+    /// <summary>
+    ///   Reports whether the value's type is Int64 (or, on Win64, NativeInt).
+    /// </summary>
+    /// <returns>
+    ///   True when TypeInfo is TypeInfo(Int64), or TypeInfo(NativeInt) on 64-bit targets.
+    /// </returns>
     function IsInt64 : Boolean;
+    /// <summary>
+    ///   Reports whether the value's type is exactly ShortInt.
+    /// </summary>
+    /// <returns>
+    ///   True when TypeInfo is TypeInfo(ShortInt).
+    /// </returns>
     function IsShortInt : Boolean;
+    /// <summary>
+    ///   Reports whether the value's type is exactly Single.
+    /// </summary>
+    /// <returns>
+    ///   True when TypeInfo is TypeInfo(Single).
+    /// </returns>
     function IsSingle : Boolean;
+    /// <summary>
+    ///   Reports whether the value's type is exactly SmallInt.
+    /// </summary>
+    /// <returns>
+    ///   True when TypeInfo is TypeInfo(SmallInt).
+    /// </returns>
     function IsSmallInt : Boolean;
+    /// <summary>
+    ///   Reports whether the value's type is exactly TTime.
+    /// </summary>
+    /// <returns>
+    ///   True when TypeInfo is TypeInfo(TTime).
+    /// </returns>
     function IsTime : Boolean;
+    /// <summary>
+    ///   Reports whether the value's type is UInt64 (or, on Win64, NativeUInt).
+    /// </summary>
+    /// <returns>
+    ///   True when TypeInfo is TypeInfo(UInt64), or TypeInfo(NativeUInt) on 64-bit targets.
+    /// </returns>
     function IsUInt64 : Boolean;
+    /// <summary>
+    ///   Reports whether the value's type is exactly Variant.
+    /// </summary>
+    /// <returns>
+    ///   True when TypeInfo is TypeInfo(Variant).
+    /// </returns>
     function IsVariant : Boolean;
+    /// <summary>
+    ///   Reports whether the value's type is exactly Word.
+    /// </summary>
+    /// <returns>
+    ///   True when TypeInfo is TypeInfo(Word).
+    /// </returns>
     function IsWord : Boolean;
 
+    /// <summary>
+    ///   The RTTI type of the value's TypeInfo (nil for an empty value).
+    /// </summary>
     property RttiType : TRttiType read GetRttiType;
   end;
 
 {$IFDEF DELPHI_XE3_UP}
+  /// <summary>Pointer to a <see cref="TPropInfoExt" />.</summary>
   PPropInfoExt = ^TPropInfoExt;
+  /// <summary>
+  ///   A writable mirror of the RTL's TPropInfo layout with room for the inline short-string name, used as the
+  ///   synthetic property information behind a <see cref="TRttiPropertyExtension" />.
+  /// </summary>
   TPropInfoExt = record
+    /// <summary>Indirect type information of the property's type.</summary>
     PropType : PPTypeInfo;
+    /// <summary>Getter address; unused (nil) for an extension property.</summary>
     GetProc : Pointer;
+    /// <summary>Setter address; unused (nil) for an extension property.</summary>
     SetProc : Pointer;
+    /// <summary>Stored specifier address; unused (nil) for an extension property.</summary>
     StoredProc : Pointer;
+    /// <summary>Index specifier value, as in TPropInfo.</summary>
     Index : Integer;
+    /// <summary>Default specifier value, as in TPropInfo.</summary>
     Default : Integer;
+    /// <summary>Name index, as in TPropInfo.</summary>
     NameIndex : SmallInt;
+    /// <summary>Length byte of the inline short-string name (at most 255).</summary>
     NameLength : Byte;
+    /// <summary>The name's ANSI characters, stored inline after NameLength.</summary>
     NameData : array[0..255] of Byte;
+    /// <summary>
+    ///   Returns an accessor over the inline short-string name.
+    /// </summary>
+    /// <returns>
+    ///   A TTypeInfoFieldAccessor positioned at NameLength.
+    /// </returns>
     function NameFld : TTypeInfoFieldAccessor; inline;
+    /// <summary>
+    ///   Returns the address just past the variable-length name, as the RTL does for TPropInfo.
+    /// </summary>
+    /// <returns>
+    ///   The address following the name.
+    /// </returns>
     function Tail : PPropInfoExt; inline;
   end;
 {$ENDIF}
 
+  /// <summary>
+  ///   A synthetic RTTI property, attached to a class at run time and backed by getter/setter closures, which
+  ///   <c>TRttiTypeHelper.GetProperty</c> returns when the class has no real property of that name.
+  /// </summary>
+  /// <remarks>
+  ///   Inherited upstream code that works by patching a copy of the VMT. The slot indices in
+  ///   InitVirtualMethodTable were derived from an older System.Rtti and have NOT been re-verified against
+  ///   Delphi 13, which changed the TRttiMember hierarchy; nothing in DUnitX constructs an instance, so the
+  ///   stale map is currently unreachable. Re-verify every index before using this class.
+  /// </remarks>
   TRttiPropertyExtension = class(TRttiInstanceProperty)
   private
 {$IFDEF DELPHI_XE3_UP}
+    /// <summary>The synthetic property information this property's Handle points at.</summary>
     FPropInfo : TPropInfoExt;
 {$ELSE}
+    /// <summary>The synthetic property information this property's Handle points at.</summary>
     FPropInfo : TPropInfo;
 {$ENDIF}
+    /// <summary>Closure that reads the property's value from an instance; nil makes it write-only.</summary>
     FGetter : TFunc<Pointer, TValue>;
+    /// <summary>Closure that writes the property's value to an instance; nil makes it read-only.</summary>
     FSetter : TProc<Pointer, TValue>;
     class var
+      /// <summary>Every extension property, keyed by (parent type, name); owns its values.</summary>
       FRegister : TDictionary<TPair<PTypeInfo, string>, TRttiPropertyExtension>;
+      /// <summary>Maps each class to its patched VMT copy, which new instances are switched to.</summary>
       FPatchedClasses : TDictionary<TClass, TClass>;
+    /// <summary>
+    ///   Static-dispatch entry patched into the VMT slot of TRttiProperty.GetIsReadable.
+    /// </summary>
+    /// <returns>
+    ///   The result of the virtual <see cref="GetIsReadable" />.
+    /// </returns>
     function GetIsReadableStub : Boolean; //override;
+    /// <summary>
+    ///   Static-dispatch entry patched into the VMT slot of TRttiProperty.GetIsWritable.
+    /// </summary>
+    /// <returns>
+    ///   The result of the virtual <see cref="GetIsWritable" />.
+    /// </returns>
     function GetIsWritableStub : Boolean; //override;
+    /// <summary>
+    ///   Static-dispatch entry patched into the VMT slot of TRttiProperty.DoGetValue.
+    /// </summary>
+    /// <param name="Instance">
+    ///   The instance to read from.
+    /// </param>
+    /// <returns>
+    ///   The result of the virtual <see cref="DoGetValue" />.
+    /// </returns>
     function DoGetValueStub(Instance : Pointer) : TValue; //override;
+    /// <summary>
+    ///   Static-dispatch entry patched into the VMT slot of TRttiProperty.DoSetValue.
+    /// </summary>
+    /// <param name="Instance">
+    ///   The instance to write to.
+    /// </param>
+    /// <param name="AValue">
+    ///   The value to write.
+    /// </param>
     procedure DoSetValueStub(Instance : Pointer; const AValue : TValue); //override;
+    /// <summary>
+    ///   Static-dispatch entry patched into the VMT slot of TRttiInstanceProperty.GetPropInfo.
+    /// </summary>
+    /// <returns>
+    ///   The result of the virtual <see cref="GetPropInfo" />.
+    /// </returns>
     function GetPropInfoStub : PPropInfo; // override;
   protected
+    /// <summary>
+    ///   Builds this class's patched VMT copy (registered in FPatchedClasses) whose property slots point at the
+    ///   *Stub methods. Called once from the class constructor.
+    /// </summary>
     class procedure InitVirtualMethodTable;
 
+    /// <summary>
+    ///   Reports whether the property can be read.
+    /// </summary>
+    /// <returns>
+    ///   True when a Getter is assigned.
+    /// </returns>
     function GetIsReadable : Boolean; virtual;
+    /// <summary>
+    ///   Reports whether the property can be written.
+    /// </summary>
+    /// <returns>
+    ///   True when a Setter is assigned.
+    /// </returns>
     function GetIsWritable : Boolean; virtual;
+    /// <summary>
+    ///   Reads the property's value by calling the Getter.
+    /// </summary>
+    /// <param name="Instance">
+    ///   The instance to read from.
+    /// </param>
+    /// <returns>
+    ///   The value the Getter returns.
+    /// </returns>
     function DoGetValue(Instance : Pointer) : TValue; virtual;
+    /// <summary>
+    ///   Writes the property's value by calling the Setter.
+    /// </summary>
+    /// <param name="Instance">
+    ///   The instance to write to.
+    /// </param>
+    /// <param name="AValue">
+    ///   The value to write.
+    /// </param>
     procedure DoSetValue(Instance : Pointer; const AValue : TValue); virtual;
+    /// <summary>
+    ///   Returns the synthetic property information.
+    /// </summary>
+    /// <returns>
+    ///   The RTTI Handle, which points at FPropInfo.
+    /// </returns>
     function GetPropInfo : PPropInfo; virtual;
   public
+    /// <summary>
+    ///   Creates the registry and patched-class map and builds the patched VMT.
+    /// </summary>
     class constructor Create;
+    /// <summary>
+    ///   Frees every registered extension property, then the patched VMT copies and the maps.
+    /// </summary>
+    /// <remarks>
+    ///   The instances are freed BEFORE the patched VMT memory: each dispatches through it, so the reverse
+    ///   order destroyed them through freed memory.
+    /// </remarks>
     class destructor Destroy;
 
+    /// <summary>
+    ///   Creates an extension property on the given class and registers it; the registry owns and frees it.
+    /// </summary>
+    /// <param name="Parent">
+    ///   Type information of the class the property is attached to.
+    /// </param>
+    /// <param name="Name">
+    ///   The property name (truncated to 255 characters in the synthetic property information).
+    /// </param>
+    /// <param name="PropertyType">
+    ///   Type information of the property's value type.
+    /// </param>
+    /// <exception cref="EListError">
+    ///   A property of that name is already registered for Parent (duplicate dictionary key).
+    /// </exception>
     constructor Create(Parent : PTypeInfo; const Name : string; PropertyType : PTypeInfo);
 
+    /// <summary>
+    ///   Finds an extension property by name on a type or, failing that, on its ancestors.
+    /// </summary>
+    /// <param name="Parent">
+    ///   The type to search first; must not be nil.
+    /// </param>
+    /// <param name="PropertyName">
+    ///   The property name, compared case-insensitively.
+    /// </param>
+    /// <returns>
+    ///   The extension property, or nil when there is none.
+    /// </returns>
     class function FindByName(Parent : TRttiType;
       const PropertyName : string) : TRttiPropertyExtension; overload;
+    /// <summary>
+    ///   Finds an extension property by a dotted name such as <c>TMyClass.MyProp</c> or
+    ///   <c>MyUnit.TMyClass.MyProp</c>.
+    /// </summary>
+    /// <param name="FullPropertyName">
+    ///   The scope and property name separated by the last dot; the scope must END the parent's qualified class
+    ///   name and the name matches case-insensitively.
+    /// </param>
+    /// <returns>
+    ///   The first matching extension property, or nil.
+    /// </returns>
     class function FindByName(const FullPropertyName : string) : TRttiPropertyExtension; overload;
 
+    /// <summary>
+    ///   Closure that reads the property's value from an instance pointer; nil makes the property write-only.
+    /// </summary>
     property Getter : TFunc<Pointer, TValue> read FGetter write FGetter;
+    /// <summary>
+    ///   Closure that writes a value to an instance pointer; nil makes the property read-only.
+    /// </summary>
     property Setter : TProc<Pointer, TValue> read FSetter write FSetter;
   end;
 
+  /// <summary>
+  ///   Static generic helpers for dynamic arrays.
+  /// </summary>
   TArrayHelper = class
   public
+    /// <summary>
+    ///   Concatenates several arrays into one new array.
+    /// </summary>
+    /// <param name="Arrays">
+    ///   The arrays to join, in order.
+    /// </param>
+    /// <returns>
+    ///   A new array holding every element of every input array.
+    /// </returns>
     class function Concat<T>(const Arrays : array of TArray<T>) : TArray<T>; static;
+    /// <summary>
+    ///   Builds a two-element array.
+    /// </summary>
+    /// <param name="a">
+    ///   The first element.
+    /// </param>
+    /// <param name="b">
+    ///   The second element.
+    /// </param>
+    /// <returns>
+    ///   The array <c>[a, b]</c>.
+    /// </returns>
     class function Create<T>(const a : T; const b : T) : TArray<T>; static;
+    /// <summary>
+    ///   Removes elements from an array in place, shifting the tail down and shortening the array.
+    /// </summary>
+    /// <param name="source">
+    ///   The array to modify.
+    /// </param>
+    /// <param name="index">
+    ///   Zero-based index of the first element to remove; an index below 0 or past the end is ignored.
+    /// </param>
+    /// <param name="count">
+    ///   Number of elements to remove; clamped to the elements from index onwards; zero or less does nothing.
+    /// </param>
     class procedure Delete<T>(var source : TArray<T>; index, count : integer); static;
 {$IFDEF DELPHI_2010}
+    /// <summary>
+    ///   Copies an enumerable into a new array, for Delphi 2010 whose TEnumerable lacks ToArray.
+    /// </summary>
+    /// <param name="Enumerable">
+    ///   The collection to copy.
+    /// </param>
+    /// <param name="Count">
+    ///   The collection's exact element count; the array is sized from it.
+    /// </param>
+    /// <returns>
+    ///   The elements in enumeration order.
+    /// </returns>
     class function ToArray<T>(Enumerable : TEnumerable<T>; Count : Integer) : TArray<T>; static;
 {$ENDIF}
   end;
 
 {$IFNDEF DELPHI_XE8_UP }
+  /// <summary>
+  ///   Back-fills <c>TFormatSettings.Invariant</c> for compilers before XE8.
+  /// </summary>
   TFormatSettingsHelper = record helper for TFormatSettings
+    /// <summary>
+    ///   Returns culture-invariant format settings (US-style dates, '.' decimal separator, English month and
+    ///   day names).
+    /// </summary>
+    /// <returns>
+    ///   The invariant settings.
+    /// </returns>
     class function Invariant : TFormatSettings; static;
   end;
 {$ENDIF}
 
+  /// <summary>Pointer to an object reference.</summary>
   PObject = ^TObject;
 
+/// <summary>
+///   Finds an RTTI type by qualified name or, failing that, by its bare name (case-insensitive) among all types.
+/// </summary>
+/// <param name="AName">
+///   The qualified (<c>Unit.TType</c>) or bare type name.
+/// </param>
+/// <param name="AType">
+///   The type found, or nil.
+/// </param>
+/// <returns>
+///   True when a type was found.
+/// </returns>
+/// <remarks>
+///   The bare-name fallback enumerates every type in the application, so it is slow; the first match wins.
+/// </remarks>
 function FindType(const AName : string; out AType : TRttiType) : Boolean; overload;
+/// <summary>
+///   Finds the interface type with the given GUID among all RTTI types.
+/// </summary>
+/// <param name="AGuid">
+///   The interface GUID.
+/// </param>
+/// <param name="AType">
+///   The interface type found, or nil.
+/// </param>
+/// <returns>
+///   True when an interface with that GUID was found.
+/// </returns>
 function FindType(const AGuid : TGUID; out AType : TRttiType) : Boolean; overload;
 
 {$REGION 'Documentation'}
 ///	<summary>
 ///	  Returns the RTTI type of the given TClass.
 ///	</summary>
+///	<param name="AClass">
+///	  The class to look up.
+///	</param>
+///	<returns>
+///	  The class's RTTI type, from the unit's shared TRttiContext.
+///	</returns>
 {$ENDREGION}
 function GetRttiType(AClass : TClass) : TRttiType; overload;
 
@@ -752,23 +2018,153 @@ function GetRttiType(AClass : TClass) : TRttiType; overload;
 ///	<summary>
 ///	  Returns the RTTI type of the given TypeInfo.
 ///	</summary>
+///	<param name="ATypeInfo">
+///	  The type information to look up.
+///	</param>
+///	<returns>
+///	  The RTTI type, from the unit's shared TRttiContext; nil when ATypeInfo is nil.
+///	</returns>
 {$ENDREGION}
 function GetRttiType(ATypeInfo : PTypeInfo) : TRttiType; overload;
+/// <summary>
+///   Returns every RTTI type in the application, through the unit's shared TRttiContext.
+/// </summary>
+/// <returns>
+///   All types the context knows; slow, as it enumerates every package.
+/// </returns>
 function GetRttiTypes : TArray<TRttiType>;
+/// <summary>
+///   Reports whether an instance of one class can be used where another class is expected.
+/// </summary>
+/// <param name="ThisClass">
+///   The class being tested.
+/// </param>
+/// <param name="OtherClass">
+///   The target class; must not be nil.
+/// </param>
+/// <returns>
+///   True when ThisClass has RTTI and <c>TRttiTypeHelper.IsCovariantTo</c> accepts OtherClass.
+/// </returns>
 function IsClassCovariantTo(ThisClass, OtherClass : TClass) : Boolean;
+/// <summary>
+///   Reports whether a value of one type can be used where another type is expected (inheritance, or generic
+///   covariance of type arguments).
+/// </summary>
+/// <param name="ThisType">
+///   Type information of the type being tested.
+/// </param>
+/// <param name="OtherType">
+///   Type information of the target type.
+/// </param>
+/// <returns>
+///   True when ThisType has RTTI and <c>TRttiTypeHelper.IsCovariantTo</c> accepts OtherType.
+/// </returns>
 function IsTypeCovariantTo(ThisType, OtherType : PTypeInfo) : Boolean;
+/// <summary>
+///   Retrieves the RTTI type of a class and returns if this was successful.
+/// </summary>
+/// <param name="AClass">
+///   The class to look up.
+/// </param>
+/// <param name="AType">
+///   The RTTI type, or nil.
+/// </param>
+/// <returns>
+///   True when an RTTI type was found.
+/// </returns>
 function TryGetRttiType(AClass : TClass; out AType : TRttiType) : Boolean; overload;
+/// <summary>
+///   Retrieves the RTTI type for type information and returns if this was successful.
+/// </summary>
+/// <param name="ATypeInfo">
+///   The type information to look up.
+/// </param>
+/// <param name="AType">
+///   The RTTI type, or nil.
+/// </param>
+/// <returns>
+///   True when an RTTI type was found.
+/// </returns>
 function TryGetRttiType(ATypeInfo : PTypeInfo; out AType : TRttiType) : Boolean; overload;
 
+/// <summary>
+///   Orders two values: ordinals by ordinal value, floats by value, strings by case-sensitive CompareStr.
+/// </summary>
+/// <param name="Left">
+///   The first value.
+/// </param>
+/// <param name="Right">
+///   The second value.
+/// </param>
+/// <returns>
+///   Negative, zero or positive as Left is less than, equal to or greater than Right. Values of any other
+///   kind, or of mismatched kinds (an ordinal and a float included), return 0 - "equal".
+/// </returns>
 function CompareValue(const Left, Right : TValue) : Integer;
+/// <summary>
+///   Reports whether two values are the same: numbers (ordinals and floats, mixed freely) through
+///   <c>Math.SameValue</c>'s default tolerance, strings case-sensitively, classes, objects, pointers and variants
+///   by equality.
+/// </summary>
+/// <param name="Left">
+///   The first value.
+/// </param>
+/// <param name="Right">
+///   The second value.
+/// </param>
+/// <returns>
+///   True when the values are considered the same; False for unrelated kinds.
+/// </returns>
+/// <remarks>
+///   Any other pair with identical TypeInfo (records, sets, arrays...) is compared byte for byte over its raw
+///   data, so a managed field or a dynamic array compares by reference, not by content.
+/// </remarks>
 function SameValue(const Left, Right : TValue) : Boolean;
 
+/// <summary>
+///   Removes the <c>System.</c> unit prefix from a type name for display.
+/// </summary>
+/// <param name="s">
+///   The name to clean.
+/// </param>
+/// <returns>
+///   The name with EVERY occurrence of <c>System.</c> removed (case-insensitive); other unit prefixes are kept.
+/// </returns>
 function StripUnitName(const s : string) : string;
 
 {$IFDEF DELPHI_2010}
+/// <summary>
+///   Back-fills <c>StrUtils.SplitString</c> for Delphi 2010: splits a string at every occurrence of any of the
+///   delimiter characters.
+/// </summary>
+/// <param name="S">
+///   The string to split.
+/// </param>
+/// <param name="Delimiters">
+///   The set of delimiter characters.
+/// </param>
+/// <returns>
+///   The parts, empty parts included; an empty array for an empty S.
+/// </returns>
 function SplitString(const S : string; const Delimiters : string) : TStringDynArray;
 {$ENDIF}
 
+/// <summary>
+///   Overload of <c>SysUtils.Supports</c> for a TValue: queries the object behind an object or interface value
+///   for an interface.
+/// </summary>
+/// <param name="Instance">
+///   The value to query.
+/// </param>
+/// <param name="IID">
+///   The GUID of the interface wanted.
+/// </param>
+/// <param name="Intf">
+///   Receives the interface reference when the result is True.
+/// </param>
+/// <returns>
+///   True when the value holds an object or interface whose object supports IID; False for any other kind.
+/// </returns>
 function Supports(const Instance : TValue; const IID : TGUID; out Intf) : Boolean; overload;
 
 implementation
@@ -1004,11 +2400,30 @@ begin
   end;
 end;
 
-function ConvFloat2Ord(const ASource : TValue; ATarget : PTypeInfo; out AResult : TValue) : Boolean;
+//True when AValue lies within the range of the ordinal type ATarget, so TValue.FromOrdinal does not truncate it
+//(Integer 300 used to become Byte 44). A 64-bit target takes any Int64.
+function OrdinalFitsType(const AValue : Int64; ATarget : PTypeInfo) : Boolean;
+var
+  LTypeData : PTypeData;
 begin
-  Result := Frac(ASource.AsExtended) = 0;
+  if ATarget.Kind = tkInt64 then
+    Exit(True);
+  LTypeData := GetTypeData(ATarget);
+  if (ATarget.Kind = tkInteger) and (LTypeData.OrdType = otULong) then
+    Result := (AValue >= Cardinal(LTypeData.MinValue)) and (AValue <= Cardinal(LTypeData.MaxValue))
+  else
+    Result := (AValue >= LTypeData.MinValue) and (AValue <= LTypeData.MaxValue);
+end;
+
+function ConvFloat2Ord(const ASource : TValue; ATarget : PTypeInfo; out AResult : TValue) : Boolean;
+var
+  LValue : Extended;
+begin
+  LValue := ASource.AsExtended;
+  //Within Int64's range first, or Trunc raises; then a whole number that fits the target.
+  Result := (Abs(LValue) < 9.2E18) and (Frac(LValue) = 0) and OrdinalFitsType(Trunc(LValue), ATarget);
   if Result then
-    AResult := TValue.FromOrdinal(ATarget, Trunc(ASource.AsExtended));
+    AResult := TValue.FromOrdinal(ATarget, Trunc(LValue));
 end;
 
 function ConvFloat2Str(const ASource : TValue; ATarget : PTypeInfo; out AResult : TValue) : Boolean;
@@ -1077,8 +2492,9 @@ end;
 
 function ConvOrd2Ord(const ASource : TValue; ATarget : PTypeInfo; out AResult : TValue) : Boolean;
 begin
-  AResult := TValue.FromOrdinal(ATarget, ASource.AsOrdinal);
-  Result := True;
+  Result := OrdinalFitsType(ASource.AsOrdinal, ATarget);
+  if Result then
+    AResult := TValue.FromOrdinal(ATarget, ASource.AsOrdinal);
 end;
 
 function ConvOrd2Str(const ASource : TValue; ATarget : PTypeInfo; out AResult : TValue) : Boolean;
@@ -1222,11 +2638,40 @@ begin
     AResult := TValue.From<TDate>(date);
 end;
 
+//True when AValue's only comma is followed by exactly three digits and preceded by a whole number that does not start
+//with 0, as in '1,000' or '-12,500': a thousands group in one locale and a decimal comma in another.
+function IsAmbiguousDecimalComma(const AValue : string) : Boolean;
+var
+  commaPos : Integer;
+  wholePart : string;
+  fraction : string;
+  ch : Char;
+begin
+  Result := False;
+  commaPos := Pos(',', AValue);
+  if (commaPos = 0) or (Pos(',', AValue, commaPos + 1) > 0) or (Pos('.', AValue) > 0) then
+    Exit;
+  wholePart := Copy(AValue, 1, commaPos - 1);
+  if (wholePart <> '') and CharInSet(wholePart[1], ['+', '-']) then
+    Delete(wholePart, 1, 1);
+  fraction := Copy(AValue, commaPos + 1, MaxInt);
+  if (wholePart = '') or (wholePart[1] = '0') or (Length(fraction) <> 3) then
+    Exit;
+  for ch in wholePart + fraction do
+    if not CharInSet(ch, ['0'..'9']) then
+      Exit;
+  Result := True;
+end;
+
 function ConvStr2Float(const ASource : TValue; ATarget : PTypeInfo; out AResult : TValue) : Boolean;
 var
   lValue : string;
   lFloat : Extended;
 begin
+  //A decimal comma is accepted ('2,5'), except where it could be a thousands separator, which is refused rather
+  //than read as a decimal ('1,000' used to become 1.0).
+  if IsAmbiguousDecimalComma(Trim(ASource.AsString)) then
+    Exit(False);
   lValue := StringReplace(ASource.AsString, ',', '.', [rfReplaceAll]);
 
   if ATarget = TypeInfo(TDate) then
@@ -1870,7 +3315,8 @@ begin
   end
   else if Left.TypeInfo = Right.TypeInfo then
   begin
-    Result := Left.AsPointer = Right.AsPointer;
+    Result := (Left.DataSize = Right.DataSize)
+      and CompareMem(Left.GetReferenceToRawData, Right.GetReferenceToRawData, Left.DataSize);
   end
   else
   begin
@@ -1923,25 +3369,17 @@ end;
 
 class procedure TArrayHelper.Delete<T>(var source : TArray<T>; index, count : integer);
 var
-  len, tailLen : integer;
-  i, tailStart : integer;
+  len : integer;
+  i : integer;
 begin
-  Len := Length(Source);
-  if (Index >= 1) and (Index <= Len) then
+  len := Length(source);
+  if (index >= 0) and (index < len) and (count > 0) then
   begin
-    if Count > 0 then
-    begin
-      TailLen := len - index;
-      tailStart := index + count;
-      if Count > tailLen then
-        Count := tailLen;
-      if (tailLen > 0) and (tailStart <= len - 1) then
-      begin
-        for i := 0 to tailLen - 1 do
-          source[index + i] := source[tailStart + i];
-      end;
-      SetLength(source, len - count);
-    end;
+    if count > len - index then
+      count := len - index;
+    for i := index to len - count - 1 do
+      source[i] := source[i + count];
+    SetLength(source, len - count);
   end;
 end;
 
@@ -2105,6 +3543,7 @@ end;
 function TObjectHelper.TryGetType(out AType : TRttiType) : Boolean;
 begin
   Result := False;
+  AType := nil;
   if Assigned(Self) then
   begin
     AType := Context.GetType(ClassInfo);
@@ -2247,7 +3686,7 @@ begin
     if Length(Args) > 1 then
       Result := Result + TValue.ToString(Args[1]);
   end
-  else
+  else if Length(Args) > 0 then
     Result := Result + TValue.ToString(Args[0]);
   Result := Result + ')';
 end;
@@ -2535,7 +3974,7 @@ begin
       otherArgs := t.GetGenericArguments;
       for i := Low(args) to High(args) do
       begin
-        if args[i].IsInterface and args[i].IsInterface
+        if args[i].IsInterface and otherArgs[i].IsInterface
           and args[i].InheritsFrom(otherArgs[i].Handle) then
         begin
           Continue;
@@ -3170,12 +4609,16 @@ begin
     tkClass :
       begin
         LObject := Value.AsObject;
+        if not Assigned(LObject) then
+          Exit('nil');
         Result := Format('%s($%x)', [StripUnitName(LObject.ClassName),
             NativeInt(LObject)]);
       end;
     tkInterface :
       begin
         LInterface := Value.AsInterface;
+        if not Assigned(LInterface) then
+          Exit('nil');
         LObject := LInterface as TObject;
         Result := Format('%s($%x) as %s', [StripUnitName(LObject.ClassName),
             NativeInt(LInterface), StripUnitName(GetTypeName(Value.TypeInfo))]);
@@ -3232,7 +4675,10 @@ begin
         tkRecord : Result := ConvAny2Nullable(Self, ATypeInfo, AResult);
       end;
     end;
-    if not Result then
+    //Between numeric types the converters above have decided: they refuse a value that does not fit, and TryCast
+    //would truncate it instead (Integer 300 to Byte 44).
+    if (not Result) and not ((Kind in [tkInteger, tkChar, tkWChar, tkEnumeration, tkInt64, tkFloat])
+      and (ATypeInfo.Kind in [tkInteger, tkChar, tkWChar, tkEnumeration, tkInt64])) then
     begin
       Result := TryCast(ATypeInfo, AResult);
     end;

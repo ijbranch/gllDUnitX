@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -24,7 +24,7 @@
 {  limitations under the License.                                           }
 {                                                                           }
 { This unit is largely a port of the NUnit TestNameParser class             }
-{ Copyright � 2012-2014 Charlie Poole                                       }
+{ Copyright (C) 2012-2014 Charlie Poole                                     }
 { License  : http://nunit.org/index.php?p=vsTestAdapterLicense&r=2.6.3      }
 {                                                                           }
 {***************************************************************************}
@@ -36,11 +36,52 @@ interface
 {$I DUnitX.inc}
 
 type
+  /// <summary>
+  ///   Splits a --run argument into individual test names (a port of NUnit's TestNameParser).
+  /// </summary>
+  /// <remarks>
+  ///   Names are comma-separated, but a comma inside double quotes, parentheses or angle brackets does not split, so
+  ///   parameterised names such as <c>Fixture.Test(1,2)</c> survive intact.
+  /// </remarks>
   TTestNameParser = class
   private
+    /// <summary>
+    ///   Reads the test name that starts at index and advances index past its separator.
+    /// </summary>
+    /// <param name="arg">
+    ///   The full argument text.
+    /// </param>
+    /// <param name="index">
+    ///   On entry the 1-based position of the name's first character; on exit the position just after the separator,
+    ///   or past the end of the text.
+    /// </param>
+    /// <returns>
+    ///   The trimmed name; may be empty.
+    /// </returns>
     class function GetTestName(const arg : string; var index : integer) : string;
+    /// <summary>
+    ///   Finds the next top-level comma at or after index, ignoring commas that are quoted or nested in () or &lt;&gt;.
+    /// </summary>
+    /// <param name="arg">
+    ///   The full argument text.
+    /// </param>
+    /// <param name="index">
+    ///   The 1-based position to start scanning from.
+    /// </param>
+    /// <returns>
+    ///   The position of the separating comma, or -1 when there is none.
+    /// </returns>
     class function GetSeparator(const arg : string; index : integer) : integer;
   public
+    /// <summary>
+    ///   Splits a comma-separated list of test names.
+    /// </summary>
+    /// <param name="arg">
+    ///   The list text.
+    /// </param>
+    /// <returns>
+    ///   The trimmed, non-empty names in order; an empty array for empty text.
+    /// </returns>
     class function Parse(const arg : string) : TArray<string>;
   end;
 

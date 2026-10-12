@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -40,42 +40,81 @@ uses
 {$ENDIF}
 
 type
+  /// <summary>
+  ///   Sample enumeration whose set type is passed as a [TestCase] argument.
+  /// </summary>
   TTestEnum = (
+    /// <summary>Bit 0 of the set (ordinal value 1 as a set).</summary>
     teOne,
+    /// <summary>Bit 1 of the set (ordinal value 2 as a set).</summary>
     teTwo,
+    /// <summary>Bit 2 of the set (ordinal value 4 as a set).</summary>
     teThree
   );
+  /// <summary>
+  ///   Set of TTestEnum, to prove '[a,b]' strings in a [TestCase] are converted to set parameters.
+  /// </summary>
   TTestEnums = set of TTestEnum;
 
 {$M+}
+  /// <summary>
+  ///   Example fixture exercising the attribute surface: [TestCase] parameter conversion (integers, dates, times,
+  ///   sets), categories, [MaxTime], disabled and ignored tests, [WillRaise], per-test setup/teardown, and published
+  ///   methods picked up as tests.
+  /// </summary>
   [TestFixture('ExampleFixture1')]
   [Category('examples')]
   TMyExampleTests = class
   public
-    //Run the same test with mulitiple parameters.
-    //ideally we would like to implement this using
-    //[TestCase('Case 1',[1,3,4])]
-    //but the delphi compiler will not accept arrays of
-    //TValue as parameters to attributes, so we have to use
-    //a string constant.. the attribute will split the string
-    //and attempt to convert the values to the parameters of the
-    //test method.
-
-    //TODO: Add named params so that certain params can be passed and others are defaulted.
-    //TODO: Add TestCase where the params are over and under the actually name to pass.
-    //TODO: Make sure that each test case is passed and run only once, currently run multiple times. Actually its X*X times where X is the number of test cases in the fixture.
+    /// <summary>
+    ///   Proves one method runs once per [TestCase] attribute with that case's comma-separated values converted to
+    ///   its integer parameters.
+    /// </summary>
+    /// <param name="param1">
+    ///   First value from the test case string.
+    /// </param>
+    /// <param name="param2">
+    ///   Second value from the test case string.
+    /// </param>
+    /// <remarks>
+    ///   Ideally this would be [TestCase('Case 1',[1,3,4])], but the Delphi compiler will not accept arrays of TValue
+    ///   as attribute parameters, so a string constant is used: the attribute splits it and converts the values to
+    ///   the method's parameters. Upstream TODOs: named parameters so some can be defaulted; cases with too many or
+    ///   too few values; make sure each case runs only once (it once ran X*X times for X cases).
+    /// </remarks>
     [Test]
     [TestCase('Case 1', '1,2')]
     [TestCase('Case 2', '3,4')]
     [TestCase('Case 3', '5,6')]
     procedure TestOne(param1 : integer; param2 : integer);
 
+    /// <summary>
+    ///   Proves <c>Assert.AreEqual</c> handles the full UInt64 range: High(UInt64) equals the literal
+    ///   18446744073709551615 without sign or truncation errors.
+    /// </summary>
     [Test]
     procedure TestUint64Max;
 
+    /// <summary>
+    ///   Proves a [TestCase] alone, without [Test], makes a method a test and converts a string and an integer
+    ///   argument.
+    /// </summary>
+    /// <param name="a">
+    ///   String value from the test case ('Blah').
+    /// </param>
+    /// <param name="b">
+    ///   Integer value from the test case (1).
+    /// </param>
     [TestCase('Case 3', 'Blah,1')]
     procedure AnotherTestMethod(const a : string; const b : integer);
 
+    /// <summary>
+    ///   Proves ISO 8601 date-time strings in every common form (space or T separator, Z, and both offset spellings)
+    ///   convert to the same TDateTime parameter, to the second.
+    /// </summary>
+    /// <param name="dateTime">
+    ///   The converted test-case value; expected to be 1988-10-21 17:44:23 once milliseconds are dropped.
+    /// </param>
     [Test]
     [TestCase('Date, space, time', '1988-10-21 17:44:23.456')]
     [TestCase('Date, T, time', '1988-10-21T17:44:23.456')]
@@ -84,15 +123,37 @@ type
     [TestCase('Date, T, time, offset (2)', '1988-10-21T17:44:23.456+0230')]
     procedure TestDateTimeArgument(dateTime : TDateTime);
 
+    /// <summary>
+    ///   Proves an ISO date-only string converts to a TDate parameter.
+    /// </summary>
+    /// <param name="date">
+    ///   The converted test-case value; expected to be 1988-10-21.
+    /// </param>
     [Test]
     [TestCase('Just date', '1988-10-21')]
     procedure TestDateArgument(const date : TDate);
 
+    /// <summary>
+    ///   Proves a time string, with or without milliseconds, converts to a TTime parameter.
+    /// </summary>
+    /// <param name="time">
+    ///   The converted test-case value; expected to be 17:44:23 once milliseconds are dropped.
+    /// </param>
     [Test]
     [TestCase('time with ms', '17:44:23.456')]
     [TestCase('time without ms', '17:44:23')]
     procedure TestTimeArgument(time : TTime);
 
+    /// <summary>
+    ///   Proves set literals (empty, single, several, and out of order) convert to the right set value, using '|' as
+    ///   the case's separator so the commas inside the set are not split.
+    /// </summary>
+    /// <param name="aset">
+    ///   The converted set.
+    /// </param>
+    /// <param name="ExpectedAsInteger">
+    ///   The set's expected bit pattern as a byte.
+    /// </param>
     [Test]
     [TestCase('Set []', '[]|0', '|')]
     [TestCase('Set [teOne]', '[teOne]|1', '|')]
@@ -104,85 +165,169 @@ type
     [TestCase('Set [teThree,teTwo,teOne]', '[teThree,teTwo,teOne]|7', '|')]
     procedure TestSetArgument(aset : TTestEnums; ExpectedAsInteger : UInt8);
 
+    /// <summary>
+    ///   Proves a test carrying a comma-separated [Category] runs (and so can be selected by either category); the
+    ///   assertion itself is trivial.
+    /// </summary>
     [Test]
     [Category('Bar,foo')]
     procedure TestTwo;
 
+    /// <summary>
+    ///   Second test in the 'Bar,foo' categories, so a category filter has more than one test to select.
+    /// </summary>
     [Test]
     [Category('Bar,foo')]
     procedure TestTwoOne;
 
+    /// <summary>
+    ///   Proves a test that finishes inside its [MaxTime] limit passes; [MaxTime] is checked after the method returns,
+    ///   and exceeding it would fail the test with ETimedOut.
+    /// </summary>
     [Test]
     [MaxTime(1000)]
     procedure TestMaxTime;
 
-    //Disabled test
+    /// <summary>
+    ///   Disabled with [Test(false)]: proves a disabled test is never called (it raises if it is).
+    /// </summary>
+    /// <exception cref="Exception">
+    ///   Raised if the runner calls it, which would show [Test(false)] was not honoured.
+    /// </exception>
     [Test(false)]
     procedure DontCallMe;
 
+    /// <summary>
+    ///   Proves an [Ignore]d test is reported as ignored and not run; its body fails if called.
+    /// </summary>
     [Test]
     [Ignore('I was told to ignore me')]
     procedure IgnoreMe;
 
+    /// <summary>
+    ///   Proves [WillRaise(EOutOfMemory)] turns the expected exception into a pass.
+    /// </summary>
     [WillRaise(EOutOfMemory)]
     procedure FailMe;
 
+    /// <summary>
+    ///   Proves [WillRaise(..., exDescendant)] accepts a descendant: EOutOfMemory satisfies EHeapException.
+    /// </summary>
     [WillRaise(EHeapException, exDescendant)]
     procedure FailMeToo;
 
+    /// <summary>
+    ///   Proves [WillRaise(Exception, exDescendant)] accepts any exception, here EAbort.
+    /// </summary>
     [WillRaise(Exception, exDescendant)]
     procedure FailAny;
 
+    /// <summary>
+    ///   Proves [Ignore] wins over [WillRaise]: the method raises EAbort, not EOutOfMemory, and would fail if run.
+    /// </summary>
     [WillRaise(EOutOfMemory)]
     [Ignore('I am not behaving as I should')]
     procedure IgnoreMeCauseImWrong;
 
+    /// <summary>
+    ///   Per-test setup; reports a status line so the log shows it ran before each test.
+    /// </summary>
     [Setup]
     procedure Setup;
 
+    /// <summary>
+    ///   Per-test teardown; reports a status line so the log shows it ran after each test.
+    /// </summary>
     [TearDown]
     procedure TearDown;
 
   published
+    /// <summary>
+    ///   Proves a published method with no [Test] attribute is still run as a test, and takes its [Category].
+    /// </summary>
     [Category('blah')]
     procedure TestMeAnyway;
 
+    /// <summary>
+    ///   Proves [Ignore] is honoured on a published (attribute-less) test; its body fails if called.
+    /// </summary>
     [Ignore('I was told to ignore me anyway')]
     procedure IgnoreMeAnyway;
 
   end;
 
+  /// <summary>
+  ///   Proves published methods are included as tests: the test sets a flag that the per-test teardown asserts.
+  /// </summary>
   [TestFixture]
   TExampleFixture2 = class
   private
+    /// <summary>Set by the published test; checked by TearDownFixture to prove the test ran.</summary>
     FPublished_Procedures_Are_Included_As_Tests_Called : Boolean;
   public
+    /// <summary>
+    ///   Per-test setup (despite its name): logs and clears the "test was called" flag.
+    /// </summary>
     [Setup]
     procedure SetupFixture;
+    /// <summary>
+    ///   Per-test teardown (despite its name): asserts the published test set the flag.
+    /// </summary>
+    /// <exception cref="ETestFailure">
+    ///   Raised (via Assert) when the published test did not run.
+    /// </exception>
     [Teardown]
     procedure TearDownFixture;
+    /// <summary>
+    ///   Empty destructor, present so the fixture has a virtual destructor for the runner to call.
+    /// </summary>
     destructor Destroy; override;
   published
+    /// <summary>
+    ///   Proves a published method without [Test] is discovered and run, by recording that it was called.
+    /// </summary>
     procedure Published_Procedures_Are_Included_As_Tests;
   end;
 
+  /// <summary>
+  ///   Proves the fixture's constructor serves as fixture setup: when a parameterless constructor exists, the
+  ///   [SetupFixture] method is not called.
+  /// </summary>
   [TestFixture]
   TExampleFixture3 = class
   private
+    /// <summary>Set by the constructor; asserted by ATest.</summary>
     FSetupCalled : boolean;
   public
-    // Testing constructor/destructor as fixture setup/teardown
-    // Delphi 2010 does support calling of constructor
 {$IFDEF DELPHI_XE_UP}
+    /// <summary>
+    ///   Fixture setup by construction: records that it ran. (Delphi 2010 did not call the constructor, hence the
+    ///   AfterConstruction alternative.)
+    /// </summary>
     constructor Create;
 {$ELSE}
+    /// <summary>
+    ///   Fixture setup on compilers that do not call the constructor: records that it ran.
+    /// </summary>
     procedure AfterConstruction; override;
 {$ENDIF}
+    /// <summary>
+    ///   Fixture teardown by destruction; empty.
+    /// </summary>
     destructor Destroy; override;
 
+    /// <summary>
+    ///   Must not be called when the constructor provides fixture setup; fails if it is.
+    /// </summary>
+    /// <exception cref="ETestFailure">
+    ///   Raised (via Assert) if the runner calls it.
+    /// </exception>
     [SetupFixture]
     procedure SetupFixture;
   published
+    /// <summary>
+    ///   Proves the constructor ran before the fixture's tests.
+    /// </summary>
     procedure ATest;
   end;
 

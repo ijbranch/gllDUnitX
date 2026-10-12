@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -32,9 +32,16 @@ uses
    DUnitX.TestFramework;
 
 type
+   /// <summary>
+   ///   Example fixture showing the inequality assertions across several value types.
+   /// </summary>
    [TestFixture]
    TDUnitXExamplesEqualityAsserts = class
    public
+     /// <summary>
+     ///   Proves Assert.AreNotEqual passes for unequal strings, unequal class references and floating-point values
+     ///   further apart than the tolerance, and shows Assert.IsFalse for a Boolean comparison.
+     /// </summary>
      [Test]
      procedure Assert_AreNotEqual;
    end;

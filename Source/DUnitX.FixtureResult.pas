@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -46,57 +46,223 @@ uses
   DUnitX.InternalInterfaces;
 
 type
+  /// <summary>
+  ///   The result of one test fixture: its own test results, the results of nested fixtures, outcome counts and
+  ///   timing. Fixture results form a tree that mirrors the namespace/fixture hierarchy.
+  /// </summary>
   TDUnitXFixtureResult = class(TInterfacedObject, IFixtureResult, IFixtureResultBuilder)
   private
+    /// <summary>Results of nested fixtures; created lazily, nil until the first child is added.</summary>
     FChildren : IList<IFixtureResult>;
+    /// <summary>Results of this fixture's own tests; created lazily, nil until the first result is added.</summary>
     FTestResults : IList<ITestResult>;
+    /// <summary>The fixture this result describes; replaced by the child's fixture when <c>Reduce</c> merges a child.</summary>
     FFixture : ITestFixtureInfo;
 
-    FAllPassed : boolean;
+    /// <summary>Number of tests that ended in an error, including children once rolled up.</summary>
     FErrorCount : integer;
+    /// <summary>Number of tests that failed an assertion, including children once rolled up.</summary>
     FFailureCount : integer;
+    /// <summary>Number of tests that passed, including children once rolled up.</summary>
     FPassCount : integer;
+    /// <summary>Number of tests that were ignored, including children once rolled up.</summary>
     FIgnoredCount : integer;
+    /// <summary>Number of tests that leaked memory, including children once rolled up.</summary>
     FMemoryLeakCount : Integer;
+    /// <summary>Number of this fixture's own test results recorded; children are not added to it.</summary>
     FTotalCount : integer;
 
+    /// <summary>Times the fixture from construction to <c>RollUpResults</c>.</summary>
     FStopWatch : TStopwatch;
+    /// <summary>Wall-clock time the result object was created.</summary>
     FStartTime : TDateTime;
+    /// <summary>Wall-clock finish time; zero (undefined) until <c>RollUpResults</c> runs, which also guards re-entry.</summary>
     FFinishTime : TDateTime;
+    /// <summary>Elapsed time from the stopwatch, which spans the fixture's own tests and its children's.</summary>
     FDuration : TTimeSpan;
 
+    /// <summary>Fixture name; becomes the child's name when <c>Reduce</c> merges a single child.</summary>
     FName : string;
+    /// <summary>Fixture namespace; extended with the old name when <c>Reduce</c> merges a single child.</summary>
     FNameSpace : string;
+    /// <summary>True when the result has a parent, so a lone child may be merged into it; the root never reduces.</summary>
     FCanReduce : boolean;
 
   protected
+    /// <summary>
+    ///   Simplifies the result tree: reduces every child first, then, when this result has a parent, no test results
+    ///   of its own and exactly one child, absorbs that child (name, fixture, tests and grandchildren) so namespace
+    ///   levels with nothing in them do not appear as separate nodes.
+    /// </summary>
     procedure Reduce;
 
+    /// <summary>
+    ///   Counts the nested fixture results.
+    /// </summary>
+    /// <returns>
+    ///   The number of children, 0 when there are none.
+    /// </returns>
     function GetChildCount : Integer;
+    /// <summary>
+    ///   Gives the nested fixture results, creating an empty list on first use so callers never receive nil.
+    /// </summary>
+    /// <returns>
+    ///   The children list itself (not a copy).
+    /// </returns>
     function GetChildren : IList<IFixtureResult>;
+    /// <summary>
+    ///   Counts tests that ended in an error.
+    /// </summary>
+    /// <returns>
+    ///   The error count, including children once rolled up.
+    /// </returns>
     function GetErrorCount : Integer;
+    /// <summary>
+    ///   Collects this fixture's own test results that carry error details.
+    /// </summary>
+    /// <returns>
+    ///   A new list of the results supporting <c>ITestError</c>; children are not searched.
+    /// </returns>
     function GetErrors : IList<ITestError>;
+    /// <summary>
+    ///   Counts tests that failed an assertion.
+    /// </summary>
+    /// <returns>
+    ///   The failure count, including children once rolled up.
+    /// </returns>
     function GetFailureCount : Integer;
+    /// <summary>
+    ///   Collects this fixture's own failed test results.
+    /// </summary>
+    /// <returns>
+    ///   A new list of the results whose type is <c>Failure</c>; children are not searched.
+    /// </returns>
     function GetFailures : IList<ITestResult>;
+    /// <summary>
+    ///   Gives the fixture this result describes.
+    /// </summary>
+    /// <returns>
+    ///   The fixture information.
+    /// </returns>
     function GetFixture : ITestFixtureInfo;
+    /// <summary>
+    ///   Reports whether the fixture did not succeed.
+    /// </summary>
+    /// <returns>
+    ///   True when any test failed, errored or leaked memory; passes and ignores alone return False.
+    /// </returns>
     function GetHasFailures : Boolean;
+    /// <summary>
+    ///   Counts tests that passed.
+    /// </summary>
+    /// <returns>
+    ///   The pass count, including children once rolled up.
+    /// </returns>
     function GetPassCount : Integer;
+    /// <summary>
+    ///   Collects this fixture's own passed test results.
+    /// </summary>
+    /// <returns>
+    ///   A new list of the results whose type is <c>Pass</c>; children are not searched.
+    /// </returns>
     function GetPasses : IList<ITestResult>;
+    /// <summary>
+    ///   Counts this fixture's own test results.
+    /// </summary>
+    /// <returns>
+    ///   The number of results, 0 when there are none.
+    /// </returns>
     function GetTestResultCount : Integer;
+    /// <summary>
+    ///   Gives this fixture's own test results, creating an empty list on first use so callers never receive nil.
+    /// </summary>
+    /// <returns>
+    ///   The result list itself (not a copy).
+    /// </returns>
     function GetTestResults : IList<ITestResult>;
+    /// <summary>
+    ///   Counts tests that were ignored.
+    /// </summary>
+    /// <returns>
+    ///   The ignored count, including children once rolled up.
+    /// </returns>
     function GetIgnoredCount : Integer;
 
+    /// <summary>
+    ///   Gives the time the fixture result was created.
+    /// </summary>
+    /// <returns>
+    ///   The wall-clock start time.
+    /// </returns>
     function GetStartTime : TDateTime;
+    /// <summary>
+    ///   Gives the time the fixture finished.
+    /// </summary>
+    /// <returns>
+    ///   The finish time (the latest child finish time for a fixture with children); zero before rolling up.
+    /// </returns>
     function GetFinishTime : TDateTime;
+    /// <summary>
+    ///   Gives the elapsed time of the fixture.
+    /// </summary>
+    /// <returns>
+    ///   The duration set by <c>RollUpResults</c>.
+    /// </returns>
     function GetDuration : TTimeSpan;
+    /// <summary>
+    ///   Gives the fixture's name.
+    /// </summary>
+    /// <returns>
+    ///   The name, as changed by <c>Reduce</c> if a child was merged.
+    /// </returns>
     function GetName : string;
+    /// <summary>
+    ///   Gives the fixture's namespace.
+    /// </summary>
+    /// <returns>
+    ///   The namespace, as extended by <c>Reduce</c> if a child was merged.
+    /// </returns>
     function GetNamespace : string;
 
+    /// <summary>
+    ///   Implements <c>IFixtureResultBuilder</c>: adds a nested fixture result, creating the children list on first
+    ///   use.
+    /// </summary>
+    /// <param name="AFixtureResult">
+    ///   The child fixture result.
+    /// </param>
     procedure AddChild(const AFixtureResult : IFixtureResult);
+    /// <summary>
+    ///   Implements <c>IFixtureResultBuilder</c>: adds a test result to this fixture and counts it by outcome.
+    /// </summary>
+    /// <param name="AResult">
+    ///   The test result to add.
+    /// </param>
     procedure AddTestResult(const AResult : ITestResult);
+    /// <summary>
+    ///   Increments the total and the counter that matches the result's outcome.
+    /// </summary>
+    /// <param name="AResult">
+    ///   The test result to count.
+    /// </param>
     procedure RecordTestResult(const AResult : ITestResult);
+    /// <summary>
+    ///   Implements <c>IFixtureResultBuilder</c>: finishes the fixture. A fixture with children rolls each child up,
+    ///   adds the children's counts to its own and takes the latest finish time. Every fixture stops its stopwatch,
+    ///   which spans its own tests and its children's. Runs only once.
+    /// </summary>
     procedure RollUpResults;
   public
+    /// <summary>
+    ///   Creates the result for a fixture, starts its timing and attaches it to its parent's result.
+    /// </summary>
+    /// <param name="AParentResult">
+    ///   The parent fixture's result, which must support <c>IFixtureResultBuilder</c>; nil for the root, which is
+    ///   then never reduced.
+    /// </param>
+    /// <param name="AFixture">
+    ///   The fixture the result describes; its name and namespace are copied.
+    /// </param>
     constructor Create(const AParentResult : IFixtureResult; const AFixture : ITestFixtureInfo);
   end;
 
@@ -302,9 +468,6 @@ begin
     TTestResultType.Ignored : Inc(FIgnoredCount);
     TTestResultType.MemoryLeak : Inc(FMemoryLeakCount);
   end;
-
-  if AResult.ResultType <> TTestResultType.Pass then
-    FAllPassed := False;
 end;
 
 procedure TDUnitXFixtureResult.Reduce;
@@ -348,8 +511,11 @@ begin
 
   if FChildren <> nil then
   begin
-    FDuration := TTimeSpan.Zero;
-    FFinishTime := FStartTime;
+    //The stopwatch spans this fixture's own tests and its children's, which run inside it; the sum of the children's
+    //durations, used before, left out the fixture's own tests.
+    FStopWatch.Stop;
+    FDuration := FStopWatch.Elapsed;
+    FFinishTime := Now;
     for fixture in FChildren do
     begin
       (fixture as IFixtureResultBuilder).RollUpResults;
@@ -360,9 +526,7 @@ begin
       //IFixtureResult has no leak count; every fixture result is one of ours.
       if fixture is TDUnitXFixtureResult then
         Inc(FMemoryLeakCount, TDUnitXFixtureResult(fixture).FMemoryLeakCount);
-      FAllPassed := FAllPassed and (not fixture.HasFailures);
       FFinishTime := Max(FFinishTime, fixture.FinishTime);
-      FDuration := FDuration.Add(fixture.Duration);
     end;
   end
   else if (FFinishTime = UNDEFINED_DATETIME) then

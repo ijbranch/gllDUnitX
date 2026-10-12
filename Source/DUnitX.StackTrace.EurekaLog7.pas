@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -45,10 +45,45 @@ uses
   DUnitX.TestFramework;
 
 type
+  /// <summary>
+  ///   Stack trace provider backed by EurekaLog 7. It is registered as the <c>IStacktraceProvider</c> only when
+  ///   <c>USE_EUREKALOG7</c> is defined; without it every method returns an empty string.
+  /// </summary>
   TEurekaLog7StackTraceProvider = class(TInterfacedObject, IStacktraceProvider)
   public
+    /// <summary>
+    ///   Builds a textual call stack starting at the exception address, using EurekaLog's <c>TEurekaStackListV7</c>.
+    /// </summary>
+    /// <param name="ex">
+    ///   The exception being reported (not used by this provider).
+    /// </param>
+    /// <param name="exAddressAddress">
+    ///   The address at which the exception was raised; the stack walk starts there.
+    /// </param>
+    /// <returns>
+    ///   The formatted call stack, or an empty string when EurekaLog support is not compiled in.
+    /// </returns>
     function GetStackTrace(const ex : Exception; const exAddressAddress : Pointer) : string;
+    /// <summary>
+    ///   Resolves a code address to EurekaLog's location description (unit, routine and line).
+    /// </summary>
+    /// <param name="Addrs">
+    ///   The code address to resolve.
+    /// </param>
+    /// <returns>
+    ///   The location text, or an empty string when EurekaLog support is not compiled in.
+    /// </returns>
     function PointerToLocationInfo(const Addrs : Pointer) : string;
+    /// <summary>
+    ///   Resolves a code address to descriptive text. This provider returns the same location text as
+    ///   <c>PointerToLocationInfo</c>.
+    /// </summary>
+    /// <param name="Addrs">
+    ///   The code address to resolve.
+    /// </param>
+    /// <returns>
+    ///   The location text, or an empty string when EurekaLog support is not compiled in.
+    /// </returns>
     function PointerToAddressInfo(Addrs : Pointer) : string;
   end;
 

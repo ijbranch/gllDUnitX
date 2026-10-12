@@ -36,59 +36,131 @@ uses
 
 type
 {$M+}
+  /// <summary>
+  ///   Tests for the <c>Assert</c> class itself: every assertion must pass when its condition holds and raise
+  ///   ETestFailure (or the outcome exception ETestPass / ETestIgnored) when it does not, including the NaN,
+  ///   infinity, identity and message-format cases fixed in the fork (issue #398).
+  /// </summary>
   [TestFixture]
   TTestsAssert = class
   published
+    /// <summary>
+    ///   Proves Assert.Pass ends the test by raising ETestPass, the exception the runner records as a pass.
+    /// </summary>
     [Test]
     procedure Pass_Throws_ETestPass_Exception;
 
+    /// <summary>
+    ///   Proves Assert.Pass with a message raises ETestPass carrying exactly that message (WillRaiseWithMessage
+    ///   compares it case-sensitively), so the pass reason reaches the runner.
+    /// </summary>
     [Test]
     procedure Pass_Throws_ETestPass_Exception_With_Message;
 
+    /// <summary>
+    ///   Proves Assert.Ignore raises ETestIgnored. Assert.Ignore is the runtime counterpart of the [Ignore] attribute:
+    ///   it stops a test whose precondition turned out to be absent and reports it as ignored rather than passed;
+    ///   without it the only ways to skip are Assert.Pass, which lies, and doing nothing, which lies more quietly.
+    /// </summary>
     [Test]
     procedure Ignore_Throws_ETestIgnored_Exception;
 
+    /// <summary>
+    ///   Proves Assert.Ignore with a reason still raises ETestIgnored; the reason must survive to the runner, since a
+    ///   skip whose reason is dropped is nearly as unhelpful as no skip at all. WillRaiseWithMessage compares the
+    ///   exception's message with the reason, case-sensitively.
+    /// </summary>
     [Test]
     procedure Ignore_Throws_ETestIgnored_Exception_With_Message;
 
+    /// <summary>
+    ///   Proves the deprecated IsType&lt;T&gt; fails rather than passing whatever it is given: a value of type T is
+    ///   always of type T, so it checked nothing.
+    /// </summary>
+    [Test]
+    procedure IsType_Fails_Because_It_Cannot_Check;
+
+    /// <summary>
+    ///   Proves Assert.Fail raises ETestFailure.
+    /// </summary>
     [Test]
     procedure Fail_Throws_ETestFailure_Exception;
 
+    /// <summary>
+    ///   Proves Assert.Fail with a message raises ETestFailure carrying exactly that message (WillRaiseWithMessage
+    ///   compares it case-sensitively), so the failure reason reaches the runner.
+    /// </summary>
     [Test]
     procedure Fail_Throws_ETestFailure_Exception_With_Message;
 
+    /// <summary>
+    ///   Proves Assert.Fail given an explicit error address raises at that address: the inner WillNotRaise does not
+    ///   see the failure, which surfaces only when the enclosing method returns.
+    /// </summary>
     [Test]
     procedure Fail_Throws_ETestFailure_Exception_With_Return_Address_Reference;
 
+    /// <summary>
+    ///   Proves Assert.Fail without an address raises at its caller, so an enclosing WillRaise catches it and the
+    ///   outer WillNotRaise sees nothing.
+    /// </summary>
     [Test]
     procedure Fail_Throws_ETestFailure_Exception_With_Caller_Address_Reference;
 
+    /// <summary>
+    ///   Proves AreEqual( string ) passes for identical strings.
+    /// </summary>
     [Test]
     procedure AreEqual_String_Throws_No_Exception_When_Values_Are_Equal;
 
+    /// <summary>
+    ///   Proves AreEqual( Integer ) passes for equal values.
+    /// </summary>
     [Test]
     procedure AreEqual_Integer_Throws_No_Exception_When_Values_Are_Equal;
 
+    /// <summary>
+    ///   Proves AreEqual( Integer ) raises ETestFailure for different values.
+    /// </summary>
     [Test]
     procedure AreEqual_Integer_Throws_ETestFailure_When_Values_Are_NotEqual;
 
 {$IFDEF CPU64BITS}
+    /// <summary>
+    ///   Proves on Win64 that AreEqual resolves an overload for a NativeInt against an Integer, either way round,
+    ///   and passes for equal values.
+    /// </summary>
     [Test]
     procedure AreEqual_Integer_NativeInt_Throws_No_Exception_When_Values_Are_Equal;
 
+    /// <summary>
+    ///   Proves on Win64 that AreEqual of an Integer and a different NativeInt raises ETestFailure.
+    /// </summary>
     [Test]
     procedure AreEqual_Integer_NativeInt_Throws_ETestFailure_When_Values_Are_NotEqual;
 {$ENDIF}
 
+    /// <summary>
+    ///   Proves AreEqual( Extended ) passes when the values differ by less than the tolerance.
+    /// </summary>
     [Test]
     procedure AreEqual_Extended_Throws_No_Exception_When_Values_Are_Equal;
 
+    /// <summary>
+    ///   Proves AreEqual( Extended ) raises ETestFailure when the values differ by more than the tolerance.
+    /// </summary>
     [Test]
     procedure AreEqual_Extended_Throws_ETestFailure_When_Values_Are_NotEqual;
 
+    /// <summary>
+    ///   Proves AreEqual( Double ) passes when the values differ by less than the tolerance.
+    /// </summary>
     [Test]
     procedure AreEqual_Double_Throws_No_Exception_When_Values_Are_Equal;
 
+    /// <summary>
+    ///   Proves AreEqual( Double ) raises ETestFailure when the values differ by more than the tolerance.
+    /// </summary>
     [Test]
     procedure AreEqual_Double_Throws_ETestFailure_When_Values_Are_NotEqual;
 
@@ -132,27 +204,62 @@ type
     [Test]
     procedure AreNotEqual_Extended_Throws_No_Exception_When_One_Value_Is_NaN;
 
+    /// <summary>
+    ///   Proves AreEqual( Currency ) raises ETestFailure for values a cent apart.
+    /// </summary>
     [Test]
     procedure AreEqual_Currency_Throws_ETestFailure_When_Values_Are_NotEqual;
 
+    /// <summary>
+    ///   Proves AreEqual( TGUID ) passes for two separately built GUIDs with the same value: the comparison is by
+    ///   value, not by identity.
+    /// </summary>
     [Test]
     procedure AreEqual_GUID_Throws_No_Exception_When_Values_Are_Equal;
 
+    /// <summary>
+    ///   Proves AreEqual( TGUID ) raises ETestFailure for different GUIDs.
+    /// </summary>
     [Test]
     procedure AreEqual_GUID_Throws_ETestFailure_When_Values_Are_NotEqual;
 
+    /// <summary>
+    ///   Proves AreEqual( TStream ) passes for two streams with the same content.
+    /// </summary>
     [Test]
     procedure AreEqual_Stream_Throws_No_Exception_When_Values_Are_Equal;
 
+    /// <summary>
+    ///   Proves AreEqual( TStream ) raises ETestFailure for streams with different content.
+    /// </summary>
     [Test]
     procedure AreEqual_Stream_Throws_ETestFailure_When_Values_Are_NotEqual;
 
+    /// <summary>
+    ///   Proves AreEqual( TClass ) passes for the same class.
+    /// </summary>
     [Test]
     procedure AreEqual_TClass_Throws_No_Exception_When_Classes_Are_Equal;
 
+    /// <summary>
+    ///   Proves AreEqual( TClass ) raises ETestFailure for two unrelated classes.
+    /// </summary>
     [Test]
     procedure AreEqual_TClass_Throws_ETestFailure_When_Classes_Are_NotEqual;
 
+    /// <summary>
+    ///   Proves NoDiff passes for equal strings - empty, a lone CR, plain text - and, with AIgnoreCase, for strings
+    ///   that differ only in case.
+    /// </summary>
+    /// <param name="A">
+    ///   Expected string.
+    /// </param>
+    /// <param name="B">
+    ///   Actual string.
+    /// </param>
+    /// <param name="AIgnoreCase">
+    ///   Whether NoDiff ignores case.
+    /// </param>
     [Test]
     [TestCase('Empty', ',,false')]
     [TestCase('CR', #13','#13',false')]
@@ -161,6 +268,23 @@ type
     [TestCase('Ignore case complex', 'LoReM iPsUm DoLoR sIt AmEt,lOrEm IpSuM dOlOr SiT aMeT,true')]
     procedure NoDiff_Throws_No_Exception_When_Strings_Are_Equal(const A, B : string; AIgnoreCase : boolean = false);
 
+    /// <summary>
+    ///   Proves NoDiff raises ETestFailure whose message names the first differing position and shows the text around
+    ///   it - for length, first and last character, leading and trailing spaces, prefixes, extra spaces, case, CR
+    ///   against LF (with a "Linebreak style" note) and space against tab.
+    /// </summary>
+    /// <param name="A">
+    ///   Expected string.
+    /// </param>
+    /// <param name="B">
+    ///   Actual string.
+    /// </param>
+    /// <param name="AException">
+    ///   The exact ETestFailure message expected.
+    /// </param>
+    /// <param name="AMessage">
+    ///   The user message passed to NoDiff, appended to the failure text.
+    /// </param>
     [TestCase('Length',
         '  '#8',' +
         ' ,' +
@@ -223,139 +347,298 @@ type
         ',', false)]
     procedure NoDiff_Throws_ETestFailure_When_Strings_Are_NotEqual(const A, B, AException, AMessage : string);
 
+    /// <summary>
+    ///   Proves AreEqual( TStrings ) passes for two empty lists, for equal lists, and for lists that differ only on a
+    ///   line listed in ignoreLines.
+    /// </summary>
     [Test]
     procedure AreEqual_TStrings_Throws_No_Exception_When_Strings_Are_Equal;
 
+    /// <summary>
+    ///   Proves AreEqual( TStrings ) fails with a message giving the two counts when the lengths differ, and with the
+    ///   position, surrounding text and line number of the first difference otherwise.
+    /// </summary>
     [Test]
     procedure AreEqual_TStrings_Throws_ETestFailure_When_Strings_Are_NotEqual;
 
 {$IFDEF DELPHI_XE2_UP}
+    /// <summary>
+    ///   Proves AreEqual&lt;IInterface&gt; passes for the same interface reference.
+    /// </summary>
     [Test]
     procedure AreEqual_T_Throws_No_Exception_When_Interfaces_Are_Equal;
 
+    /// <summary>
+    ///   Proves AreEqual&lt;IInterface&gt; raises ETestFailure for references to two different objects.
+    /// </summary>
     [Test]
     procedure AreEqual_T_Throws_ETestFailure_When_Interfaces_Are_NotEqual;
 
+    /// <summary>
+    ///   Proves AreEqual&lt;IInterface&gt; raises ETestFailure, not an access violation, when either side is nil.
+    /// </summary>
     [Test]
     procedure AreEqual_T_Throws_ETestFailure_When_Interfaces_Are_Nil;
 
+    /// <summary>
+    ///   Proves AreEqual&lt;TObject&gt; passes for the same object.
+    /// </summary>
     [Test]
     procedure AreEqual_T_Throws_No_Exception_When_Objects_Are_Equal;
 
+    /// <summary>
+    ///   Proves AreEqual&lt;TObject&gt; raises ETestFailure for two distinct objects.
+    /// </summary>
     [Test]
     procedure AreEqual_T_Throws_ETestFailure_When_Objects_Are_NotEqual;
 
+    /// <summary>
+    ///   Proves AreEqual&lt;TObject&gt; raises ETestFailure, not an access violation, when either side is nil.
+    /// </summary>
     [Test]
     procedure AreEqual_T_Throws_ETestFailure_When_Objects_Are_Nil;
 
+    /// <summary>
+    ///   Proves AreEqual&lt;T&gt;( TArray ) passes for string and real arrays with the same elements in the same
+    ///   order.
+    /// </summary>
     [Test]
     procedure AreEqual_Array_T_Throws_No_Exception_When_Arrays_Are_Equal;
 
+    /// <summary>
+    ///   Proves AreEqual&lt;T&gt;( TArray ) fails for arrays of different length and for the same elements in a
+    ///   different order (integer, real and string arrays).
+    /// </summary>
     [Test]
     procedure AreEqual_Array_T_Throws_ETestFailure_When_Arrays_Are_Not_Equal;
 
 {$ENDIF}
 
+    /// <summary>
+    ///   Proves AreEqualMemory passes when both pointers address the same memory.
+    /// </summary>
     [Test]
     procedure AreEqualMemory_Throws_No_Exception_When_Pointers_Are_Equal;
 
+    /// <summary>
+    ///   Proves AreEqualMemory raises ETestFailure for two blocks that differ only in their LAST byte, so the whole
+    ///   size is compared and not just a prefix.
+    /// </summary>
     [Test]
     procedure AreEqualMemory_Throws_ETestFailure_When_Pointers_Are_NotEqual;
 
+    /// <summary>
+    ///   Proves AreEqual( Extended ) passes for identical values with a zero tolerance (the boundary of the
+    ///   tolerance comparison).
+    /// </summary>
     [Test]
     procedure AreEqual_Throws_No_Exception_When_Values_Are_Exactly_Equal;
 
+    /// <summary>
+    ///   Proves AreNotEqual( Integer ) passes for different values.
+    /// </summary>
     [Test]
     procedure AreNotEqual_Integer_Throws_No_Exception_When_Values_Are_NotEqual;
 
+    /// <summary>
+    ///   Proves AreNotEqual( Integer ) raises ETestFailure for equal values.
+    /// </summary>
     [Test]
     procedure AreNotEqual_Integer_Throws_Exception_When_Values_Are_Equal;
 
+    /// <summary>
+    ///   Proves AreNotEqual( Currency ) raises ETestFailure for equal values.
+    /// </summary>
     [Test]
     procedure AreNotEqual_Currency_Throws_Exception_When_Values_Are_Equal;
 
+    /// <summary>
+    ///   Proves AreNotEqual( TGUID ) passes for different GUIDs.
+    /// </summary>
     [Test]
     procedure AreNotEqual_GUID_Throws_No_Exception_When_Values_Are_NotEqual;
 
+    /// <summary>
+    ///   Proves AreNotEqual( TGUID ) raises ETestFailure for equal GUIDs.
+    /// </summary>
     [Test]
     procedure AreNotEqual_GUID_Throws_Exception_When_Values_Are_Equal;
 
+    /// <summary>
+    ///   Proves WillRaise with no exception class accepts any exception.
+    /// </summary>
     [Test]
     procedure WillRaise_Without_Exception_Class_Will_Capture_Any_Exception;
 
+    /// <summary>
+    ///   Proves WillRaiseWithMessage passes when both the exception class and its message match (here the
+    ///   ETestPass from Assert.Pass and its message).
+    /// </summary>
     [Test]
     procedure WillRaiseWithMessage_Exception_And_Message_Will_Check_ExceptionClass_And_Exception_Message;
 
+    /// <summary>
+    ///   Proves WillRaiseWithMessage with neither class nor message accepts any exception.
+    /// </summary>
     [Test]
     procedure WillRaiseWithMessage_Without_Exception_Class_And_Message_Will_Capture_Any_Exception;
 
+    /// <summary>
+    ///   Proves WillRaiseWithMessage with no class but a message accepts any exception carrying that message.
+    /// </summary>
     [Test]
     procedure WillRaiseWithMessage_Without_Exception_Class_With_Message_Will_Capture_Any_Exception_With_Message;
 
+    /// <summary>
+    ///   Proves WillRaiseWithMessage raises ETestFailure when handed a nil method in place of one that raises.
+    /// </summary>
     [Test]
     procedure WillRaiseWithMessage_Exception_Not_Thrown_Throws_ETestFailure_Exception;
 
+    /// <summary>
+    ///   Proves WillRaiseDescendant fails when the raised class is not the named class or a descendant of it.
+    /// </summary>
     [Test]
     procedure WillRaiseDescendant_With_NonDescendingClass;
 
+    /// <summary>
+    ///   Proves WillRaiseDescendant passes for a descendant of the named class (EFilerError for EStreamError).
+    /// </summary>
     [Test]
     procedure WillRaiseDescendant_With_DescendingClass;
 
+    /// <summary>
+    ///   Proves WillRaiseDescendant passes for exactly the named class.
+    /// </summary>
     [Test]
     procedure WillRaiseDescendant_With_ExactClass;
 
+    /// <summary>
+    ///   Proves WillRaiseAny passes for any exception, here EAbort.
+    /// </summary>
     [Test]
     procedure WillRaiseAny;
 
+    /// <summary>
+    ///   Proves WillRaiseAny raises ETestFailure when the method raises nothing.
+    /// </summary>
     [Test]
     procedure WillRaiseAny_NoExecption;
 
+    /// <summary>
+    ///   Proves WillNotRaise( class ) lets a different exception class PROPAGATE unchanged (same class, same message)
+    ///   rather than swallowing it: the assertion is not about that exception, but the test must not pass over it.
+    /// </summary>
     [Test]
     procedure WillNotRaise_With_ExactClass_Positive;
 
+    /// <summary>
+    ///   Proves WillNotRaise( class ) fails with ETestFailure when the method raises exactly the named class, and that
+    ///   the failure message carries the caller's message.
+    /// </summary>
     [Test]
     procedure WillNotRaise_With_ExactClass_Negative;
 
+    /// <summary>
+    ///   Proves WillNotRaiseDescendant lets an ancestor (Exception), not a descendant, of the named class PROPAGATE
+    ///   unchanged rather than swallowing it.
+    /// </summary>
     [Test]
     procedure WillNotRaise_With_DescendingClass_Positive;
 
+    /// <summary>
+    ///   Proves WillNotRaiseDescendant raises ETestFailure when the method raises a descendant of the named class.
+    /// </summary>
     [Test]
     procedure WillNotRaise_With_DescendingClass_Negative;
 
+    /// <summary>
+    ///   Proves WillNotRaise with no class raises ETestFailure for any exception.
+    /// </summary>
     [Test]
     procedure WillNotRaise_With_NoClass;
 
+    /// <summary>
+    ///   Proves Implements&lt;I&gt; raises ETestFailure when the object does not support the interface.
+    /// </summary>
     [Test]
     procedure Test_Implements_Will_Fail_If_Not_Implemented;
 
+    /// <summary>
+    ///   Proves Implements&lt;I&gt; passes and returns a non-nil interface when the object supports it.
+    /// </summary>
     [Test]
     procedure Test_Implements_Will_Pass_If_Implemented;
 
+    /// <summary>
+    ///   Proves AreSame( IInterface ) compares the underlying object, so two different interfaces of one object are
+    ///   the same.
+    /// </summary>
     [Test]
     procedure Test_AreSameOnSameObjectWithDifferentInterfaces_No_Exception;
 
+    /// <summary>
+    ///   Proves AreNotSame( IInterface ) fails for two different interfaces of one object.
+    /// </summary>
     [Test]
     procedure Test_AreNotSameOnSameObjectWithDifferentInterfaces_Throws_Exception;
 
 {$IFDEF DELPHI_XE_UP}
+    /// <summary>
+    ///   Proves Contains&lt;T&gt;( array ) passes when the value is in the array.
+    /// </summary>
     [Test]
     procedure Contains_ArrayOfT_Throws_No_Exception_When_Value_In_Array;
 
+    /// <summary>
+    ///   Proves Contains&lt;T&gt;( array ) raises ETestFailure when the value is not in the array.
+    /// </summary>
     [Test]
     procedure Contains_ArrayOfT_Throws_Exception_When_Value_Not_In_Array;
 
+    /// <summary>
+    ///   Proves DoesNotContain&lt;T&gt;( array ) passes when the value is not in the array.
+    /// </summary>
     [Test]
     procedure DoesNotContain_ArrayOfT_Throws_No_Exception_When_Value_Not_In_Array;
 
+    /// <summary>
+    ///   Proves DoesNotContain&lt;T&gt;( array ) raises ETestFailure when the value is in the array.
+    /// </summary>
     [Test]
     procedure DoesNotContain_ArrayOfT_Throws_Exception_When_Value_In_Array;
 {$ENDIF}
 
+    /// <summary>
+    ///   Proves StartsWith passes when the substring begins the string, with and without case sensitivity.
+    /// </summary>
+    /// <param name="subString">
+    ///   The expected prefix.
+    /// </param>
+    /// <param name="theString">
+    ///   The string searched.
+    /// </param>
+    /// <param name="caseSensitive">
+    ///   Whether the comparison is case-sensitive.
+    /// </param>
     [Test]
     [TestCase('substring', 'a str,a string,false')]
     [TestCase('substring - case sensitive', 'a str,a string,true')]
     procedure StartsWith_SubString_Is_At_The_Start_Of_String(const subString, theString : string; caseSensitive : boolean);
 
+    /// <summary>
+    ///   Proves StartsWith fails for an empty substring, an empty string, and a substring found only at the end, in
+    ///   the middle or not at all.
+    /// </summary>
+    /// <param name="subString">
+    ///   The prefix that must not match.
+    /// </param>
+    /// <param name="theString">
+    ///   The string searched.
+    /// </param>
+    /// <param name="caseSensitive">
+    ///   Whether the comparison is case-sensitive.
+    /// </param>
     [Test]
     [TestCase('empty substring', ',a string,false')]
     [TestCase('empty substring - case sensitive', ',a string,true')]
@@ -369,11 +652,36 @@ type
     [TestCase('not in the string - case sensitive', 'something else,the substring is not here,true')]
     procedure StartsWith_SubString_Is_Not_At_Start(const subString, theString : string; caseSensitive : boolean);
 
+    /// <summary>
+    ///   Proves EndsWith passes when the substring ends the string, with and without case sensitivity.
+    /// </summary>
+    /// <param name="subString">
+    ///   The expected suffix.
+    /// </param>
+    /// <param name="theString">
+    ///   The string searched.
+    /// </param>
+    /// <param name="caseSensitive">
+    ///   Whether the comparison is case-sensitive.
+    /// </param>
     [Test]
     [TestCase('substring', 'ing,a string,false')]
     [TestCase('substring - case sensitive', 'ing,a string,true')]
     procedure EndsWith_SubString_Is_At_The_End_Of_String(const subString, theString : string; caseSensitive : boolean);
 
+    /// <summary>
+    ///   Proves EndsWith fails for an empty substring, an empty string, and a substring found only at the start, in
+    ///   the middle or not at all.
+    /// </summary>
+    /// <param name="subString">
+    ///   The suffix that must not match.
+    /// </param>
+    /// <param name="theString">
+    ///   The string searched.
+    /// </param>
+    /// <param name="caseSensitive">
+    ///   Whether the comparison is case-sensitive.
+    /// </param>
     [Test]
     [TestCase('empty substring', ',a string,false')]
     [TestCase('empty substring - case sensitive', ',a string,true')]
@@ -387,37 +695,104 @@ type
     [TestCase('not in the string - case sensitive', 'something else,the substring is not here,true')]
     procedure EndsWith_SubString_Is_Not_At_End(const subString, theString : string; caseSensitive : boolean);
 
+    /// <summary>
+    ///   Proves Assert.IgnoreCaseDefault governs AreEqual, AreNotEqual, StartsWith and EndsWith on strings when no
+    ///   case argument is passed: True makes 'String' and 'STRING' equal, False makes them differ. The original
+    ///   setting is restored afterwards.
+    /// </summary>
     [Test]
     procedure IgnoreCaseDefault;
 
 {$IFDEF SUPPORTS_REGEX}
+    /// <summary>
+    ///   Proves IsMatch passes when the string matches the regular expression (a GUID with or without dashes).
+    /// </summary>
+    /// <param name="regexPattern">
+    ///   The regular expression.
+    /// </param>
+    /// <param name="theString">
+    ///   The string that must match.
+    /// </param>
     [Test]
     [TestCase('GUID with dash', '[0-9A-F]{8}[-]?([0-9A-F]{4}[-]?){3}[0-9A-F]{12},C687683F-F25B-4F9A-A231-31C52253B6A1')]
     [TestCase('GUID without dash', '[0-9A-F]{8}[-]?([0-9A-F]{4}[-]?){3}[0-9A-F]{12},C687683FF25B4F9AA23131C52253B6A1')]
     procedure IsMatch_True_Will_Not_Raise(const regexPattern, theString : string);
 
+    /// <summary>
+    ///   Proves IsMatch raises ETestFailure when the string does not match (a GUID ending in '#').
+    /// </summary>
+    /// <param name="regexPattern">
+    ///   The regular expression.
+    /// </param>
+    /// <param name="theString">
+    ///   The string that must not match.
+    /// </param>
     [Test]
     [TestCase('GUID with dash', '[0-9A-F]{8}[-]([0-9A-F]{4}[-]){3}[0-9A-F]{12},C687683F-F25B-4F9A-A231-31C52253B6A#')]
     [TestCase('GUID without dash', '[0-9A-F]{8}[-]?([0-9A-F]{4}[-]?){3}[0-9A-F]{12},C687683FF25B4F9AA23131C52253B6A#')]
     procedure IsMatch_False_Will_Raise_ETestFailure(const regexPattern, theString : string);
 
+    /// <summary>
+    ///   Proves WillRaiseWithMessageRegex passes when the exception message matches the pattern and fails when it
+    ///   does not.
+    /// </summary>
     [Test]
     procedure WillRaiseWithMessageRegex;
 {$ENDIF}
 
+    /// <summary>
+    ///   Proves WillNotRaiseWithMessage with no class and no message fails for any exception. (Published, so a test
+    ///   without [Test].)
+    /// </summary>
     procedure WillNotRaiseWithMessage_NilExceptionParam_NoExceptionMessage_WillRaise;
+    /// <summary>
+    ///   Proves WillNotRaiseWithMessage fails when both the class and the message match the raised exception.
+    /// </summary>
     procedure WillNotRaiseWithMessage_MatchingExceptionParam_MatchingExceptionMessage_WillRaise;
+    /// <summary>
+    ///   Proves WillNotRaiseWithMessage with a matching class and no message fails.
+    /// </summary>
     procedure WillNotRaiseWithMessage_MatchingExceptionParam_NoExceptionMessage_WillRaise;
+    /// <summary>
+    ///   Proves WillNotRaiseWithMessage lets the exception PROPAGATE unchanged when the class matches but the message
+    ///   does not (it is not the exception asserted against, and must not be swallowed).
+    /// </summary>
     procedure WillNotRaiseWithMessage_MatchingExceptionParam_NonMatchingExceptionMessage_WillNotRaise;
+    /// <summary>
+    ///   Proves WillNotRaiseWithMessage with no class but a matching message fails.
+    /// </summary>
     procedure WillNotRaiseWithMessage_NilExceptionParam_MatchingExceptionMessage_WillRaise;
+    /// <summary>
+    ///   Proves WillNotRaiseWithMessage with no class and a different message lets the exception PROPAGATE unchanged
+    ///   rather than swallowing it.
+    /// </summary>
     procedure WillNotRaiseWithMessage_NilExceptionParam_NonMatchingExceptionMessage_WillNotRaise;
+    /// <summary>
+    ///   Proves WillNotRaiseWithMessage lets the exception PROPAGATE unchanged when the message matches but the class
+    ///   does not.
+    /// </summary>
     procedure WillNotRaiseWithMessage_NonMatchingExceptionParam_MatchingExceptionMessage_WillNotRaise;
+    /// <summary>
+    ///   Proves WillNotRaiseWithMessage with a non-matching class and no message lets the exception PROPAGATE
+    ///   unchanged.
+    /// </summary>
     procedure WillNotRaiseWithMessage_NonMatchingExceptionParam_NoExceptionMessage_WillNotRaise;
+    /// <summary>
+    ///   Proves WillNotRaiseWithMessage lets the exception PROPAGATE unchanged when neither the class nor the message
+    ///   matches.
+    /// </summary>
     procedure WillNotRaiseWithMessage_NonMatchingExceptionParam_NonMatchingExceptionMessage_WillNotRaise;
 
+    /// <summary>
+    ///   Proves CheckExpectation fails when given a non-empty expectation message (a mock's unmet expectation).
+    /// </summary>
     [Test]
     procedure CheckExpectation_Not_Empty_String_Will_Raise;
 
+    /// <summary>
+    ///   Proves AreEqual resolves an Int64 overload (Int64 against Int64, either side a cast literal) and passes for
+    ///   equal values; a compile-time overload check as much as a run-time one.
+    /// </summary>
     [Test]
     procedure Test64BitListIndex;
 
@@ -486,6 +861,13 @@ type
     procedure WillNotRaise_Nil_Class_Fails_Readably;
 
     /// <summary>
+    ///   Proves that when WillRaise, WillRaiseDescendant or WillRaiseWithMessage gets the WRONG exception class, the
+    ///   failure message carries the caller's message; it used to be dropped, leaving no clue which assertion failed.
+    /// </summary>
+    [Test]
+    procedure WillRaise_Family_Wrong_Class_Failure_Includes_Caller_Message;
+
+    /// <summary>
     ///   Proves the WillNotRaise family lets Assert.Pass, Assert.Ignore and Assert.Fail inside the method through as
     ///   the outcome they set, instead of reporting "Method raised ETestPass" or swallowing a failure because its
     ///   class is not the one named. Issue #398 item 3.
@@ -536,7 +918,8 @@ type
     procedure Contains_And_DoesNotContain_Reject_Empty_SubString;
 
     /// <summary>
-    ///   Proves AreEqual( TStream ) restores both streams' positions and passes for the same instance.
+    ///   Proves AreEqual( TStream ) restores both streams' positions and passes for the same instance, so an
+    ///   assertion does not disturb the stream the test goes on to use.
     /// </summary>
     [Test]
     procedure AreEqual_Stream_Restores_Positions_And_Accepts_Same_Instance;
@@ -687,11 +1070,11 @@ procedure TTestsAssert.Fail_Throws_ETestFailure_Exception_With_Message;
 const
   EXPECTED_EXCEPTION_MSG = 'Failed Message';
 begin
-  Assert.WillRaise(
+  Assert.WillRaiseWithMessage(
     procedure
     begin
       Assert.Fail(EXPECTED_EXCEPTION_MSG);
-    end, ETestFailure, EXPECTED_EXCEPTION_MSG);
+    end, ETestFailure, EXPECTED_EXCEPTION_MSG, 'The failure message did not reach the exception');
 end;
 
 procedure TTestsAssert.Fail_Throws_ETestFailure_Exception_With_Return_Address_Reference;
@@ -794,17 +1177,28 @@ procedure TTestsAssert.Pass_Throws_ETestPass_Exception_With_Message;
 const
   EXPECTED_EXCEPTION_MSG = 'Passing Message';
 begin
-  Assert.WillRaise(
+  Assert.WillRaiseWithMessage(
     procedure
     begin
       Assert.Pass(EXPECTED_EXCEPTION_MSG);
-    end, ETestPass, EXPECTED_EXCEPTION_MSG);
+    end, ETestPass, EXPECTED_EXCEPTION_MSG, 'The pass message did not reach the exception');
 end;
 
 //  Assert.Ignore is the runtime counterpart of the [Ignore] attribute: it
 //  stops a test whose PRECONDITION turned out to be absent and reports it
 //  as ignored rather than passed. Without it the only ways to skip are
 //  Assert.Pass, which lies, and doing nothing, which lies more quietly.
+procedure TTestsAssert.IsType_Fails_Because_It_Cannot_Check;
+begin
+  Assert.WillRaise(
+    procedure
+    begin
+{$WARN SYMBOL_DEPRECATED OFF}
+      Assert.IsType<Integer>(1);
+{$WARN SYMBOL_DEPRECATED ON}
+    end, ETestFailure);
+end;
+
 procedure TTestsAssert.Ignore_Throws_ETestIgnored_Exception;
 begin
   Assert.WillRaise(
@@ -821,11 +1215,11 @@ procedure TTestsAssert.Ignore_Throws_ETestIgnored_Exception_With_Message;
 const
   EXPECTED_EXCEPTION_MSG = 'Ignoring Message';
 begin
-  Assert.WillRaise(
+  Assert.WillRaiseWithMessage(
     procedure
     begin
       Assert.Ignore(EXPECTED_EXCEPTION_MSG);
-    end, ETestIgnored, EXPECTED_EXCEPTION_MSG);
+    end, ETestIgnored, EXPECTED_EXCEPTION_MSG, 'The ignore reason did not reach the exception');
 end;
 
 procedure TTestsAssert.Test_Implements_Will_Fail_If_Not_Implemented;
@@ -884,7 +1278,7 @@ end;
 
 procedure TTestsAssert.WillNotRaiseWithMessage_NilExceptionParam_NonMatchingExceptionMessage_WillNotRaise;
 begin
-  Assert.WillNotRaise(
+  Assert.WillRaiseWithMessage(
     procedure
     begin
       Assert.WillNotRaiseWithMessage(
@@ -892,7 +1286,7 @@ begin
         begin
           raise Exception.Create('Test');
         end, nil, 'Different Exception Message');
-    end);
+    end, Exception, 'Test', 'The unasserted exception was swallowed instead of propagating');
 end;
 
 procedure TTestsAssert.WillNotRaiseWithMessage_MatchingExceptionParam_NoExceptionMessage_WillRaise;
@@ -923,7 +1317,7 @@ end;
 
 procedure TTestsAssert.WillNotRaiseWithMessage_MatchingExceptionParam_NonMatchingExceptionMessage_WillNotRaise;
 begin
-  Assert.WillNotRaise(
+  Assert.WillRaiseWithMessage(
     procedure
     begin
       Assert.WillNotRaiseWithMessage(
@@ -931,12 +1325,12 @@ begin
         begin
           raise TestExceptionOne.Create('Test');
         end, TestExceptionOne, 'Different Exception Message');
-    end);
+    end, TestExceptionOne, 'Test', 'The unasserted exception was swallowed instead of propagating');
 end;
 
 procedure TTestsAssert.WillNotRaiseWithMessage_NonMatchingExceptionParam_NoExceptionMessage_WillNotRaise;
 begin
-  Assert.WillNotRaise(
+  Assert.WillRaiseWithMessage(
     procedure
     begin
       Assert.WillNotRaiseWithMessage(
@@ -944,12 +1338,12 @@ begin
         begin
           raise TestExceptionOne.Create('Test');
         end, TestExceptionTwo);
-    end);
+    end, TestExceptionOne, 'Test', 'The unasserted exception was swallowed instead of propagating');
 end;
 
 procedure TTestsAssert.WillNotRaiseWithMessage_NonMatchingExceptionParam_MatchingExceptionMessage_WillNotRaise;
 begin
-  Assert.WillNotRaise(
+  Assert.WillRaiseWithMessage(
     procedure
     begin
       Assert.WillNotRaiseWithMessage(
@@ -957,12 +1351,12 @@ begin
         begin
           raise TestExceptionOne.Create('Test');
         end, TestExceptionTwo, 'Test');
-    end);
+    end, TestExceptionOne, 'Test', 'The unasserted exception was swallowed instead of propagating');
 end;
 
 procedure TTestsAssert.WillNotRaiseWithMessage_NonMatchingExceptionParam_NonMatchingExceptionMessage_WillNotRaise;
 begin
-  Assert.WillNotRaise(
+  Assert.WillRaiseWithMessage(
     procedure
     begin
       Assert.WillNotRaiseWithMessage(
@@ -970,7 +1364,7 @@ begin
         begin
           raise TestExceptionOne.Create('Test');
         end, TestExceptionTwo, 'Different Exception Message');
-    end);
+    end, TestExceptionOne, 'Test', 'The unasserted exception was swallowed instead of propagating');
 end;
 
 procedure TTestsAssert.WillNotRaise_With_DescendingClass_Negative;
@@ -990,19 +1384,25 @@ end;
 
 procedure TTestsAssert.WillNotRaise_With_DescendingClass_Positive;
 begin
-  Assert.WillNotRaiseDescendant(
+  Assert.WillRaiseWithMessage(
     procedure
     begin
-      raise Exception.Create('Test');
-    end,
-    EStreamError);
+      Assert.WillNotRaiseDescendant(
+        procedure
+        begin
+          raise Exception.Create('Test');
+        end,
+        EStreamError);
+    end, Exception, 'Test', 'The unasserted exception was swallowed instead of propagating');
 end;
 
 procedure TTestsAssert.WillNotRaise_With_ExactClass_Negative;
 const
   EXPECTED_EXCEPTION_MSG = 'Passing Message';
+var
+  msg : string;
 begin
-  Assert.WillRaise(
+  msg := FailureMessage(
     procedure
     begin
       Assert.WillNotRaise(
@@ -1011,20 +1411,23 @@ begin
           raise EStreamError.Create('Error Message');
         end,
         EStreamError, EXPECTED_EXCEPTION_MSG);
-    end,
-    ETestFailure,
-      EXPECTED_EXCEPTION_MSG);
+    end);
+  Assert.Contains(msg, EXPECTED_EXCEPTION_MSG, False, 'WillNotRaise did not fail, or dropped the caller''s message');
 end;
 
 procedure TTestsAssert.WillNotRaise_With_ExactClass_Positive;
 begin
-  Assert.WillNotRaise(
+  Assert.WillRaiseWithMessage(
     procedure
     begin
-      // Don't raise an exception we are looking for.
-      raise Exception.Create('Error Message');
-    end,
-    EStreamError, '');
+      Assert.WillNotRaise(
+        procedure
+        begin
+          // Not the class being asserted against, so it must propagate untouched.
+          raise Exception.Create('Error Message');
+        end,
+        EStreamError, '');
+    end, Exception, 'Error Message', 'The unasserted exception was swallowed instead of propagating');
 end;
 
 procedure TTestsAssert.WillNotRaise_With_NoClass;
@@ -1164,8 +1567,18 @@ begin
 end;
 
 procedure TTestsAssert.AreEqualMemory_Throws_ETestFailure_When_Pointers_Are_NotEqual;
+var
+  expected, actual : array[0..7] of Byte;
 begin
-  Assert.Pass;
+  FillChar(expected, SizeOf(expected), 0);
+  FillChar(actual, SizeOf(actual), 0);
+  //Only the last byte differs, so a comparison that stops short of the full size would pass.
+  actual[High(actual)] := 1;
+  Assert.WillRaise(
+    procedure
+    begin
+      Assert.AreEqualMemory(@expected, @actual, SizeOf(expected));
+    end, ETestFailure);
 end;
 
 procedure TTestsAssert.AreEqualMemory_Throws_No_Exception_When_Pointers_Are_Equal;
@@ -1349,14 +1762,17 @@ end;
 
 procedure TTestsAssert.AreEqual_GUID_Throws_No_Exception_When_Values_Are_Equal;
 const
-  EXPECTED_GUID     : TGUID = (D1 : 0; D2 : 0; D3 : 0; D4 : (0, 0, 0, 0, 0, 0, 0, 0));
-  ACTUAL_GUID       : TGUID = (D1 : 1; D2 : 1; D3 : 1; D4 : (1, 1, 1, 1, 1, 1, 1, 1));
+  EXPECTED_GUID     : TGUID = '{6F1C2A3B-4D5E-4F60-8A7B-9C0D1E2F3A4B}';
+var
+  actualGuid : TGUID;
 begin
-  Assert.WillNotRaise(
+  //A separate variable built from the string, so equality is by value and not by sharing one constant.
+  actualGuid := StringToGUID('{6F1C2A3B-4D5E-4F60-8A7B-9C0D1E2F3A4B}');
+  Assert.WillNotRaiseAny(
     procedure
     begin
-      Assert.AreNotEqual(EXPECTED_GUID, ACTUAL_GUID);
-    end, Exception);
+      Assert.AreEqual(EXPECTED_GUID, actualGuid);
+    end);
 end;
 
 procedure TTestsAssert.AreEqual_Integer_Throws_ETestFailure_When_Values_Are_NotEqual;
@@ -2102,6 +2518,34 @@ begin
       Assert.WillNotRaiseWithMessage(procedure begin raise EFilerError.Create('boom') end, nil, 'boom');
     end);
   Assert.Contains(msg, 'EFilerError', False, 'WillNotRaiseWithMessage( nil ) did not name the raised class');
+end;
+
+procedure TTestsAssert.WillRaise_Family_Wrong_Class_Failure_Includes_Caller_Message;
+const
+  CALLER_MSG = 'caller context 7Q';
+var
+  msg : string;
+begin
+  msg := FailureMessage(
+    procedure
+    begin
+      Assert.WillRaise(procedure begin raise EFilerError.Create('boom') end, EConvertError, CALLER_MSG);
+    end);
+  Assert.Contains(msg, CALLER_MSG, False, 'WillRaise dropped the caller''s message on a wrong class');
+
+  msg := FailureMessage(
+    procedure
+    begin
+      Assert.WillRaiseDescendant(procedure begin raise EFilerError.Create('boom') end, EConvertError, CALLER_MSG);
+    end);
+  Assert.Contains(msg, CALLER_MSG, False, 'WillRaiseDescendant dropped the caller''s message on a wrong class');
+
+  msg := FailureMessage(
+    procedure
+    begin
+      Assert.WillRaiseWithMessage(procedure begin raise EFilerError.Create('boom') end, EConvertError, 'boom', CALLER_MSG);
+    end);
+  Assert.Contains(msg, CALLER_MSG, False, 'WillRaiseWithMessage dropped the caller''s message on a wrong class');
 end;
 
 procedure TTestsAssert.AreSame_Object_Compares_Identity;

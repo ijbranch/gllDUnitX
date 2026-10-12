@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -35,27 +35,67 @@ uses
 
 type
 {$M+}
+  /// <summary>
+  ///   Base fixture class, not registered itself, whose [Test] and [TearDownFixture] methods must be inherited by
+  ///   the registered descendant.
+  /// </summary>
   TMyBaseTestClass = class
   private
+    /// <summary>Marker set by the constructors ('base' or 'derived') and cleared by fixture teardown.</summary>
     FBlah : string;
   protected
+    /// <summary>
+    ///   Virtual hook the inherited test calls, so the descendant's override is what runs.
+    /// </summary>
+    /// <returns>
+    ///   'base'.
+    /// </returns>
     function GetSomething : string; virtual;
   public
+    /// <summary>
+    ///   Virtual constructor the runner calls through the registered descendant's class reference.
+    /// </summary>
     constructor Create; virtual;
+    /// <summary>
+    ///   Empty destructor.
+    /// </summary>
     destructor Destroy; override;
 
+    /// <summary>
+    ///   Inherited fixture teardown; clears the marker.
+    /// </summary>
     [TearDownFixture]
     procedure TearDownFixture;
 
+    /// <summary>
+    ///   Proves a [Test] declared in a base class is discovered and run on a registered descendant: the instance was
+    ///   built through the descendant's virtual constructor (the marker is 'derived') and virtual dispatch reaches the
+    ///   descendant's override (it returns 'derived', not the base's 'base').
+    /// </summary>
     [Test]
     procedure TestInBase;
   end;
 
+  /// <summary>
+  ///   Registered fixture that declares no tests of its own; its tests all come from TMyBaseTestClass.
+  /// </summary>
   TMyDerivedTest = class(TMyBaseTestClass)
   protected
+    /// <summary>
+    ///   Override reached from the inherited test, which checks its result.
+    /// </summary>
+    /// <returns>
+    ///   'derived'.
+    /// </returns>
     function GetSomething : string; override;
   public
+    /// <summary>
+    ///   Calls the inherited constructor, then sets the marker to 'derived'.
+    /// </summary>
     constructor Create; override;
+    /// <summary>
+    ///   Empty destructor.
+    /// </summary>
     destructor Destroy; override;
   end;
 
@@ -84,8 +124,8 @@ end;
 
 procedure TMyBaseTestClass.TestInBase;
 begin
-  Writeln(GetSomething);
-  Assert.Pass;
+  Assert.AreEqual('derived', FBlah, False, 'the fixture was not built through the descendant''s constructor');
+  Assert.AreEqual('derived', GetSomething, False, 'virtual dispatch did not reach the descendant''s override');
 end;
 
 constructor TMyDerivedTest.Create;
@@ -103,7 +143,6 @@ end;
 function TMyDerivedTest.GetSomething : string;
 begin
   Result := 'derived';
-  Assert.Pass;
 end;
 
 initialization

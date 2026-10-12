@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -50,50 +50,137 @@ uses
   DUnitX.WeakReference;
 
 type
+  /// <summary>
+  ///   Minimal interface for a weakly referenced object.
+  /// </summary>
   ISimpleInterface = interface
     ['{1A84030F-EEC5-447F-981D-94C4339D8800}']
+    /// <summary>
+    ///   Identifies the implementing object.
+    /// </summary>
+    /// <returns>
+    ///   The implementing class's name.
+    /// </returns>
     function GetName : string;
   end;
 
+  /// <summary>
+  ///   Weak-referenceable implementation of ISimpleInterface.
+  /// </summary>
   TSimpleInterfacedObject = class(TWeakReferencedObject, ISimpleInterface)
+    /// <summary>
+    ///   Identifies the object.
+    /// </summary>
+    /// <returns>
+    ///   The class name, 'TSimpleInterfacedObject'.
+    /// </returns>
     function GetName : string;
   end;
 
+  /// <summary>
+  ///   The wider of two interfaces on one object: the one the object is created through.
+  /// </summary>
   IInternalUseInterface = interface
     ['{B2A2406D-C17D-478C-A194-59AACF40D279}']
+    /// <summary>
+    ///   Reads the object's name.
+    /// </summary>
+    /// <returns>
+    ///   The name given at construction.
+    /// </returns>
     function GetName : string;
+    /// <summary>
+    ///   Reads a value only the internal interface exposes.
+    /// </summary>
+    /// <returns>
+    ///   A fixed placeholder string.
+    /// </returns>
     function GetInternalUseOnly : string;
+    /// <summary>The name given at construction.</summary>
     property Name : string read GetName;
+    /// <summary>A value only visible through the internal interface.</summary>
     property InternalUseOnly : string read GetInternalUseOnly;
   end;
 
+  /// <summary>
+  ///   The narrower interface on the same object, to which a weak reference is taken after a cast.
+  /// </summary>
   IExternalUseInterface = interface
     ['{907365C0-2A20-41D0-927B-8B36FB4CB0FD}']
+    /// <summary>
+    ///   Reads the object's name.
+    /// </summary>
+    /// <returns>
+    ///   The name given at construction.
+    /// </returns>
     function GetName : string;
+    /// <summary>The name given at construction.</summary>
     property Name : string read GetName;
   end;
 
+  /// <summary>
+  ///   Weak-referenceable object implementing both the internal and external interfaces, to prove a weak reference
+  ///   taken through a cast interface still reaches the object.
+  /// </summary>
   TExposedObject = class(TWeakReferencedObject, IInternalUseInterface, IExternalUseInterface)
   private
+    /// <summary>Name given at construction.</summary>
     FName : string;
   protected
+    /// <summary>
+    ///   Reads the name.
+    /// </summary>
+    /// <returns>
+    ///   The name given at construction.
+    /// </returns>
     function GetName : string;
+    /// <summary>
+    ///   Reads the internal-only value.
+    /// </summary>
+    /// <returns>
+    ///   A fixed placeholder string.
+    /// </returns>
     function GetInternalUseOnly : string;
   public
+    /// <summary>The name given at construction.</summary>
     property Name : string read GetName;
+    /// <summary>
+    ///   Creates the object with a name.
+    /// </summary>
+    /// <param name="ANewName">
+    ///   The name GetName will return.
+    /// </param>
     constructor Create(const ANewName : string);
   end;
 
 {$M+}
+  /// <summary>
+  ///   Tests for <c>TWeakReference&lt;T&gt;</c>: a weak reference reaches its target while the target lives, and
+  ///   reports it gone once the last strong reference is released.
+  /// </summary>
   [TestFixture]
   TDUnitX_WeakReferenceXMLNUnitTests = class
   public
+    /// <summary>
+    ///   Proves a weak reference taken through an interface obtained by casting (not the one the object was created
+    ///   through) still calls through to the live object.
+    /// </summary>
     [Test]
     procedure After_Being_Assigned_To_Another_Interface_Properties_Can_Be_Called;
+    /// <summary>
+    ///   Proves a weak reference's Data calls through to the live object, returning what the strong reference does.
+    /// </summary>
     [Test]
     procedure After_Being_Created_Interface_Properties_Can_Be_Called;
+    /// <summary>
+    ///   Proves releasing the last strong reference frees the object and the weak reference's Data becomes nil
+    ///   rather than dangling.
+    /// </summary>
     [Test]
     procedure After_The_Reference_Is_Freed_The_WeakReference_Data_Is_Nill;
+    /// <summary>
+    ///   Proves releasing the last strong reference makes IsAlive return False.
+    /// </summary>
     [Test]
     procedure After_The_Reference_Is_Freed_The_WeakReference_Data_Is_Not_Alive;
   end;

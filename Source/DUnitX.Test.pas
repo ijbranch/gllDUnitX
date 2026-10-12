@@ -51,108 +51,481 @@ uses
   DUnitX.TestFramework;
 
 type
+  /// <summary>
+  ///   A single runnable test: a parameterless method of a fixture instance, with its name, categories, enabled /
+  ///   ignored state, [MaxTime] limit and timing of its last run.
+  /// </summary>
   TDUnitXTest = class(TWeakReferencedObject, ITest, ITestInfo, ISetTestResult, ITestExecute)
   private
+    /// <summary>The test's display name (for a repeated test, suffixed -n-of-count).</summary>
     FName : string;
+    /// <summary>The name of the fixture method the test runs.</summary>
     FMethodName : string;
+    /// <summary>The test's categories, compared case-insensitively.</summary>
     FCategories : TList<string>;
+    /// <summary>The bound test method; its Data is the fixture instance.</summary>
     FMethod : TTestMethod;
+    /// <summary>Weak reference to the owning fixture, so the test does not keep it alive.</summary>
     FFixture : IWeakReference<ITestFixture>;
+    /// <summary>When the last run started.</summary>
     FStartTime : TDateTime;
+    /// <summary>When the last run ended.</summary>
     FEndTime : TDateTime;
+    /// <summary>How long the last run took.</summary>
     FDuration : TTimeSpan;
+    /// <summary>Whether the test is selected to run.</summary>
     FEnabled : boolean;
+    /// <summary>Whether the test is ignored ([Ignore], or an ignored fixture).</summary>
     FIgnored : boolean;
+    /// <summary>Why the test is ignored.</summary>
     FIgnoreReason : string;
+    /// <summary>Whether memory leaks found while the test runs are to be ignored.</summary>
     FIgnoreMemoryLeaks : Boolean;
-    FMaxTime : cardinal;                // milliseconds for timeout
+    /// <summary>The [MaxTime] limit in milliseconds; 0 for no limit.</summary>
+    FMaxTime : cardinal;
+    /// <summary>Whether the last run exceeded FMaxTime.</summary>
     FTimedOut : Boolean;
   protected
-    //ITest
+    /// <summary>
+    ///   ITest: the test's display name.
+    /// </summary>
+    /// <returns>
+    ///   The name given at creation.
+    /// </returns>
     function GetName : string; virtual;
+    /// <summary>
+    ///   ITest: the name of the fixture method the test runs.
+    /// </summary>
+    /// <returns>
+    ///   The method name.
+    /// </returns>
     function GetMethodName : string;
+    /// <summary>
+    ///   ITest: the test's categories.
+    /// </summary>
+    /// <returns>
+    ///   The live list owned by the test; do not free it.
+    /// </returns>
     function GetCategories : TList<string>;
+    /// <summary>
+    ///   ITest: the fixture's full name, a '.', and the test's name.
+    /// </summary>
+    /// <returns>
+    ///   The fully qualified test name.
+    /// </returns>
     function GetFullName : string; virtual;
+    /// <summary>
+    ///   ITest: the owning fixture.
+    /// </summary>
+    /// <returns>
+    ///   The fixture, or nil when it has already been freed.
+    /// </returns>
     function GetTestFixture : ITestFixture;
+    /// <summary>
+    ///   ITest: the bound test method.
+    /// </summary>
+    /// <returns>
+    ///   The method; nil for a test case or an error test.
+    /// </returns>
     function GetTestMethod : TTestMethod;
+    /// <summary>
+    ///   ITest: when the last run started.
+    /// </summary>
+    /// <returns>
+    ///   The start time; 0 before the first run.
+    /// </returns>
     function GetTestStartTime : TDateTime;
+    /// <summary>
+    ///   ITest: when the last run ended.
+    /// </summary>
+    /// <returns>
+    ///   The end time; 0 before the first run.
+    /// </returns>
     function GetTestEndTime : TDateTime;
+    /// <summary>
+    ///   ITest: how long the last run took.
+    /// </summary>
+    /// <returns>
+    ///   The duration.
+    /// </returns>
     function GetTestDuration : TTimeSpan;
+    /// <summary>
+    ///   ITest: whether memory leaks found while the test runs are ignored.
+    /// </summary>
+    /// <returns>
+    ///   True when leaks are ignored.
+    /// </returns>
     function GetIgnoreMemoryLeaks() : Boolean;
+    /// <summary>
+    ///   ITest: sets whether memory leaks found while the test runs are ignored.
+    /// </summary>
+    /// <param name="AValue">
+    ///   True to ignore leaks.
+    /// </param>
     procedure SetIgnoreMemoryLeaks(const AValue : Boolean);
+    /// <summary>
+    ///   ITest: the [MaxTime] limit.
+    /// </summary>
+    /// <returns>
+    ///   The limit in milliseconds; 0 for no limit.
+    /// </returns>
     function GetMaxTime : cardinal;
+    /// <summary>
+    ///   ITest: sets the [MaxTime] limit.
+    /// </summary>
+    /// <param name="AValue">
+    ///   The limit in milliseconds; 0 for no limit.
+    /// </param>
     procedure SetMaxTime(const AValue : cardinal);
+    /// <summary>
+    ///   ITest: whether the last run exceeded its [MaxTime] limit.
+    /// </summary>
+    /// <returns>
+    ///   True when it timed out.
+    /// </returns>
     function GetTimedOut : Boolean;
+    /// <summary>
+    ///   ITest: sets the timed-out flag.
+    /// </summary>
+    /// <param name="AValue">
+    ///   True to mark the test as timed out.
+    /// </param>
     procedure SetTimedOut(const AValue : Boolean);
+    /// <summary>
+    ///   ITest: whether this is one case of a parameterised test.
+    /// </summary>
+    /// <returns>
+    ///   False; TDUnitXTestCase overrides it to return True.
+    /// </returns>
     function GetIsTestCase : boolean; virtual;
 
-    //ITestInfo
+    /// <summary>
+    ///   ITestInfo: whether the test is active.
+    /// </summary>
+    /// <returns>
+    ///   Always True; the active state is not yet tracked.
+    /// </returns>
     function GetActive : boolean;
+    /// <summary>ITestInfo.GetTestFixture is implemented by ITestInfo_GetTestFixture.</summary>
     function ITestInfo.GetTestFixture = ITestInfo_GetTestFixture;
+    /// <summary>
+    ///   ITestInfo: the owning fixture's information.
+    /// </summary>
+    /// <returns>
+    ///   The fixture as ITestFixtureInfo, or nil when it has already been freed.
+    /// </returns>
     function ITestInfo_GetTestFixture : ITestFixtureInfo;
+    /// <summary>
+    ///   ITestInfo: whether the test is selected to run.
+    /// </summary>
+    /// <returns>
+    ///   True when enabled.
+    /// </returns>
     function GetEnabled : Boolean;
+    /// <summary>
+    ///   ITestInfo: selects or deselects the test.
+    /// </summary>
+    /// <param name="value">
+    ///   True to run the test.
+    /// </param>
     procedure SetEnabled(const value : Boolean);
+    /// <summary>
+    ///   ITestInfo: whether the test is ignored.
+    /// </summary>
+    /// <returns>
+    ///   True when ignored.
+    /// </returns>
     function GetIgnored : boolean;
+    /// <summary>
+    ///   ITestInfo: why the test is ignored.
+    /// </summary>
+    /// <returns>
+    ///   The reason; empty when none was given.
+    /// </returns>
     function GetIgnoreReason : string;
 
-    //ISetTestResult
+    /// <summary>
+    ///   ISetTestResult: receives the test's result. Currently does nothing.
+    /// </summary>
+    /// <param name="value">
+    ///   The result (discarded).
+    /// </param>
     procedure SetResult(const value : ITestResult);
 
-    //ITestExecute
+    /// <summary>
+    ///   ITestExecute: runs the test body, records its start, end and duration, and enforces [MaxTime].
+    /// </summary>
+    /// <param name="context">
+    ///   The execution context (not used by the base implementation).
+    /// </param>
+    /// <exception cref="ETimedOut">
+    ///   Raised when the body overran its [MaxTime] limit, including when it ended early with Assert.Pass.
+    /// </exception>
+    /// <remarks>
+    ///   Any exception from the test body (ETestFailure, ETestPass, ETestIgnored and so on) propagates to the runner.
+    /// </remarks>
     procedure Execute(const context : ITestExecuteContext); virtual;
+    /// <summary>
+    ///   ITestExecute: rebinds the test to a new fixture instance.
+    /// </summary>
+    /// <param name="fixtureInstance">
+    ///   The fixture instance the method is now to run on.
+    /// </param>
     procedure UpdateInstance(const fixtureInstance : TObject); virtual;
-    //Runs the test body; Execute times it against [MaxTime].
+    /// <summary>
+    ///   Runs the test body; Execute times it against [MaxTime]. The base implementation calls the bound method.
+    /// </summary>
     procedure ExecuteMethod; virtual;
   public
+    /// <summary>
+    ///   Creates a test bound to a fixture method.
+    /// </summary>
+    /// <param name="AFixture">
+    ///   The owning fixture, held weakly.
+    /// </param>
+    /// <param name="AMethodName">
+    ///   The name of the fixture method.
+    /// </param>
+    /// <param name="AName">
+    ///   The test's display name.
+    /// </param>
+    /// <param name="ACategory">
+    ///   Comma-separated categories; each is trimmed.
+    /// </param>
+    /// <param name="AMethod">
+    ///   The bound method to run.
+    /// </param>
+    /// <param name="AEnabled">
+    ///   True to run the test.
+    /// </param>
+    /// <param name="AIgnored">
+    ///   True to report the test as ignored.
+    /// </param>
+    /// <param name="AIgnoreReason">
+    ///   Why the test is ignored.
+    /// </param>
+    /// <param name="AMaxTime">
+    ///   The [MaxTime] limit in milliseconds; 0 for no limit.
+    /// </param>
     constructor Create(const AFixture : ITestFixture; const AMethodName : string; const AName : string; const ACategory : string; const AMethod : TTestMethod;
       const AEnabled : boolean; const AIgnored : boolean = false; const AIgnoreReason : string = ''; const AMaxTime : Cardinal = 0);
+    /// <summary>
+    ///   Frees the category list.
+    /// </summary>
     destructor Destroy; override;
   end;
 
+  /// <summary>
+  ///   A [WillRaise] test: passes only when the body raises the expected exception class (exactly, or a descendant).
+  /// </summary>
   TDUnitXExceptionTest = class(TDUnitXTest, ITestExecute)
   private
+    /// <summary>The exception class the body must raise.</summary>
     FExpectedException : ExceptClass;
+    /// <summary>Whether the raised class must match exactly or may descend from FExpectedException.</summary>
     FExceptionInheritance : TExceptionInheritance;
   protected
+    /// <summary>
+    ///   Runs the body inside Assert.WillRaise (or Assert.WillRaiseDescendant), within the timed region so that
+    ///   [MaxTime] still applies.
+    /// </summary>
+    /// <exception cref="ETestFailure">
+    ///   Raised when the body raises nothing or a different exception class.
+    /// </exception>
+    /// <remarks>
+    ///   Nothing is kept from the execute context: holding it (the run results, which hold the fixture, which holds
+    ///   this test) made a reference cycle that leaked the whole run.
+    /// </remarks>
     procedure ExecuteMethod; override;
   public
+    /// <summary>
+    ///   Creates a test that expects its body to raise.
+    /// </summary>
+    /// <param name="AFixture">
+    ///   The owning fixture, held weakly.
+    /// </param>
+    /// <param name="AMethodName">
+    ///   The name of the fixture method.
+    /// </param>
+    /// <param name="AName">
+    ///   The test's display name.
+    /// </param>
+    /// <param name="ACategory">
+    ///   Comma-separated categories.
+    /// </param>
+    /// <param name="AMethod">
+    ///   The bound method to run.
+    /// </param>
+    /// <param name="AEnabled">
+    ///   True to run the test.
+    /// </param>
+    /// <param name="AIgnored">
+    ///   True to report the test as ignored.
+    /// </param>
+    /// <param name="AIgnoreReason">
+    ///   Why the test is ignored.
+    /// </param>
+    /// <param name="AMaxTime">
+    ///   The [MaxTime] limit in milliseconds; 0 for no limit.
+    /// </param>
+    /// <param name="AExpectedException">
+    ///   The exception class the body must raise.
+    /// </param>
+    /// <param name="AExceptionInheritance">
+    ///   exExact to require that class exactly; exDescendant to accept a descendant too.
+    /// </param>
     constructor Create(const AFixture : ITestFixture; const AMethodName : string; const AName : string; const ACategory : string;
       const AMethod : TTestMethod; const AEnabled : boolean; const AIgnored : boolean = false;
       const AIgnoreReason : string = ''; const AMaxTime : Cardinal = 0;
       const AExpectedException : ExceptClass = nil; const AExceptionInheritance : TExceptionInheritance = exExact);
   end;
 
+  /// <summary>
+  ///   One case of a parameterised test ([TestCase], a test case source or a [TestCaseProvider]): invokes the method
+  ///   through RTTI with arguments converted to the parameter types when the test is created.
+  /// </summary>
   TDUnitXTestCase = class(TDUnitXTest, ITestExecute)
   private
+    /// <summary>The case's name, appended to the test name by GetName.</summary>
     FCaseName : string;
+    /// <summary>The arguments, already converted to the method's parameter types.</summary>
     FArgs : TValueArray;
+    /// <summary>The RTTI method invoked for the case.</summary>
     FRttiMethod : TRttiMethod;
+    /// <summary>The fixture instance the method is invoked on.</summary>
     FInstance : TObject;
+    /// <summary>
+    ///   A wrong argument count or failed conversion found at creation; when set, running the case raises it instead
+    ///   of invoking the method, so bad data does not silently become defaults and does not abort the whole run.
+    /// </summary>
     FArgError : string;
+    /// <summary>The [WillRaise] exception class each case must raise; nil when none is expected.</summary>
     FExpectedException : ExceptClass;
+    /// <summary>Whether the raised class must match exactly or may descend from FExpectedException.</summary>
     FExceptionInheritance : TExceptionInheritance;
+    /// <summary>
+    ///   Invokes the RTTI method on the fixture instance with the converted arguments.
+    /// </summary>
     procedure InvokeMethod;
   protected
+    /// <summary>
+    ///   Identifies the test as a test case.
+    /// </summary>
+    /// <returns>
+    ///   Always True.
+    /// </returns>
     function GetIsTestCase : boolean; override;
+    /// <summary>
+    ///   The test name joined to the case name: directly when the case name starts with '(' (an auto-named case),
+    ///   otherwise with a '.'.
+    /// </summary>
+    /// <returns>
+    ///   The case's display name; the plain test name when the case has no name.
+    /// </returns>
     function GetName : string; override;
+    /// <summary>
+    ///   Invokes the method with the case's arguments, applying [WillRaise] to each case as to a plain test.
+    /// </summary>
+    /// <exception cref="EArgumentException">
+    ///   Raised when the case's values did not match the method's parameters (count or conversion).
+    /// </exception>
+    /// <exception cref="ETestFailure">
+    ///   Raised when [WillRaise] is set and the method raises nothing or a different exception class.
+    /// </exception>
     procedure ExecuteMethod; override;
+    /// <summary>
+    ///   Rebinds the case to a new fixture instance.
+    /// </summary>
+    /// <param name="fixtureInstance">
+    ///   The fixture instance the method is now to be invoked on.
+    /// </param>
     procedure UpdateInstance(const fixtureInstance : TObject); override;
   public
+    /// <summary>
+    ///   Creates a test case and converts its values to the method's parameter types. A count mismatch or failed
+    ///   conversion is stored and reported when the case runs, not raised here.
+    /// </summary>
+    /// <param name="AInstance">
+    ///   The fixture instance to invoke the method on.
+    /// </param>
+    /// <param name="AFixture">
+    ///   The owning fixture, held weakly.
+    /// </param>
+    /// <param name="AMethodName">
+    ///   The name of the fixture method.
+    /// </param>
+    /// <param name="ACaseName">
+    ///   The case's name.
+    /// </param>
+    /// <param name="AName">
+    ///   The test's display name.
+    /// </param>
+    /// <param name="ACategory">
+    ///   Comma-separated categories.
+    /// </param>
+    /// <param name="AMethod">
+    ///   The RTTI method to invoke.
+    /// </param>
+    /// <param name="AEnabled">
+    ///   True to run the case.
+    /// </param>
+    /// <param name="AArgs">
+    ///   The case's values. For a single-parameter method, no values means one empty string.
+    /// </param>
+    /// <param name="AMaxTime">
+    ///   The [MaxTime] limit in milliseconds; 0 for no limit.
+    /// </param>
+    /// <param name="AExpectedException">
+    ///   The exception class each case must raise; nil when none is expected.
+    /// </param>
+    /// <param name="AExceptionInheritance">
+    ///   exExact to require that class exactly; exDescendant to accept a descendant too.
+    /// </param>
     constructor Create(const AInstance : TObject; const AFixture : ITestFixture; const AMethodName : string; const ACaseName : string; const AName : string;
       const ACategory : string; const AMethod : TRttiMethod;
       const AEnabled : boolean; const AArgs : TValueArray; const AMaxTime : Cardinal = 0;
       const AExpectedException : ExceptClass = nil; const AExceptionInheritance : TExceptionInheritance = exExact); reintroduce;
+    /// <summary>
+    ///   Destroys the test case.
+    /// </summary>
     destructor Destroy; override;
   end;
 
-  //A test that reports, when it runs, a problem found while the tests were generated (such as a
-  //[TestCaseProvider] that is not registered), so the problem is not silently a missing test.
+  /// <summary>
+  ///   A test that reports, when it runs, a problem found while the tests were generated (such as a [TestCaseProvider]
+  ///   that is not registered), so the problem is not silently a missing test.
+  /// </summary>
   TDUnitXErrorTest = class(TDUnitXTest, ITestExecute)
   private
+    /// <summary>The problem to report.</summary>
     FError : string;
   protected
+    /// <summary>
+    ///   Reports the stored problem as an error.
+    /// </summary>
+    /// <exception cref="EArgumentException">
+    ///   Always raised, with the stored message.
+    /// </exception>
     procedure ExecuteMethod; override;
   public
+    /// <summary>
+    ///   Creates an enabled error test.
+    /// </summary>
+    /// <param name="AFixture">
+    ///   The owning fixture, held weakly.
+    /// </param>
+    /// <param name="AMethodName">
+    ///   The name of the fixture method the problem concerns.
+    /// </param>
+    /// <param name="AName">
+    ///   The test's display name.
+    /// </param>
+    /// <param name="ACategory">
+    ///   Comma-separated categories.
+    /// </param>
+    /// <param name="AError">
+    ///   The message reported when the test runs.
+    /// </param>
     constructor Create(const AFixture : ITestFixture; const AMethodName : string; const AName : string; const ACategory : string;
       const AError : string); reintroduce;
   end;
@@ -169,6 +542,7 @@ uses
 {$ENDIF}
   DUnitX.Timeout,
   DUnitX.ResStrs,
+  DUnitX.Exceptions,
   DUnitX.Utils;
 
 { TDUnitXTest }
@@ -214,19 +588,36 @@ end;
 procedure TDUnitXTest.Execute(const context : ITestExecuteContext);
 var
   timeout : ITimeout;
-begin
-  FStartTime := Now();
-  try
-    if FMaxTime > 0 then
-      timeout := InitialiseTimeOut(FMaxTime);
-    ExecuteMethod;
-    //Stop timing before anything else runs, so that nothing executed afterwards is
-    //attributed to the test body, then report an overrun.
+
+  //Stops timing before anything else runs, so that nothing executed afterwards is attributed to the test body, then
+  //reports an overrun.
+  procedure CheckTimeout;
+  begin
     if timeout <> nil then
     begin
       timeout.Stop;
+      FTimedOut := timeout.TimedOut;
       timeout.RaiseIfTimedOut;
     end;
+  end;
+
+begin
+  FStartTime := Now();
+  FTimedOut := false;
+  try
+    if FMaxTime > 0 then
+      timeout := InitialiseTimeOut(FMaxTime);
+    try
+      ExecuteMethod;
+    except
+      //Assert.Pass ends the body early with ETestPass; an overrun before it is still a failure.
+      on ETestPass do
+      begin
+        CheckTimeout;
+        raise;
+      end;
+    end;
+    CheckTimeout;
   finally
     FEndTime := Now();
 
@@ -256,8 +647,15 @@ begin
 end;
 
 function TDUnitXTest.GetFullName : string;
+var
+  fixture : ITestFixture;
 begin
-  result := FFixture.Data.FullName + '.' + Self.GetName;
+  //The fixture is held weakly; a result can outlive it (the GUI runner keeps results across a reload).
+  fixture := FFixture.Data;
+  if fixture <> nil then
+    result := fixture.FullName + '.' + Self.GetName
+  else
+    result := Self.GetName;
 end;
 
 function TDUnitXTest.GetIgnored : boolean;

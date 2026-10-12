@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -50,65 +50,172 @@ interface
 
 uses
 {$IFDEF USE_NS}
+  Winapi.Windows,
   System.Generics.Collections;
 {$ELSE}
+  Windows,
   Generics.Collections;
 {$ENDIF}
 
 type
-  /// Implemented by our weak referenced object base class
+  /// <summary>
+  ///   Implemented by the weak-referenceable object base class: lets a <see cref="TWeakReference{T}" /> register the
+  ///   address of its target field so the target can clear it when it is destroyed.
+  /// </summary>
   IWeakReferenceableObject = interface
     ['{3D7F9CB5-27F2-41BF-8C5F-F6195C578755}']
+    /// <summary>Registers the address of a weak reference's target field, to be set to nil on destruction.</summary>
+    /// <param name="value">Address of the pointer field that refers to this object.</param>
     procedure AddWeakRef(value : Pointer);
+    /// <summary>Unregisters a weak reference's target field previously added by <c>AddWeakRef</c>.</summary>
+    /// <param name="value">Address of the pointer field to forget.</param>
     procedure RemoveWeakRef(value : Pointer);
+    /// <summary>Returns the object's current reference count.</summary>
+    /// <returns>The number of strong interface references held, excluding the destroying flag.</returns>
     function GetRefCount : integer;
   end;
 
-  ///  This is our base class for any object that can have a weak reference to
-  ///  it. It implements IInterface so the object can also be used just like
-  ///  any normal reference counted objects in Delphi.
+  /// <summary>
+  ///   Base class for any object that can have a weak reference to it. It implements IInterface so the object can
+  ///   also be used just like any normal reference-counted object in Delphi.
+  /// </summary>
+  /// <remarks>
+  ///   Delphi reference counting leaks circular references (a parent holding <c>IChild</c> and a child holding
+  ///   <c>IParent</c> keep each other alive). A weak reference to such an object does not count, and is cleared to
+  ///   nil when the object is destroyed - the .NET WeakReference lifecycle. Borrowed from FinalBuilder 7.
+  /// </remarks>
   TWeakReferencedObject = class(TObject, IInterface, IWeakReferenceableObject)
   private const
+    /// <summary>
+    ///   High bit set in <c>FRefCount</c> once the count has reached zero and destruction has begun, so a weak
+    ///   reference does not revive the object.
+    /// </summary>
     objDestroyingFlag = Integer($80000000);
+  private
+    /// <summary>
+    ///   Guards all weak-reference bookkeeping: the lists of weak references and every TWeakReference's target field.
+    /// </summary>
+    /// <remarks>
+    ///   A critical section record, not an object, and never deleted: objects holding weak references are still
+    ///   being destroyed after this unit finalizes (a VCL form freed by Vcl.Forms' finalization), so a lock freed
+    ///   there was used after it was freed. The operating system releases it at process exit.
+    /// </remarks>
+    class var FWeakReferenceLock : TRTLCriticalSection;
+    /// <summary>Initialises <c>FWeakReferenceLock</c> once, before the class is first used.</summary>
+    class constructor Create;
+    /// <summary>Enters the process-wide weak-reference lock.</summary>
+    class procedure LockWeakReferences; static;
+    /// <summary>Leaves the process-wide weak-reference lock.</summary>
+    class procedure UnlockWeakReferences; static;
   protected
 {$IFNDEF AUTOREFCOUNT}
+    /// <summary>
+    ///   Interface reference count; its high bit is <c>objDestroyingFlag</c> once destruction has begun.
+    /// </summary>
     FRefCount : Integer;
 {$ENDIF}
+    /// <summary>
+    ///   Addresses of the target fields of every live weak reference to this object; nil when there are none.
+    /// </summary>
     FWeakReferences : TList<Pointer>;
+    /// <summary>Returns the requested interface if the object implements it.</summary>
+    /// <param name="IID">The interface identifier asked for.</param>
+    /// <param name="Obj">Receives the interface reference on success.</param>
+    /// <returns>0 (S_OK) when supported, otherwise E_NOINTERFACE.</returns>
     function QueryInterface(const IID : TGUID; out Obj) : HResult; stdcall;
+    /// <summary>Atomically increments the reference count.</summary>
+    /// <returns>The new reference count.</returns>
     function _AddRef : Integer; stdcall;
+    /// <summary>
+    ///   Atomically decrements the reference count; at zero, sets the destroying flag and destroys the object.
+    /// </summary>
+    /// <returns>The new reference count.</returns>
     function _Release : Integer; stdcall;
+    /// <summary>
+    ///   Registers the address of a weak reference's target field, under the weak-reference lock, creating the list
+    ///   on first use.
+    /// </summary>
+    /// <param name="value">Address of the pointer field that refers to this object.</param>
     procedure AddWeakRef(value : Pointer);
+    /// <summary>
+    ///   Unregisters a weak reference's target field under the weak-reference lock, freeing the list when it empties.
+    /// </summary>
+    /// <param name="value">Address of the pointer field to forget.</param>
+    /// <exception cref="Exception">
+    ///   DEBUG builds only: no weak reference was ever registered (the list is nil). Release builds just return.
+    /// </exception>
     procedure RemoveWeakRef(value : Pointer);
+    /// <summary>Returns the reference count with the destroying flag masked off.</summary>
+    /// <returns>The number of strong interface references held.</returns>
     function GetRefCount : integer; inline;
   public
+    /// <summary>Drops the implicit reference that <c>NewInstance</c> took for the duration of construction.</summary>
     procedure AfterConstruction; override;
+    /// <summary>
+    ///   Sets every registered weak reference's target field to nil, under the weak-reference lock, and frees the list.
+    ///   Raises an invalid-pointer runtime error if strong references are still outstanding.
+    /// </summary>
     procedure BeforeDestruction; override;
+    /// <summary>
+    ///   Allocates the instance with an implicit reference count of 1 so that reference counting during construction
+    ///   cannot destroy it.
+    /// </summary>
+    /// <returns>The new, uninitialised instance.</returns>
 {$IFDEF AUTOREFCOUNT} [Result : Unsafe]{$ENDIF}class function NewInstance : TObject; override;
 {$IFNDEF AUTOREFCOUNT}
+    /// <summary>Number of strong interface references currently held.</summary>
     property RefCount : Integer read GetRefCount;
 {$ENDIF}
   end;
 
-  // This is our generic WeakReference interface
+  /// <summary>
+  ///   A reference to an interface that does not keep its target alive; the target must descend from
+  ///   <see cref="TWeakReferencedObject" /> (or implement <see cref="IWeakReferenceableObject" />).
+  /// </summary>
   IWeakReference<T : IInterface> = interface
+    /// <summary>Reports whether the target still exists.</summary>
+    /// <returns>True until the target is destroyed.</returns>
     function IsAlive : boolean;
+    /// <summary>Returns a strong reference to the target, or nil if it has been or is being destroyed.</summary>
+    /// <returns>The target as <c>T</c>, or nil.</returns>
     function Data : T;
   end;
 
-  //The actual WeakReference implementation.
+  /// <summary>
+  ///   The implementation of <see cref="IWeakReference{T}" />: holds the target as a raw pointer which the target
+  ///   clears when it is destroyed.
+  /// </summary>
   TWeakReference<T : IInterface> = class(TInterfacedObject, IWeakReference<T>)
   private
+    /// <summary>The target object as a raw, uncounted pointer; nil once the target is destroyed.</summary>
     FData : Pointer;
   protected
+    /// <summary>Reports whether the target still exists.</summary>
+    /// <returns>True while the target field is non-nil.</returns>
     function IsAlive : boolean;
+    /// <summary>
+    ///   Returns a strong reference to the target, taken under the weak-reference lock; a target whose last reference
+    ///   has already gone (destroying flag set) is not revived.
+    /// </summary>
+    /// <returns>The target as <c>T</c>, or nil if it is gone or does not support <c>T</c>'s GUID.</returns>
     function Data : T;
   public
+    /// <summary>Creates a weak reference to <paramref name="data" /> and registers it with the target.</summary>
+    /// <param name="data">The target interface; its object must implement <see cref="IWeakReferenceableObject" />.</param>
+    /// <exception cref="Exception">
+    ///   <paramref name="data" /> is nil, or its object does not implement <see cref="IWeakReferenceableObject" />.
+    /// </exception>
     constructor Create(const data : T);
+    /// <summary>Unregisters this reference from its target, if the target is still alive.</summary>
     destructor Destroy; override;
   end;
 
-//only here to work around compiler limitation.
+/// <summary>
+///   <c>TMonitor.TryEnter</c> with a nil check, which <c>TMonitor.TryEnter</c> lacks. Only here to work around a
+///   compiler limitation.
+/// </summary>
+/// <param name="AObject">The object whose monitor to try to enter; may be nil.</param>
+/// <returns>True if the monitor was entered; False if it was not or <paramref name="AObject" /> is nil.</returns>
 function SafeMonitorTryEnter(const AObject : TObject) : Boolean;
 
 implementation
@@ -202,42 +309,45 @@ end;
 function TWeakReference<T>.Data : T;
 begin
   result := Default(T);                 /// can't assign nil to T
-  if FData <> nil then
-  begin
-    //Make sure that the object supports the interface which is our generic type if we
-    //simply pass in the interface base type, the method table doesn't work correctly
-    if Supports(FData, GetTypeData(TypeInfo(T))^.Guid, result) then
-      //if Supports(FData, IInterface, result) then
-      result := T(result);
+  //The target clears FData under the weak-reference lock as it starts destroying, so while the lock is held a non-nil
+  //FData is a live object. One whose last reference has already gone (destroying flag set) is not revived.
+  TWeakReferencedObject.LockWeakReferences;
+  try
+    if (FData <> nil) and not ((TObject(FData) is TWeakReferencedObject)
+      and ((TWeakReferencedObject(FData).FRefCount and TWeakReferencedObject.objDestroyingFlag) <> 0)) then
+    begin
+      //Make sure that the object supports the interface which is our generic type if we
+      //simply pass in the interface base type, the method table doesn't work correctly
+      if Supports(TObject(FData), GetTypeData(TypeInfo(T))^.Guid, result) then
+        result := T(result);
+    end;
+  finally
+    TWeakReferencedObject.UnlockWeakReferences;
   end;
 end;
 
 destructor TWeakReference<T>.Destroy;
 var
   target : IWeakReferenceableObject;
-  data : TObject;
 begin
-  //Take a stable reference: FData is cleared below, and by the target if it is being
-  //destroyed concurrently, so it cannot be used as the monitor object throughout.
-  data := FData;
-  if data <> nil then
-  begin
-    //Block rather than try. Giving up on the lock skipped RemoveWeakRef but still nilled
-    //FData, which left the target holding a pointer to a field that was about to be freed
-    //- it would then write through that pointer during its own destruction. RemoveWeakRef
-    //itself blocks on this same monitor, so waiting here matches the unit's discipline.
-    MonitorEnter(data);
-    try
-      //get a strong reference to the target
-      if (FData <> nil) and Supports(FData, IWeakReferenceableObject, target) then
+  //One lock for all weak-reference bookkeeping. Locking the target's own monitor meant reading FData first, and the
+  //target could be freed by another thread between that read and the lock.
+  TWeakReferencedObject.LockWeakReferences;
+  try
+    if FData <> nil then
+    begin
+      //No interface reference to our own class: taking one would revive a target whose count has reached zero.
+      if TObject(FData) is TWeakReferencedObject then
+        TWeakReferencedObject(FData).RemoveWeakRef(@FData)
+      else if Supports(TObject(FData), IWeakReferenceableObject, target) then
       begin
         target.RemoveWeakRef(@FData);
         target := nil;                  //release the reference asap.
       end;
       FData := nil;
-    finally
-      MonitorExit(data);
     end;
+  finally
+    TWeakReferencedObject.UnlockWeakReferences;
   end;
   inherited;
 end;
@@ -251,19 +361,19 @@ end;
 
 procedure TWeakReferencedObject.AddWeakRef(value : Pointer);
 begin
-  MonitorEnter(Self);
+  TWeakReferencedObject.LockWeakReferences;
   try
     if FWeakReferences = nil then
       FWeakReferences := TList<Pointer>.Create;
     FWeakReferences.Add(value);
   finally
-    MonitorExit(Self);
+    TWeakReferencedObject.UnlockWeakReferences;
   end;
 end;
 
 procedure TWeakReferencedObject.RemoveWeakRef(value : Pointer);
 begin
-  MonitorEnter(Self);
+  TWeakReferencedObject.LockWeakReferences;
   try
     if FWeakReferences = nil then       // should never happen
 {$IFDEF DEBUG}
@@ -275,7 +385,7 @@ begin
     if FWeakReferences.Count = 0 then
       FreeAndNil(FWeakReferences);
   finally
-    MonitorExit(Self);
+    TWeakReferencedObject.UnlockWeakReferences;
   end;
 end;
 
@@ -297,7 +407,7 @@ begin
 {$ELSE}
   inherited BeforeDestruction;
 {$ENDIF}
-  MonitorEnter(Self);
+  TWeakReferencedObject.LockWeakReferences;
   try
     if FWeakReferences <> nil then
     begin
@@ -309,7 +419,7 @@ begin
       FreeAndNil(FWeakReferences);
     end;
   finally
-    MonitorExit(Self);
+    TWeakReferencedObject.UnlockWeakReferences;
   end;
 end;
 
@@ -369,6 +479,21 @@ begin
 {$ELSE}
   Result := __ObjRelease;
 {$ENDIF}
+end;
+
+class constructor TWeakReferencedObject.Create;
+begin
+  InitializeCriticalSection(FWeakReferenceLock);
+end;
+
+class procedure TWeakReferencedObject.LockWeakReferences;
+begin
+  EnterCriticalSection(FWeakReferenceLock);
+end;
+
+class procedure TWeakReferencedObject.UnlockWeakReferences;
+begin
+  LeaveCriticalSection(FWeakReferenceLock);
 end;
 
 end.

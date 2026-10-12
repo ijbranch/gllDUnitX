@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -36,10 +36,30 @@ uses
 
 //Defines the command line options for DUnitX. Add any new options definitions
 
+/// <summary>
+///   Checks the bare (unnamed) command-line argument, which names the XML output file.
+/// </summary>
+/// <param name="value">
+///   The argument as given.
+/// </param>
+/// <exception cref="EArgumentException">
+///   The argument does not end in <c>.xml</c>, so it is most likely a test name given without <c>--run:</c>; taken as
+///   the output file, it would run every test and overwrite a file of that name.
+/// </exception>
+procedure CheckXmlOutputFileArgument(const value : string);
+
 implementation
 
 uses
+  System.SysUtils,
+  DUnitX.ResStrs,
   DUnitX.CommandLine.Options;
+
+procedure CheckXmlOutputFileArgument(const value : string);
+begin
+  if not SameText(ExtractFileExt(value), '.xml') then
+    raise EArgumentException.CreateFmt(SBareArgumentNotXmlFile, [value]);
+end;
 
 procedure RegisterOptions;
 var
@@ -122,6 +142,7 @@ begin
   def := TOptionsRegistry.RegisterUnNamedOption<string>('',
     procedure(value : string)
     begin
+      CheckXmlOutputFileArgument(value);
       TDUnitX.Options.XMLOutputFile := value;
     end);
   def.Hidden := True;

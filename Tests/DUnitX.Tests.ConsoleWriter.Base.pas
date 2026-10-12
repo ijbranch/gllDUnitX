@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -41,44 +41,124 @@ uses
 
 type
 {$M+}
+  /// <summary>
+  ///   Console writer exposing what the base class's wrapping logic actually emitted, so tests can count and
+  ///   reassemble the physical lines a Write or WriteLn produced.
+  /// </summary>
   IDUnitXConsoleWriterTester = interface(IDUnitXConsoleWriter)
     ['{F5A84F9E-69A8-479E-9321-E1C528E09B92}']
+    /// <summary>
+    ///   Reads the console width the wrapping logic is using.
+    /// </summary>
+    /// <returns>
+    ///   The width in characters.
+    /// </returns>
     function GetConsoleWidth : integer;
+    /// <summary>
+    ///   Sets the console width the wrapping logic wraps at.
+    /// </summary>
+    /// <param name="Value">
+    ///   The width in characters.
+    /// </param>
     procedure SetConsoleWidth(const Value : integer);
 
+    /// <summary>
+    ///   Returns the physical lines written so far, one entry per console line.
+    /// </summary>
+    /// <returns>
+    ///   The writer's own list of written lines; owned by the writer, do not free.
+    /// </returns>
     function WrittenLines : TStringList;
+    /// <summary>
+    ///   Console width in characters at which the base writer wraps output.
+    /// </summary>
     property ConsoleWidth : integer read GetConsoleWidth write SetConsoleWidth;
   end;
 {$M-}
 
+  /// <summary>
+  ///   Which console-writer call a shared test helper should make.
+  /// </summary>
   TWriteMethod = (
+    /// <summary>Call Write (no line terminator).</summary>
     Write,
+    /// <summary>Call WriteLn (terminate the line).</summary>
     WriteLn
   );
 
 {$M+}
+  /// <summary>
+  ///   Tests for <c>TDUnitXConsoleWriterBase</c>'s line wrapping: how many physical lines a Write or WriteLn of a
+  ///   given length produces against a fixed console width, and that no characters are lost or duplicated.
+  /// </summary>
   [TestFixture]
   TDUnitX_ConsoleWriterBaseTests = class
   private
+    /// <summary>
+    ///   Writes a string of digits of the given length and asserts the writer produced the expected number of
+    ///   physical lines whose concatenation is the original string.
+    /// </summary>
+    /// <param name="AWriteMethod">
+    ///   Whether to call Write or WriteLn.
+    /// </param>
+    /// <param name="AWriter">
+    ///   The writer under test, with its console width already set.
+    /// </param>
+    /// <param name="ALength">
+    ///   Length of the string to write.
+    /// </param>
+    /// <param name="ANumberOfLines">
+    ///   Number of physical lines expected.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   Raised (via Assert) when the line count or reassembled text differs from the expectation.
+    /// </exception>
     procedure After_Write_String_Of_Length_Expect_X_Lines_Written(const AWriteMethod : TWriteMethod; const AWriter :
       IDUnitXConsoleWriterTester; const ALength : Integer; const ANumberOfLines : Integer);
   public
+    /// <summary>
+    ///   Proves a WriteLn of exactly the console width fits on one line, with no spurious wrap at the boundary.
+    /// </summary>
     [Test]
     procedure After_WriteLn_String_Of_ConsoleWidth_Length_Expect_One_Line_Is_Written;
+    /// <summary>
+    ///   Proves a WriteLn one character longer than the console width wraps to two lines without losing text.
+    /// </summary>
     [Test]
     procedure After_WriteLn_String_Of_One_More_Than_ConsoleWidth_Length_Expect_Two_Lines_Are_Written;
 
+    /// <summary>
+    ///   Proves a Write of exactly the console width produces a single line.
+    /// </summary>
     [Test]
     procedure After_Write_String_Of_ConsoleWidth_Length_Expect_Single_Line_Is_Written;
+    /// <summary>
+    ///   Proves a Write shorter than the console width produces a single line.
+    /// </summary>
     [Test]
     procedure After_Write_String_Of_One_Less_Than_ConsoleWidth_Length_Expect_Single_Line_Is_Written;
+    /// <summary>
+    ///   Proves a Write one character longer than the console width wraps to two lines without losing text.
+    /// </summary>
     [Test]
     procedure After_Write_String_Of_One_More_Than_ConsoleWidth_Length_Expect_Two_Lines_Are_Written;
+    /// <summary>
+    ///   Proves an embedded CRLF in a Write splits the text into two physical lines that rejoin, with the CRLF, to
+    ///   the original message (the name's "one line" predates the assertion of two).
+    /// </summary>
     [Test]
     procedure After_Write_String_With_CRLF_Expect_One_Line_Is_Written;
 
+    /// <summary>
+    ///   Documents a known limitation: two consecutive Writes whose combined length exceeds the width stay on one
+    ///   line, because the base class leaves line tracking across calls to the implementing writer.
+    /// </summary>
     [Test]
     procedure After_Write_Two_Strings_Of_One_Less_Than_ConsoleWidth_Length_Expect_No_New_Line;
+    /// <summary>
+    ///   Documents a known limitation: a Write followed by a WriteLn yields two lines rather than continuing the
+    ///   first, because the base class does not track what the previous call left on the line.
+    /// </summary>
     [Test]
     procedure After_Write_Then_WriteLn_Two_Strings_Of_One_Less_Than_ConsoleWidth_Length_Expect_No_New_Line;
   end;

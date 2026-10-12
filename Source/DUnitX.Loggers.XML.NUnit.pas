@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -45,31 +45,80 @@ uses
   DUnitX.Loggers.Null;
 
 type
+  /// <summary>
+  ///   Logger that writes the whole run, once it has finished, as an NUnit 2.x XML results document (UTF-8 with a BOM)
+  ///   to a stream, for CI servers that read NUnit results. Memory leaks are reported as failures, since the NUnit
+  ///   format has no leak outcome.
+  /// </summary>
   TDUnitXXMLNUnitLogger = class(TDUnitXNullLogger)
   private
+    /// <summary>The stream the XML is written to.</summary>
     FOutputStream : TStream;
+    /// <summary>True when the logger owns <c>FOutputStream</c> and frees it on destruction.</summary>
     FOwnsStream : boolean;
+    /// <summary>The current indent of written lines, in spaces.</summary>
     FIndent : integer;
+    /// <summary>Invariant number formatting (<c>.</c> decimal, <c>,</c> thousands) so times are valid in any locale.</summary>
     FFormatSettings : TFormatSettings;
   protected
+    /// <summary>Increases the indent of following lines by two spaces.</summary>
     procedure Indent;
+    /// <summary>Decreases the indent of following lines by two spaces.</summary>
     procedure Outdent;
+    /// <summary>Writes one line, at the current indent and terminated by CR LF, to the stream as UTF-8.</summary>
+    /// <param name="value">The XML text of the line, already escaped.</param>
     procedure WriteXMLLine(const value : string);
 
+    /// <summary>
+    ///   Rolls up the namespace fixtures (<c>IFixtureResult.Reduce</c>), then writes the complete document: the
+    ///   <c>test-results</c> root with the run's totals, an assembly <c>test-suite</c>, and every fixture and test.
+    /// </summary>
+    /// <param name="RunResults">The results of the whole run.</param>
     procedure OnTestingEnds(const RunResults : IRunResults); override;
 
+    /// <summary>Writes a <c>categories</c> element listing each category; writes nothing for an empty list.</summary>
+    /// <param name="ACategoryList">The categories of a fixture or test.</param>
     procedure WriteCategoryNodes(const ACategoryList : TList<string>);
+    /// <summary>
+    ///   Writes a fixture as a <c>test-suite</c> element (type <c>Fixture</c> for a real test class, <c>Namespace</c>
+    ///   for a grouping node), recursing into its tests and child fixtures. A real fixture with no results is skipped.
+    /// </summary>
+    /// <param name="fixtureResult">The fixture's results.</param>
     procedure WriteFixtureResult(const fixtureResult : IFixtureResult);
+    /// <summary>
+    ///   Writes a test as a <c>test-case</c> element, with a <c>failure</c> (message and stack trace) for a failure,
+    ///   error or leak, or a <c>reason</c> for an ignored test.
+    /// </summary>
+    /// <param name="testResult">The test's result.</param>
     procedure WriteTestResult(const testResult : ITestResult);
 
+    /// <summary>Formats text with the logger's invariant format settings rather than the user's locale.</summary>
+    /// <param name="Format">A <c>Format</c> pattern.</param>
+    /// <param name="Args">The arguments for the pattern.</param>
+    /// <returns>The formatted text.</returns>
     function Format(const Format : string; const Args : array of const) : string;
   public
+    /// <summary>Creates the logger and writes the UTF-8 BOM to the stream at once.</summary>
+    /// <param name="AOutputStream">The stream to write the XML to.</param>
+    /// <param name="AOwnsStream">True to free the stream when the logger is destroyed.</param>
     constructor Create(const AOutputStream : TStream; const AOwnsStream : boolean = false);
+    /// <summary>Frees the output stream when owned.</summary>
     destructor Destroy; override;
   end;
 
+  /// <summary>
+  ///   NUnit XML logger that writes to a file it creates (replacing any existing file) and owns.
+  /// </summary>
   TDUnitXXMLNUnitFileLogger = class(TDUnitXXMLNUnitLogger)
   public
+    /// <summary>
+    ///   Creates the results file, and its folder when the name includes one, and starts logging to it.
+    /// </summary>
+    /// <param name="AFilename">
+    ///   The results file; empty means <c>dunitx-results.xml</c> beside the executable. A bare file name is created in
+    ///   the current folder.
+    /// </param>
+    /// <exception cref="EFCreateError">The file cannot be created.</exception>
     constructor Create(const AFilename : string = '');
   end;
 

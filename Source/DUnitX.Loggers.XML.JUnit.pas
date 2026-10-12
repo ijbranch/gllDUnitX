@@ -45,31 +45,84 @@ uses
   DUnitX.Loggers.Null;
 
 type
+  /// <summary>
+  ///   Logger that writes the whole run, once it has finished, as a JUnit XML results document (UTF-8 with a BOM) to a
+  ///   stream, for CI servers that read JUnit results. Ignored tests are written as <c>skipped</c> and counted as
+  ///   <c>disabled</c>; memory leaks are written as errors, since the JUnit format has no leak outcome.
+  /// </summary>
   TDUnitXXMLJUnitLogger = class(TDUnitXNullLogger)
   private
+    /// <summary>The stream the XML is written to.</summary>
     FOutputStream : TStream;
+    /// <summary>True when the logger owns <c>FOutputStream</c> and frees it on destruction.</summary>
     FOwnsStream : boolean;
+    /// <summary>The current indent of written lines, in spaces.</summary>
     FIndent : integer;
+    /// <summary>Invariant number formatting (<c>.</c> decimal, <c>,</c> thousands) so times are valid in any locale.</summary>
     FFormatSettings : TFormatSettings;
   protected
+    /// <summary>Increases the indent of following lines by two spaces.</summary>
     procedure Indent;
+    /// <summary>Decreases the indent of following lines by two spaces.</summary>
     procedure Outdent;
+    /// <summary>Writes one line, at the current indent and terminated by CR LF, to the stream as UTF-8.</summary>
+    /// <param name="value">The XML text of the line, already escaped.</param>
     procedure WriteXMLLine(const value : string);
 
+    /// <summary>
+    ///   Rolls up the namespace fixtures (<c>IFixtureResult.Reduce</c>), then writes the complete document: the
+    ///   <c>testsuites</c> root with the run's totals and one <c>testsuite</c> per real fixture.
+    /// </summary>
+    /// <param name="RunResults">The results of the whole run.</param>
     procedure OnTestingEnds(const RunResults : IRunResults); override;
 
+    /// <summary>
+    ///   Writes a <c>categories</c> element listing each category; writes nothing for an empty list. Not currently
+    ///   called: the JUnit output omits categories.
+    /// </summary>
+    /// <param name="ACategoryList">The categories of a fixture or test.</param>
     procedure WriteCategoryNodes(const ACategoryList : TList<string>);
+    /// <summary>
+    ///   Writes a real fixture as a flat <c>testsuite</c> element (named by its namespace, with counts of its own test
+    ///   cases and an ISO 8601 timestamp), followed by its child fixtures as further suites. A namespace node writes
+    ///   only its children; a real fixture with no results is skipped.
+    /// </summary>
+    /// <param name="fixtureResult">The fixture's results.</param>
     procedure WriteFixtureResult(const fixtureResult : IFixtureResult);
+    /// <summary>
+    ///   Writes a test as a <c>testcase</c> element, with a <c>failure</c> for a failure, an <c>error</c> for an error
+    ///   or leak (message plus stack trace), or <c>skipped</c> for an ignored test.
+    /// </summary>
+    /// <param name="testResult">The test's result.</param>
     procedure WriteTestResult(const testResult : ITestResult);
 
+    /// <summary>Formats text with the logger's invariant format settings rather than the user's locale.</summary>
+    /// <param name="Format">A <c>Format</c> pattern.</param>
+    /// <param name="Args">The arguments for the pattern.</param>
+    /// <returns>The formatted text.</returns>
     function Format(const Format : string; const Args : array of const) : string;
   public
+    /// <summary>Creates the logger and writes the UTF-8 BOM to the stream at once.</summary>
+    /// <param name="AOutputStream">The stream to write the XML to.</param>
+    /// <param name="AOwnsStream">True to free the stream when the logger is destroyed.</param>
     constructor Create(const AOutputStream : TStream; const AOwnsStream : boolean = false);
+    /// <summary>Frees the output stream when owned.</summary>
     destructor Destroy; override;
   end;
 
+  /// <summary>
+  ///   JUnit XML logger that writes to a file it creates (replacing any existing file) and owns.
+  /// </summary>
   TDUnitXXMLJUnitFileLogger = class(TDUnitXXMLJUnitLogger)
   public
+    /// <summary>
+    ///   Creates the results file, and its folder when the name includes one, and starts logging to it.
+    /// </summary>
+    /// <param name="AFilename">
+    ///   The results file; empty means <c>dunitx-results.xml</c> beside the executable. A bare file name is created in
+    ///   the current folder.
+    /// </param>
+    /// <exception cref="EFCreateError">The file cannot be created.</exception>
     constructor Create(const AFilename : string = '');
   end;
 
@@ -211,7 +264,9 @@ var
   testResult : ITestResult;
   sExecuted : string;
   sName : string;
-  leakCount : integer;
+  ignoredCount : integer;
+  errorCount : integer;
+  failureCount : integer;
 begin
   //its a real fixture if the class is not TObject.
   if (not fixtureResult.Fixture.TestClass.ClassNameIs('TObject')) then
@@ -233,15 +288,22 @@ begin
     //':' unquoted is the locale's time separator; ISO 8601 needs a literal ':'.
     sDate := FormatDateTime('yyyy-MM-dd"T"hh":"nn":"ss', fixtureResult.StartTime);
 
-    //a leaked test is written as <error>, so count it as one
-    leakCount := 0;
+    //The counts are of this suite's own <testcase> elements, as tests="" is. The fixture result's counts are rolled up
+    //from its children, which are written as suites of their own. A leaked test is written as <error>, so it counts
+    //as one.
+    ignoredCount := 0;
+    errorCount := 0;
+    failureCount := 0;
     for testResult in fixtureResult.TestResults do
-      if testResult.ResultType = TTestResultType.MemoryLeak then
-        Inc(leakCount);
+      case testResult.ResultType of
+        TTestResultType.Ignored : Inc(ignoredCount);
+        TTestResultType.Error, TTestResultType.MemoryLeak : Inc(errorCount);
+        TTestResultType.Failure : Inc(failureCount);
+      end;
 
     // There is only a "disabled" attribute on the top level, but "disabled" and "skipped" on fixture level. Return ignored tests as "disabled"
     WriteXMLLine(Format('<testsuite name="%s" tests="%d" disabled="%d" errors="%d" failures="%d" time="%s" timestamp="%s">',
-        [sName, fixtureResult.TestResults.Count, fixtureResult.IgnoredCount, fixtureResult.ErrorCount + leakCount, fixtureResult.FailureCount, sTime, sDate]));
+        [sName, fixtureResult.TestResults.Count, ignoredCount, errorCount, failureCount, sTime, sDate]));
     //WriteCategoryNodes(fixtureResult.Fixture.Categories);
 
     for testResult in fixtureResult.TestResults do

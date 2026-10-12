@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -31,7 +31,15 @@ interface
 {$I DUnitX.inc}
 
 type
+  /// <summary>
+  ///   Abstract marker base class for a serialisation format in which two values can be compared (the string
+  ///   <c>Assert.AreEqual</c> overloads in <c>DUnitX.Assert.Ex</c> take one). It has no members; descendants only name a
+  ///   format.
+  /// </summary>
   TDUnitXComparableFormat = class abstract(TObject);
+  /// <summary>
+  ///   Class reference to a <see cref="TDUnitXComparableFormat" /> descendant, used to pass a format by type.
+  /// </summary>
   TDUnitXComparableFormatClass = class of TDUnitXComparableFormat;
 
 implementation

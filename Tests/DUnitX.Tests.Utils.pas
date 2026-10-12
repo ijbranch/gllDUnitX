@@ -27,32 +27,81 @@ uses
 {$ENDIF}
 
 type
+  /// <summary>
+  ///   Tests for the TValue helper in <c>DUnitX.Utils</c>: the string-to-value conversion behind [TestCase]
+  ///   arguments (dates, times, colours, numbers, enums, sets) across locales, range checking, and ToVarRec.
+  /// </summary>
   [TestFixture('TValueHelper')]
   [Category('Utils')]
   TValueHelperTests = class
   private var
 {$IFDEF DELPHI_XE_UP}
+    /// <summary>The process FormatSettings captured at construction, restored by revertFormatSettings.</summary>
     originalFormatSettings : TFormatSettings;
 {$ELSE}
+    /// <summary>The thread locale captured at construction, restored by revertFormatSettings.</summary>
     originalLCID : Integer;
 {$ENDIF}
   protected var
+    /// <summary>The date every date test case must convert to: 2020-06-22.</summary>
     expectedDate : TDate;
+    /// <summary>The time every time test case must convert to: 18:36:00.</summary>
     expectedTime : TTime;
   protected
+    /// <summary>
+    ///   Switches the global FormatSettings to the named locale, so conversions run as they would on that machine.
+    /// </summary>
+    /// <param name="locale">
+    ///   A locale name such as 'EN-US', 'EN-GB' or 'DE'.
+    /// </param>
     procedure setFormatSettings(const locale : string);
+    /// <summary>
+    ///   Restores the FormatSettings (or thread locale) captured at construction.
+    /// </summary>
     procedure revertFormatSettings();
 {$IFDEF DELPHI_2010}
+    /// <summary>
+    ///   Maps the three supported locale names to hard-coded LCIDs, for Delphi 2010 which lacks a name lookup.
+    /// </summary>
+    /// <param name="locale">
+    ///   'EN-US', 'EN-GB' or 'DE'.
+    /// </param>
+    /// <returns>
+    ///   The locale's LCID.
+    /// </returns>
+    /// <exception cref="Exception">
+    ///   Raised for any other locale name.
+    /// </exception>
     function GetLCIDFromLocale(const locale : string) : integer;
 {$ENDIF}
   public
-    // Delphi 2010 does support calling of constructor
 {$IFDEF DELPHI_XE_UP}
+    /// <summary>
+    ///   Captures the current format settings and sets the expected date and time. (Delphi 2010 did not call the
+    ///   constructor, hence the AfterConstruction alternative.)
+    /// </summary>
     constructor Create;
 {$ELSE}
+    /// <summary>
+    ///   Captures the current thread locale and sets the expected date and time, on compilers that do not call the
+    ///   fixture's constructor.
+    /// </summary>
     procedure AfterConstruction; override;
 {$ENDIF}
+    /// <summary>
+    ///   Restores the original format settings so the locale switches do not outlive the fixture.
+    /// </summary>
     destructor Destroy; override;
+    /// <summary>
+    ///   Proves a date string in the locale's own short format, or in ISO 8601, converts to TDate 2020-06-22 -
+    ///   including German dates without leading zeroes or century.
+    /// </summary>
+    /// <param name="locale">
+    ///   Locale to switch to before converting.
+    /// </param>
+    /// <param name="text">
+    ///   The date text to convert.
+    /// </param>
     [Test]
     [TestCase('EN-US local format', 'EN-US,06/22/2020')]
     [TestCase('EN-US iso8601 format', 'EN-US,2020-06-22')]
@@ -64,6 +113,16 @@ type
     [TestCase('DE iso8601 format', 'DE,2020-06-22')]
     procedure TestDateConversion(const locale : string; const text : string);
 
+    /// <summary>
+    ///   Proves a time string in 12- or 24-hour form, with or without seconds or milliseconds, converts to TTime
+    ///   18:36:00 under each locale.
+    /// </summary>
+    /// <param name="locale">
+    ///   Locale to switch to before converting.
+    /// </param>
+    /// <param name="text">
+    ///   The time text to convert.
+    /// </param>
     [Test]
     [TestCase('EN-US local format, no leading zero, no seconds', 'EN-US,6:36 pm')]
     [TestCase('EN-US local format, with seconds', 'EN-US,06:36:00 PM')]
@@ -74,6 +133,16 @@ type
     [TestCase('EN-GB local 24 h format', 'EN-GB,18:36')]
     procedure TestTimeConversion(const locale : string; const text : string);
 
+    /// <summary>
+    ///   Proves a date-time string in local or ISO 8601 form (T separator, Z, offset) converts through
+    ///   TValue.TryConvert to 2020-06-22 18:36:00 under each locale.
+    /// </summary>
+    /// <param name="locale">
+    ///   Locale to switch to before converting.
+    /// </param>
+    /// <param name="text">
+    ///   The date-time text to convert.
+    /// </param>
     [Test]
     [TestCase('EN-US local format, verbose', 'EN-US,06/22/2020 06:36:00 pm')]
     [TestCase('EN-US local format short', 'EN-US,6/22/2020 6:36 pm')]
@@ -88,6 +157,21 @@ type
     [TestCase('DE iso8601 format', 'DE,2020-06-22 18:36:00')]
     procedure TestDateTimeConversion(const locale : string; const text : string);
 
+    /// <summary>
+    ///   Proves the RTL's StrToDateTime parses the same local-format strings to 2020-06-22 18:36:00, as a baseline
+    ///   for the TValue conversion.
+    /// </summary>
+    /// <param name="locale">
+    ///   Locale to switch to before converting.
+    /// </param>
+    /// <param name="text">
+    ///   The date-time text to convert.
+    /// </param>
+    /// <remarks>
+    ///   ISO 8601 cases belong on TestDateTimeConversion (TValue.TryConvert): the RTL's StrToDateTime does not parse
+    ///   those strings (Delphi 13.1, EN-US/EN-GB/DE). The previous {$IFDEF DELPHI_X8_UP} around them never compiled,
+    ///   because DUnitX.inc defines DELPHI_XE8_UP.
+    /// </remarks>
     [Test]
     [TestCase('EN-US local format, verbose', 'EN-US,06/22/2020 06:36:00 pm')]
     [TestCase('EN-US local format short', 'EN-US,6/22/2020 6:36 pm')]
@@ -95,11 +179,18 @@ type
     [TestCase('EN-GB local format, 12 h, verbose', 'EN-GB,22/06/2020 06:36:00 pm')]
     [TestCase('DE local format, verbose', 'DE,22.06.2020 18:36:00.000')]
     [TestCase('DE local format, short', 'DE,22.6.20 18:36')]
-    // ISO-8601 belongs on TestDateTimeConversion (TValue.TryConvert).
-    // RTL StrToDateTime does not parse those strings (Delphi 13.1, EN-US/EN-GB/DE).
-    // The previous {$IFDEF DELPHI_X8_UP} never compiled (DUnitX.inc defines DELPHI_XE8_UP).
     procedure TestDateTimeConversion2(const locale : string; const text : string);
 
+    /// <summary>
+    ///   Proves a TAlphaColor argument converts from an 'cla' name, a bare name in any case, a '$' hex literal or an
+    ///   'x' hex literal, all to the same value.
+    /// </summary>
+    /// <param name="AColor">
+    ///   The converted colour.
+    /// </param>
+    /// <param name="AColorOrd">
+    ///   The colour's expected ordinal value.
+    /// </param>
     [Test]
     [TestCase('claRed = xFFFF0000', 'claRed,xFFFF0000')]
     [TestCase('Red = xFFFF0000', 'Red,xFFFF0000')]
@@ -108,6 +199,15 @@ type
     [TestCase('xFFFF0000 = xFFFF0000', 'xFFFF0000,xFFFF0000')]
     procedure TestAlphaColorTestCase(const AColor : TAlphaColor; const AColorOrd : Cardinal);
 
+    /// <summary>
+    ///   Proves a VCL TColor argument converts from a 'cl' name in any case or a '$' hex literal.
+    /// </summary>
+    /// <param name="AColor">
+    ///   The converted colour.
+    /// </param>
+    /// <param name="AColorOrd">
+    ///   The colour's expected ordinal value.
+    /// </param>
     [Test]
     [TestCase('clRed = 255', 'clRed,255')]
     [TestCase('clred = 255', 'clred,255')]
@@ -117,34 +217,61 @@ type
     [TestCase('$000000FF = $000000FF', '$000000FF,$000000FF')]
     procedure TestColorTestCase(const AColor : TColor; const AColorOrd : Integer);
 
-    // A [TestCase] value that does not parse must fail the conversion, not become 0 / a default.
+    /// <summary>
+    ///   Proves a [TestCase] value that does not parse fails the conversion, not become 0 / a default: bad text,
+    ///   empty text, out-of-range ordinals, an ambiguous thousands-or-decimal comma, unknown enum or set members,
+    ///   and unknown colour, date or time names all return False without raising.
+    /// </summary>
     [Test]
     procedure TryConvert_Fails_For_Values_That_Do_Not_Parse;
 
-    // Valid values still convert, whatever the machine's decimal separator.
+    /// <summary>
+    ///   Proves valid values still convert, whatever the machine's decimal separator (run under DE); a decimal comma
+    ///   is accepted where it cannot be read as a thousands separator.
+    /// </summary>
     [Test]
     procedure TryConvert_Accepts_Valid_Values_In_Any_Locale;
 
-    // An ambiguous numeric date has the same meaning on every machine (ISO 8601 / invariant first).
+    /// <summary>
+    ///   Proves an ordinal or float value converts to a smaller ordinal type only when it fits, as a string value
+    ///   already must: Integer 300 does not become Byte 44, -1 does not become a Cardinal, 2.5 does not become 2.
+    /// </summary>
+    [Test]
+    procedure TryConvert_Ordinal_Fails_When_Out_Of_Range;
+
+    /// <summary>
+    ///   Proves an ambiguous numeric date has the same meaning on every machine (ISO 8601 / invariant first):
+    ///   '01/02/2020' is 2 January 2020 under both EN-GB and EN-US.
+    /// </summary>
     [Test]
     procedure TryConvert_Date_Meaning_Does_Not_Depend_On_Locale;
 
-    // ToVarRec gives a TVarRec whose VType matches the value and whose pointers read back the value: Int64 is
-    // handled, a float other than Extended is not read as 10 bytes, and strings point into the caller's storage,
-    // not at a freed temporary. Issue #398 item 2.
+    /// <summary>
+    ///   Proves ToVarRec gives a TVarRec whose VType matches the value and whose pointers read back the value: Int64
+    ///   is handled, a float other than Extended is not read as 10 bytes, and strings point into the caller's
+    ///   storage, not at a freed temporary. Issue #398 item 2.
+    /// </summary>
     [Test]
     procedure ToVarRec_Reads_Back_The_Value;
   end;
 
+  /// <summary>
+  ///   Tests for <c>TDUnitXList&lt;T&gt;</c>, the framework's interfaced list.
+  /// </summary>
   [TestFixture('TDUnitXList')]
   [Category('Utils')]
   TDUnitXListTests = class
   public
-    // ToArray returns the items in order, not nil. Issue #398 item 2.
+    /// <summary>
+    ///   Proves ToArray returns the items in order, not nil. Issue #398 item 2.
+    /// </summary>
     [Test]
     procedure ToArray_Returns_The_Items;
 
-    // The non-generic IEnumerable enumerator exists and yields the objects of a list of objects. Issue #398 item 2.
+    /// <summary>
+    ///   Proves the non-generic IEnumerable enumerator exists and yields the objects of a list of objects, then
+    ///   stops. Issue #398 item 2.
+    /// </summary>
     [Test]
     procedure NonGeneric_Enumerator_Yields_Objects;
   end;
@@ -284,6 +411,9 @@ begin
   CheckFails('abc', TypeInfo(Int64));
   CheckFails('-1', TypeInfo(UInt64));
   CheckFails('1.5x', TypeInfo(Double));
+  //A comma before exactly three digits is a thousands group in one locale and a decimal in another: ambiguous.
+  CheckFails('1,000', TypeInfo(Double));
+  CheckFails('-12,500', TypeInfo(Double));
   CheckFails('abc', TypeInfo(Single));
   CheckFails('Bogus', TypeInfo(TConvTestEnum));
   CheckFails('[cteOne,Bogus]', TypeInfo(TConvTestSet));
@@ -292,6 +422,25 @@ begin
   CheckFails('notadate', TypeInfo(TDateTime));
   CheckFails('notadate', TypeInfo(TDate));
   CheckFails('notatime', TypeInfo(TTime));
+end;
+
+procedure TValueHelperTests.TryConvert_Ordinal_Fails_When_Out_Of_Range;
+var
+  converted : TValue;
+begin
+  Assert.IsFalse(TValue.From<Integer>(300).TryConvert(TypeInfo(Byte), converted), 'Integer 300 -> Byte');
+  Assert.IsFalse(TValue.From<Integer>(-1).TryConvert(TypeInfo(Cardinal), converted), 'Integer -1 -> Cardinal');
+  Assert.IsFalse(TValue.From<Int64>(5000000000).TryConvert(TypeInfo(Integer), converted), 'Int64 5e9 -> Integer');
+  Assert.IsFalse(TValue.From<Integer>(7).TryConvert(TypeInfo(TConvTestEnum), converted), 'Integer 7 -> enum');
+  Assert.IsFalse(TValue.From<Double>(300).TryConvert(TypeInfo(Byte), converted), 'Double 300 -> Byte');
+  Assert.IsFalse(TValue.From<Double>(2.5).TryConvert(TypeInfo(Integer), converted), 'Double 2.5 -> Integer');
+  Assert.IsFalse(TValue.From<Double>(1E30).TryConvert(TypeInfo(Int64), converted), 'Double 1E30 -> Int64');
+
+  Assert.IsTrue(TValue.From<Integer>(200).TryConvert(TypeInfo(Byte), converted), 'Integer 200 -> Byte');
+  Assert.AreEqual<Int64>(200, converted.AsOrdinal);
+  Assert.IsTrue(TValue.From<Integer>(2).TryConvert(TypeInfo(TConvTestEnum), converted), 'Integer 2 -> enum');
+  Assert.IsTrue(TValue.From<Double>(255).TryConvert(TypeInfo(Byte), converted), 'Double 255 -> Byte');
+  Assert.AreEqual<Int64>(255, converted.AsOrdinal);
 end;
 
 procedure TValueHelperTests.TryConvert_Accepts_Valid_Values_In_Any_Locale;
@@ -309,6 +458,9 @@ begin
   Assert.AreEqual(1.5, converted.AsExtended, 0);
   Assert.IsTrue(TValue.From('2,5').TryConvert(TypeInfo(Double), converted), 'Double 2,5');
   Assert.AreEqual(2.5, converted.AsExtended, 0);
+  //A leading zero cannot start a thousands group, so this decimal comma is unambiguous.
+  Assert.IsTrue(TValue.From('0,125').TryConvert(TypeInfo(Double), converted), 'Double 0,125');
+  Assert.AreEqual(0.125, converted.AsExtended, 0);
   Assert.IsTrue(TValue.From('cteThree').TryConvert(TypeInfo(TConvTestEnum), converted), 'enum');
   Assert.AreEqual(Ord(cteThree), Integer(converted.AsOrdinal));
   Assert.IsTrue(TValue.From('[cteOne,cteThree]').TryConvert(TypeInfo(TConvTestSet), converted), 'set');

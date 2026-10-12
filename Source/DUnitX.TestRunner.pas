@@ -52,150 +52,810 @@ uses
   DUnitX.Exceptions;
 
 type
-  ///  Note - we rely on the fact that there will only ever be 1 testrunner
-  ///  per thread, if this changes then handling of WriteLn will need to change
+  /// <summary>
+  ///   The DUnitX test runner: builds the fixture tree, applies the filter, runs every fixture's setup, tests and
+  ///   teardown, checks each test for memory leaks, and reports progress and results to the attached loggers.
+  /// </summary>
+  /// <remarks>
+  ///   Relies on there being only one active test runner per thread; if that changes, the handling of
+  ///   <c>WriteLn</c> will need to change. A runner created while another is active on the same thread stands in for
+  ///   it until destroyed.
+  /// </remarks>
   TDUnitXTestRunner = class(TWeakReferencedObject, ITestRunner)
-  private
-    class var
-      FRttiContext : TRttiContext;
   public
     class var
+      /// <summary>
+      ///   The active runner of each thread, held weakly; guarded by <c>MonitorEnter</c> on the dictionary itself.
+      /// </summary>
       FActiveRunners : TDictionary<TThreadID, IWeakReference<ITestRunner>>;
   private
+    /// <summary>Loggers notified of every step of the run, in the order they were added.</summary>
     FLoggers : TList<ITestLogger>;
+    /// <summary>Whether fixture classes are also discovered through RTTI; passed to the fixture builder.</summary>
     FUseRTTI : boolean;
-    FFixtureClasses : TDictionary<TClass, string>;
 
+    /// <summary>The fixture tree, built and sorted on first <c>Execute</c> unless already built.</summary>
     FFixtureList : ITestFixtureList;
+    /// <summary>Text of the messages logged for the current setup, test or teardown.</summary>
     FLogMessages : TStringList;
+    /// <summary>The same messages with their log levels, attached to the current result.</summary>
     FLogMessagesEx : TLogMessageArray;
 
+    /// <summary>Whether a test that makes no assertion fails with <c>ENoAssertionsMade</c>.</summary>
     FFailsOnNoAsserts : boolean;
+    /// <summary>Name of the test currently executing, empty between tests.</summary>
     FCurrentTestName : string;
 
-    //The active-runner entry this runner registered, and the one it stood in for.
+    /// <summary>Thread whose active-runner entry this runner registered.</summary>
     FThreadId : TThreadID;
+    /// <summary>The active-runner entry this runner registered for itself.</summary>
     FOwnRunnerRef : IWeakReference<ITestRunner>;
+    /// <summary>The active-runner entry this runner stood in for, restored when it is destroyed.</summary>
     FPreviousRunnerRef : IWeakReference<ITestRunner>;
 
-    //While a test runs, measures memory the runner itself keeps (log messages, a pass message), which
-    //the leak check then discounts. nil when not measuring.
+    /// <summary>
+    ///   While a test runs, measures memory the runner itself keeps (log messages, a pass message), which the leak
+    ///   check then discounts; nil when not measuring.
+    /// </summary>
     FRunnerAllocationMonitor : IMemoryLeakMonitor;
+    /// <summary>Bytes the runner itself kept during the current test, subtracted from the leak total.</summary>
     FRunnerAllocated : Int64;
-    //Measures the whole span from the start of setup (or the test) to the end of teardown (or the test),
-    //so memory freed between the phases is not a leak. nil when the monitor is a singleton; the leak check
-    //then sums the phases.
+    /// <summary>
+    ///   Measures the whole span from the start of setup (or the test) to the end of teardown (or the test), so
+    ///   memory freed between the phases is not a leak. nil when the monitor is a singleton; the leak check then
+    ///   sums the phases.
+    /// </summary>
     FLeakSpanMonitor : IMemoryLeakMonitor;
+    /// <summary>Whether the leak span measurement has started for the current test.</summary>
     FLeakSpanStarted : boolean;
+    /// <summary>Nesting depth of runner-allocation brackets; only the outermost pair measures.</summary>
+    FRunnerAllocationDepth : Integer;
+    /// <summary>
+    ///   Opens a bracket whose allocations are credited to the runner rather than the test; nested brackets are
+    ///   measured once, by the outermost pair.
+    /// </summary>
     procedure BeginRunnerAllocation;
-    procedure EndRunnerAllocation;
+    /// <summary>
+    ///   Closes a runner-allocation bracket and, at the outermost level, adds what it allocated to the runner's total.
+    /// </summary>
+    /// <param name="onlyGrowth">
+    ///   When True, memory freed inside the bracket is not credited to the runner. Used around logger callbacks,
+    ///   which may release what the test or Setup allocated (the test's own memory going, not the runner's).
+    /// </param>
+    procedure EndRunnerAllocation(const onlyGrowth : boolean = False);
+    /// <summary>
+    ///   Starts the whole-span leak measurement for the current test, once, when a separate span monitor exists.
+    /// </summary>
     procedure BeginLeakSpan;
+    /// <summary>
+    ///   Moves the end of the leak span to now, so it covers everything up to the latest phase.
+    /// </summary>
     procedure ExtendLeakSpan;
+    /// <summary>
+    ///   Empties both log message lists, so the next result carries only what is logged from here on.
+    /// </summary>
+    procedure ClearLogMessages;
   protected
+    /// <summary>
+    ///   Applies the run filter to every test, recursively, and counts the tests that will be reported.
+    /// </summary>
+    /// <param name="fixtureList">
+    ///   The fixtures to walk.
+    /// </param>
+    /// <param name="count">
+    ///   Incremented for every enabled test.
+    /// </param>
+    /// <param name="active">
+    ///   Incremented for every enabled test that is not ignored.
+    /// </param>
     procedure CountAndFilterTests(const fixtureList : ITestFixtureList; var count, active : Cardinal);
-    //Logger calls - sequence ordered
+    /// <summary>
+    ///   Tells every logger the run is starting. The <c>Loggers_*</c> methods below are listed in the order the run
+    ///   calls them.
+    /// </summary>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="testCount">
+    ///   Number of enabled tests.
+    /// </param>
+    /// <param name="testActiveCount">
+    ///   Number of enabled tests that are not ignored.
+    /// </param>
     procedure Loggers_TestingStarts(const threadId : TThreadID; testCount, testActiveCount : Cardinal);
 
+    /// <summary>
+    ///   Tells every logger a fixture is starting.
+    /// </summary>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="fixture">
+    ///   The fixture.
+    /// </param>
     procedure Loggers_StartTestFixture(const threadId : TThreadID; const fixture : ITestFixtureInfo);
 
+    /// <summary>
+    ///   Tells every logger a fixture's <c>[SetupFixture]</c> method is about to run.
+    /// </summary>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="fixture">
+    ///   The fixture.
+    /// </param>
     procedure Loggers_SetupFixture(const threadId : TThreadID; const fixture : ITestFixtureInfo);
+    /// <summary>
+    ///   Tells every logger a fixture's <c>[SetupFixture]</c> method completed.
+    /// </summary>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="fixture">
+    ///   The fixture.
+    /// </param>
     procedure Loggers_EndSetupFixture(const threadId : TThreadID; const fixture : ITestFixtureInfo);
 
+    /// <summary>
+    ///   Tells every logger a test is beginning, before its setup.
+    /// </summary>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="Test">
+    ///   The test.
+    /// </param>
     procedure Loggers_BeginTest(const threadId : TThreadID; const Test : ITestInfo);
 
+    /// <summary>
+    ///   Tells every logger a test's <c>[Setup]</c> method is about to run.
+    /// </summary>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="Test">
+    ///   The test.
+    /// </param>
     procedure Loggers_SetupTest(const threadId : TThreadID; const Test : ITestInfo);
+    /// <summary>
+    ///   Tells every logger a test's <c>[Setup]</c> method completed. An exception from a logger is reported through
+    ///   that logger's <c>OnLog</c> (or written to the console) rather than failing the test.
+    /// </summary>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="Test">
+    ///   The test.
+    /// </param>
     procedure Loggers_EndSetupTest(const threadId : TThreadID; const Test : ITestInfo);
 
+    /// <summary>
+    ///   Tells every logger the test method is about to execute.
+    /// </summary>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="Test">
+    ///   The test.
+    /// </param>
     procedure Loggers_ExecuteTest(const threadId : TThreadID; const Test : ITestInfo);
 
+    /// <summary>
+    ///   Tells every logger a test passed.
+    /// </summary>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="Test">
+    ///   The passing result.
+    /// </param>
     procedure Loggers_AddSuccess(const threadId : TThreadID; const Test : ITestResult);
+    /// <summary>
+    ///   Tells every logger a test ended in an error.
+    /// </summary>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="Error">
+    ///   The error result.
+    /// </param>
     procedure Loggers_AddError(const threadId : TThreadID; const Error : ITestError);
+    /// <summary>
+    ///   Tells every logger a test failed.
+    /// </summary>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="Failure">
+    ///   The failure result.
+    /// </param>
     procedure Loggers_AddFailure(const threadId : TThreadID; const Failure : ITestError);
+    /// <summary>
+    ///   Tells every logger a test was ignored.
+    /// </summary>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="AIgnored">
+    ///   The ignored result.
+    /// </param>
     procedure Loggers_AddIgnored(const threadId : TThreadID; const AIgnored : ITestResult);
+    /// <summary>
+    ///   Tells every logger a test leaked memory.
+    /// </summary>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="Test">
+    ///   The memory-leak result.
+    /// </param>
     procedure Loggers_AddMemoryLeak(const threadId : TThreadID; const Test : ITestResult);
 
+    /// <summary>
+    ///   Tells every logger a test has finished, with its final result.
+    /// </summary>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="Test">
+    ///   The test's final result.
+    /// </param>
     procedure Loggers_EndTest(const threadId : TThreadID; const Test : ITestResult);
+    /// <summary>
+    ///   Tells every logger a test's <c>[TearDown]</c> method is about to run.
+    /// </summary>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="Test">
+    ///   The test.
+    /// </param>
     procedure Loggers_TeardownTest(const threadId : TThreadID; const Test : ITestInfo);
+    /// <summary>
+    ///   Tells every logger a test's <c>[TearDown]</c> method completed.
+    /// </summary>
+    /// <param name="aThreadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="aTest">
+    ///   The test.
+    /// </param>
     procedure Loggers_EndTeardownTest(const aThreadId : TThreadID; const aTest : ITestInfo);
 
+    /// <summary>
+    ///   Tells every logger a fixture's <c>[TearDownFixture]</c> method is about to run.
+    /// </summary>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="fixture">
+    ///   The fixture.
+    /// </param>
     procedure Loggers_TeardownFixture(const threadId : TThreadID; const fixture : ITestFixtureInfo);
+    /// <summary>
+    ///   Tells every logger a fixture's <c>[TearDownFixture]</c> method completed.
+    /// </summary>
+    /// <param name="aThreadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="aFixture">
+    ///   The fixture.
+    /// </param>
     procedure Loggers_EndTearDownFixture(const aThreadId : TThreadID; const aFixture : ITestFixtureInfo);
 
+    /// <summary>
+    ///   Tells every logger a fixture has finished, with its rolled-up result.
+    /// </summary>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="results">
+    ///   The fixture's result.
+    /// </param>
     procedure Loggers_EndTestFixture(const threadId : TThreadID; const results : IFixtureResult);
 
+    /// <summary>
+    ///   Tells every logger the run has ended.
+    /// </summary>
+    /// <param name="RunResults">
+    ///   The results of the whole run.
+    /// </param>
     procedure Loggers_TestingEnds(const RunResults : IRunResults);
 
-    //ITestRunner
+    /// <summary>
+    ///   Implements <c>ITestRunner</c>: attaches a logger, ignoring one already attached.
+    /// </summary>
+    /// <param name="value">
+    ///   The logger to add.
+    /// </param>
     procedure AddLogger(const value : ITestLogger);
+    /// <summary>
+    ///   Implements <c>ITestRunner</c>: builds the fixtures if needed, applies the filter, runs every fixture and
+    ///   returns the results. Logs a warning when no test executed, because such a run does not count as passed.
+    /// </summary>
+    /// <returns>
+    ///   The results of the run.
+    /// </returns>
+    /// <exception cref="ENoTestsRegistered">
+    ///   Raised when no fixture was found.
+    /// </exception>
     function Execute : IRunResults;
 
+    /// <summary>
+    ///   Runs a list of fixtures and, recursively, their children: creates each fixture instance, runs
+    ///   <c>[SetupFixture]</c> (only when a test will actually execute), the tests, the child fixtures and
+    ///   <c>[TearDownFixture]</c>, then rolls up the fixture result. A failing constructor or fixture setup turns the
+    ///   fixture's tests into errors instead of stopping the run.
+    /// </summary>
+    /// <param name="parentFixtureResult">
+    ///   Result of the parent fixture; nil at the top level, where each fixture result is recorded on the context.
+    /// </param>
+    /// <param name="context">
+    ///   The run's result-collection context.
+    /// </param>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="fixtures">
+    ///   The fixtures to run; disabled ones and those with no enabled tests at any depth are skipped.
+    /// </param>
     procedure ExecuteFixtures(const parentFixtureResult : IFixtureResult; const context : ITestExecuteContext; const threadId : TThreadID; const fixtures :
       ITestFixtureList);
+    /// <summary>
+    ///   Runs a fixture's <c>[SetupFixture]</c> method between the logger notifications. If it raises, every runnable
+    ///   test of the fixture is recorded as an error carrying that exception and the fixture is skipped.
+    /// </summary>
+    /// <param name="context">
+    ///   The run's result-collection context.
+    /// </param>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="fixture">
+    ///   The fixture whose setup runs.
+    /// </param>
+    /// <param name="fixtureResult">
+    ///   The fixture's result, which receives the error results on failure.
+    /// </param>
+    /// <returns>
+    ///   True when the setup completed; False when it raised.
+    /// </returns>
     function ExecuteSetupFixtureMethod(const context : ITestExecuteContext; const threadId : TThreadID; const fixture : ITestFixture; const fixtureResult :
       IFixtureResult) : boolean;
+    /// <summary>
+    ///   Runs the fixture's <c>[Setup]</c> method for one test, measuring its memory for the leak check.
+    /// </summary>
+    /// <param name="context">
+    ///   The run's result-collection context.
+    /// </param>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="fixture">
+    ///   The fixture whose setup runs.
+    /// </param>
+    /// <param name="test">
+    ///   The test the setup is for.
+    /// </param>
+    /// <param name="errorResult">
+    ///   An error result built from the exception when the setup raises; nil otherwise.
+    /// </param>
+    /// <param name="memoryAllocationProvider">
+    ///   The leak monitor measuring the test's phases.
+    /// </param>
+    /// <returns>
+    ///   True when the setup completed; False when it raised or there is no setup method.
+    /// </returns>
     function ExecuteTestSetupMethod(const context : ITestExecuteContext; const threadId : TThreadID; const fixture : ITestFixture; const test : ITest; out
       errorResult : ITestResult; const memoryAllocationProvider : IMemoryLeakMonitor) : boolean;
 
+    /// <summary>
+    ///   Runs every runnable test of a fixture: <c>[Setup]</c>, the test, <c>[TearDown]</c> and the leak check, then
+    ///   records the result and notifies the loggers. A failed setup becomes the test's result and its teardown is
+    ///   skipped; a teardown that fails after a test failure is appended to the test's message.
+    /// </summary>
+    /// <param name="context">
+    ///   The run's result-collection context.
+    /// </param>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="fixture">
+    ///   The fixture whose tests run.
+    /// </param>
+    /// <param name="fixtureResult">
+    ///   The fixture's result, which receives each test result.
+    /// </param>
     procedure ExecuteTests(const context : ITestExecuteContext; const threadId : TThreadID; const fixture : ITestFixture; const fixtureResult :
       IFixtureResult);
 
+    /// <summary>
+    ///   Executes one test method under the leak monitor. <c>Assert.Pass</c> is handled here so its exception object is
+    ///   released before the memory is measured; other exceptions propagate to the caller, which classifies them.
+    /// </summary>
+    /// <param name="context">
+    ///   The run's result-collection context.
+    /// </param>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="test">
+    ///   The test to execute.
+    /// </param>
+    /// <param name="memoryAllocationProvider">
+    ///   The leak monitor measuring the test's phases.
+    /// </param>
+    /// <returns>
+    ///   A passing result carrying the pass message or the logged text.
+    /// </returns>
+    /// <exception cref="ENoAssertionsMade">
+    ///   Raised when <c>FailsOnNoAsserts</c> is set and the test made no assertion.
+    /// </exception>
+    /// <exception cref="Exception">
+    ///   Raised when the test does not support <c>ITestExecute</c>; the caller records it as a test error.
+    /// </exception>
     function ExecuteTest(const context : ITestExecuteContext; const threadId : TThreadID; const test : ITest; const memoryAllocationProvider :
       IMemoryLeakMonitor) : ITestResult;
+    /// <summary>
+    ///   Builds a passing result.
+    /// </summary>
+    /// <param name="context">
+    ///   The run's result-collection context (unused).
+    /// </param>
+    /// <param name="threadId">
+    ///   Thread the run executes on (unused).
+    /// </param>
+    /// <param name="test">
+    ///   The test that passed.
+    /// </param>
+    /// <param name="aMessage">
+    ///   The result message.
+    /// </param>
+    /// <param name="aLogMessages">
+    ///   Messages logged during the test.
+    /// </param>
+    /// <returns>
+    ///   A result of type <c>Pass</c>.
+    /// </returns>
     function ExecuteSuccessfulResult(const context : ITestExecuteContext; const threadId : TThreadID; const test : ITest; const aMessage : string; const
       aLogMessages : TLogMessageArray) : ITestResult;
+    /// <summary>
+    ///   Builds a failure result from an assertion exception.
+    /// </summary>
+    /// <param name="context">
+    ///   The run's result-collection context (unused).
+    /// </param>
+    /// <param name="threadId">
+    ///   Thread the run executes on (unused).
+    /// </param>
+    /// <param name="test">
+    ///   The test that failed.
+    /// </param>
+    /// <param name="exception">
+    ///   The exception that failed the test.
+    /// </param>
+    /// <param name="aLogMessages">
+    ///   Messages logged during the test.
+    /// </param>
+    /// <returns>
+    ///   A result of type <c>Failure</c>.
+    /// </returns>
     function ExecuteFailureResult(const context : ITestExecuteContext; const threadId : TThreadID; const test : ITest; const exception : Exception; const
       aLogMessages : TLogMessageArray) : ITestError;
+    /// <summary>
+    ///   Builds the result for a test that exceeded its time limit; it is reported as a failure.
+    /// </summary>
+    /// <param name="context">
+    ///   The run's result-collection context (unused).
+    /// </param>
+    /// <param name="threadId">
+    ///   Thread the run executes on (unused).
+    /// </param>
+    /// <param name="test">
+    ///   The test that timed out.
+    /// </param>
+    /// <param name="exception">
+    ///   The time-out exception.
+    /// </param>
+    /// <param name="aLogMessages">
+    ///   Messages logged during the test.
+    /// </param>
+    /// <returns>
+    ///   A result of type <c>Failure</c>.
+    /// </returns>
     function ExecuteTimedOutResult(const context : ITestExecuteContext; const threadId : TThreadID; const test : ITest; const exception : Exception; const
       aLogMessages : TLogMessageArray) : ITestError;
+    /// <summary>
+    ///   Builds an error result from an unexpected exception.
+    /// </summary>
+    /// <param name="context">
+    ///   The run's result-collection context (unused).
+    /// </param>
+    /// <param name="threadId">
+    ///   Thread the run executes on (unused).
+    /// </param>
+    /// <param name="test">
+    ///   The test the error belongs to.
+    /// </param>
+    /// <param name="exception">
+    ///   The exception raised.
+    /// </param>
+    /// <param name="aLogMessages">
+    ///   Messages logged during the test.
+    /// </param>
+    /// <returns>
+    ///   A result of type <c>Error</c>.
+    /// </returns>
     function ExecuteErrorResult(const context : ITestExecuteContext; const threadId : TThreadID; const test : ITest; const exception : Exception; const
       aLogMessages : TLogMessageArray) : ITestError;
+    /// <summary>
+    ///   Builds an ignored result.
+    /// </summary>
+    /// <param name="context">
+    ///   The run's result-collection context (unused).
+    /// </param>
+    /// <param name="threadId">
+    ///   Thread the run executes on (unused).
+    /// </param>
+    /// <param name="test">
+    ///   The test that was ignored.
+    /// </param>
+    /// <param name="ignoreReason">
+    ///   Why it was ignored; becomes the result message.
+    /// </param>
+    /// <returns>
+    ///   A result of type <c>Ignored</c>.
+    /// </returns>
     function ExecuteIgnoredResult(const context : ITestExecuteContext; const threadId : TThreadID; const test : ITest; const ignoreReason : string) :
       ITestResult;
+    /// <summary>
+    ///   Records every runnable test of a fixture as an error carrying the given exception, used when the fixture
+    ///   cannot be created or set up. Ignored tests stay ignored, since they would not have run anyway.
+    /// </summary>
+    /// <param name="aFixture">
+    ///   The fixture whose tests are invalidated.
+    /// </param>
+    /// <param name="aContext">
+    ///   The run's result-collection context.
+    /// </param>
+    /// <param name="aThreadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="aException">
+    ///   The exception that prevented the tests from running.
+    /// </param>
+    /// <param name="aFixtureResult">
+    ///   The fixture's result, which receives the error results.
+    /// </param>
     procedure InvalidateTestsInFixture(const aFixture : ITestFixture; const aContext : ITestExecuteContext; const aThreadId : TThreadID; const aException :
       Exception; const aFixtureResult : IFixtureResult);
 
+    /// <summary>
+    ///   Checks a passing test for leaked memory: net growth across setup, test and teardown (the whole span where it
+    ///   can be measured), less what the runner itself kept. Only growth is a leak.
+    /// </summary>
+    /// <param name="test">
+    ///   The test to check; one with <c>IgnoreMemoryLeaks</c> set always passes.
+    /// </param>
+    /// <param name="errorResult">
+    ///   A <c>MemoryLeak</c> result whose message says whether setup/teardown, the test, or both leaked; nil when
+    ///   nothing leaked.
+    /// </param>
+    /// <param name="memoryAllocationProvider">
+    ///   The leak monitor that measured the test's phases.
+    /// </param>
+    /// <returns>
+    ///   True when nothing leaked; False when a leak was found.
+    /// </returns>
     function CheckMemoryAllocations(const test : ITest; out errorResult : ITestResult; const memoryAllocationProvider : IMemoryLeakMonitor) : boolean;
 
+    /// <summary>
+    ///   Runs the fixture's <c>[TearDown]</c> method for one test, measuring its memory for the leak check.
+    /// </summary>
+    /// <param name="context">
+    ///   The run's result-collection context.
+    /// </param>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="fixture">
+    ///   The fixture whose teardown runs.
+    /// </param>
+    /// <param name="test">
+    ///   The test the teardown is for.
+    /// </param>
+    /// <param name="errorResult">
+    ///   An error result built from the exception when the teardown raises; nil otherwise.
+    /// </param>
+    /// <param name="memoryAllocationProvider">
+    ///   The leak monitor measuring the test's phases.
+    /// </param>
+    /// <returns>
+    ///   True when the teardown completed; False when it raised.
+    /// </returns>
     function ExecuteTestTearDown(const context : ITestExecuteContext; const threadId : TThreadID; const fixture : ITestFixture; const test : ITest; out
       errorResult : ITestResult; const memoryAllocationProvider : IMemoryLeakMonitor) : boolean;
+    /// <summary>
+    ///   Runs a fixture's <c>[TearDownFixture]</c> method (or frees the instance when the destructor stands in for it).
+    ///   If it raises, the failure is recorded once, as an error result named after the teardown method; the
+    ///   fixture's tests, already recorded, are not reported again.
+    /// </summary>
+    /// <param name="context">
+    ///   The run's result-collection context.
+    /// </param>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="fixture">
+    ///   The fixture whose teardown runs.
+    /// </param>
+    /// <param name="fixtureResult">
+    ///   The fixture's result, which receives the error result on failure.
+    /// </param>
     procedure ExecuteTearDownFixtureMethod(const context : ITestExecuteContext; const threadId : TThreadID; const fixture : ITestFixture; const fixtureResult :
       IFixtureResult);
 
+    /// <summary>
+    ///   Records a result on the context, logs it when it did not pass, and passes it to the matching
+    ///   <c>Loggers_Add*</c> notification.
+    /// </summary>
+    /// <param name="context">
+    ///   The run's result-collection context.
+    /// </param>
+    /// <param name="threadId">
+    ///   Thread the run executes on.
+    /// </param>
+    /// <param name="fixtureResult">
+    ///   The fixture's result, which receives the test result.
+    /// </param>
+    /// <param name="testResult">
+    ///   The result to record; its test must still be alive, because its name is logged.
+    /// </param>
     procedure RecordResult(const context : ITestExecuteContext; const threadId : TThreadID; const fixtureResult : IFixtureResult; const testResult :
       ITestResult);
 
+    /// <summary>
+    ///   Implements <c>ITestRunner</c>: reports whether fixture classes are also discovered through RTTI.
+    /// </summary>
+    /// <returns>
+    ///   The <c>UseRTTI</c> setting; False by default.
+    /// </returns>
     function GetUseRTTI : Boolean;
+    /// <summary>
+    ///   Implements <c>ITestRunner</c>: sets whether fixture classes are also discovered through RTTI; takes effect
+    ///   when the fixtures are built.
+    /// </summary>
+    /// <param name="value">
+    ///   True to discover fixtures through RTTI.
+    /// </param>
     procedure SetUseRTTI(const value : Boolean);
+    /// <summary>
+    ///   Implements <c>ITestRunner</c>: reports whether a test that makes no assertion fails.
+    /// </summary>
+    /// <returns>
+    ///   The <c>FailsOnNoAsserts</c> setting.
+    /// </returns>
     function GetFailsOnNoAsserts : boolean;
+    /// <summary>
+    ///   Implements <c>ITestRunner</c>: sets whether a test that makes no assertion fails.
+    /// </summary>
+    /// <param name="value">
+    ///   True to fail such tests with <c>ENoAssertionsMade</c>.
+    /// </param>
     procedure SetFailsOnNoAsserts(const value : boolean);
 
+    /// <summary>
+    ///   Logs a message at a level: when the level meets <c>TDUnitX.Options.LogLevel</c>, a copy is added to the
+    ///   current result's log and passed to every logger. The memory it keeps is discounted from the leak check.
+    /// </summary>
+    /// <param name="logType">
+    ///   The log level.
+    /// </param>
+    /// <param name="msg">
+    ///   The message.
+    /// </param>
     procedure Log(const logType : TLogLevel; const msg : string); overload;
+    /// <summary>
+    ///   Logs a message at <c>Information</c> level.
+    /// </summary>
+    /// <param name="msg">
+    ///   The message.
+    /// </param>
     procedure Log(const msg : string); overload;
 
-    //for backwards compatibility with DUnit tests.
+    /// <summary>
+    ///   Logs a message at <c>Information</c> level; kept for backwards compatibility with DUnit tests.
+    /// </summary>
+    /// <param name="msg">
+    ///   The message.
+    /// </param>
     procedure Status(const msg : string); overload;
 
-    //redirects WriteLn to our loggers.
+    /// <summary>
+    ///   Redirects <c>WriteLn</c> to the loggers, at <c>Information</c> level.
+    /// </summary>
+    /// <param name="msg">
+    ///   The line to write.
+    /// </param>
     procedure WriteLn(const msg : string); overload;
+    /// <summary>
+    ///   Redirects an empty <c>WriteLn</c> to the loggers, at <c>Information</c> level.
+    /// </summary>
     procedure WriteLn; overload;
+    /// <summary>
+    ///   Gives the name of the test currently executing.
+    /// </summary>
+    /// <returns>
+    ///   The test name, empty between tests.
+    /// </returns>
     function CurrentTestName : string;
 
-    //internals
-    procedure RTTIDiscoverFixtureClasses;
+    /// <summary>
+    ///   Runs the fixture builder (honouring <c>UseRTTI</c>), keeps the fixture tree and sorts it by name.
+    /// </summary>
+    /// <returns>
+    ///   The fixture list, as an <c>ITestFixtureList</c>.
+    /// </returns>
     function BuildFixtures : IInterface;
 
-    procedure AddStatus(const threadId; const msg : string);
-
+    /// <summary>
+    ///   Decides whether a test is run and reported.
+    /// </summary>
+    /// <param name="test">
+    ///   The test to check.
+    /// </param>
+    /// <returns>
+    ///   False when the test is disabled, or ignored while <c>TDUnitX.Options.DontShowIgnored</c> is set; True
+    ///   otherwise.
+    /// </returns>
     function ShouldRunThisTest(const test : ITest) : boolean;
 
+    /// <summary>
+    ///   Creates the per-thread active-runner dictionary.
+    /// </summary>
     class constructor Create;
+    /// <summary>
+    ///   Frees the per-thread active-runner dictionary.
+    /// </summary>
     class destructor Destroy;
   public
+    /// <summary>
+    ///   Creates a runner with no loggers and registers it as the active runner of the calling thread, standing in
+    ///   for any runner already active there.
+    /// </summary>
     constructor Create; overload;
+    /// <summary>
+    ///   Creates a runner with one logger.
+    /// </summary>
+    /// <param name="AListener">
+    ///   The logger to attach; nil attaches none.
+    /// </param>
     constructor Create(const AListener : ITestLogger); overload;
+    /// <summary>
+    ///   Creates a runner with several loggers.
+    /// </summary>
+    /// <param name="AListeners">
+    ///   The loggers to attach.
+    /// </param>
     constructor Create(const AListeners : array of ITestLogger); overload;
+    /// <summary>
+    ///   Removes this runner's active-runner entry, restoring the runner it stood in for if that one is still alive,
+    ///   and frees the loggers list and log messages.
+    /// </summary>
     destructor Destroy; override;
+    /// <summary>
+    ///   Gives the runner active on the calling thread.
+    /// </summary>
+    /// <returns>
+    ///   The active runner, or nil when none is registered for the thread.
+    /// </returns>
     class function GetActiveRunner : ITestRunner;
+    /// <summary>
+    ///   Gives the name of the test executing on the calling thread.
+    /// </summary>
+    /// <returns>
+    ///   The test name, or an empty string when no runner is active.
+    /// </returns>
     class function GetCurrentTestName : string;
   end;
 
@@ -429,11 +1089,6 @@ begin
   end;
 end;
 
-procedure TDUnitXTestRunner.AddStatus(const threadId; const msg : string);
-begin
-  //TODO : What should be here???
-end;
-
 function TDUnitXTestRunner.BuildFixtures : IInterface;
 var
   fixtureBuilder : IFixtureBuilder;
@@ -441,15 +1096,14 @@ begin
   fixtureBuilder := TDUnitXFixtureBuilder.Create(FUseRTTI);
 
   FFixtureList := fixtureBuilder.BuildFixtureList;
-  FFixtureList.Sort;
+  FFixtureList.SortByName;
 
   result := FFixtureList;
 end;
 
 class constructor TDUnitXTestRunner.Create;
 begin
-  FRttiContext := TRttiContext.Create;
-  FActiveRunners := TDictionary < TThreadID, IWeakReference<ITestRunner> > .Create;
+  FActiveRunners :=TDictionary < TThreadID, IWeakReference<ITestRunner> > .Create;
 end;
 
 function TDUnitXTestRunner.CheckMemoryAllocations(const test : ITest; out errorResult : ITestResult; const memoryAllocationProvider : IMemoryLeakMonitor) :
@@ -516,7 +1170,6 @@ constructor TDUnitXTestRunner.Create;
 begin
   inherited;
   FLoggers := TList<ITestLogger>.Create;
-  FFixtureClasses := TDictionary<TClass, string>.Create;
   FUseRTTI := False;
   FLogMessages := TStringList.Create;
   FThreadId := TThread.CurrentThread.ThreadID;
@@ -574,14 +1227,12 @@ begin
 
   FLogMessages.Free;
   FLoggers.Free;
-  FFixtureClasses.Free;
   inherited;
 end;
 
 class destructor TDUnitXTestRunner.Destroy;
 begin
   FActiveRunners.Free;
-  FRttiContext.Free;
 end;
 
 procedure TDUnitXTestRunner.RecordResult(const context : ITestExecuteContext; const threadId : TThreadID; const fixtureResult : IFixtureResult; const testResult
@@ -618,37 +1269,6 @@ begin
         Self.Loggers_AddMemoryLeak(threadId, testResult);
       end;
 
-  end;
-end;
-
-procedure TDUnitXTestRunner.RTTIDiscoverFixtureClasses;
-var
-  types : TArray<TRttiType>;
-  rType : TRttiType;
-  attributes : TArray<TCustomAttribute>;
-  attribute : TCustomAttribute;
-  sName : string;
-begin
-  types := FRttiContext.GetTypes;
-  for rType in types do
-  begin
-    //try and keep the iteration down as much as possible
-    if (rType.TypeKind = TTypeKind.tkClass) and (not rType.InheritsFrom(TPersistent)) then
-    begin
-      attributes := rType.GetAttributes;
-      if Length(attributes) > 0 then
-        for attribute in attributes do
-        begin
-          if attribute.ClassType = TestFixtureAttribute then
-          begin
-            sName := TestFixtureAttribute(attribute).Name;
-            if sName = '' then
-              sName := TRttiInstanceType(rType).MetaclassType.ClassName;
-            if not FFixtureClasses.ContainsKey(TRttiInstanceType(rType).MetaclassType) then
-              FFixtureClasses.Add(TRttiInstanceType(rType).MetaclassType, sName);
-          end;
-        end;
-    end;
   end;
 end;
 
@@ -855,6 +1475,7 @@ var
   fixture : ITestFixture;
   fixtureResult : IFixtureResult;
   setupOk : boolean;
+  hasActiveTests : boolean;
 begin
   for fixture in fixtures do
   begin
@@ -865,6 +1486,11 @@ begin
       System.Continue;
 
     setupOk := True;
+    //Read once: stopping a run (the GUI runner disables the remaining tests) must not skip the [TearDownFixture]
+    //that pairs with a [SetupFixture] that ran.
+    hasActiveTests := fixture.HasActiveTests;
+    //The fixture's errors carry what its own setup logs, not what the previous fixture's last test logged.
+    ClearLogMessages;
     fixtureResult := TDUnitXFixtureResult.Create(parentFixtureResult, fixture as ITestFixtureInfo);
     if parentFixtureResult = nil then
       context.RecordFixture(fixtureResult);
@@ -886,10 +1512,10 @@ begin
         end;
       end;
       //A parameterless constructor takes the place of a [SetupFixture] method; say so rather than drop it silently.
-      if fixture.HasActiveTests and (fixture.SetupFixtureMethodName <> '') and (not Assigned(fixture.SetupFixtureMethod)) then
+      if hasActiveTests and (fixture.SetupFixtureMethodName <> '') and (not Assigned(fixture.SetupFixtureMethod)) then
         Log(TLogLevel.Warning, Format(SSetupFixtureNotRun, [fixture.SetupFixtureMethodName, fixture.Name]));
       //only run the setup method if there are actually tests
-      if setupOk and fixture.HasActiveTests and Assigned(fixture.SetupFixtureMethod) then
+      if setupOk and hasActiveTests and Assigned(fixture.SetupFixtureMethod) then
         //returns false if an exception happens in the setup.
         setupOk := ExecuteSetupFixtureMethod(context, threadId, fixture, fixtureResult);
 
@@ -900,7 +1526,7 @@ begin
         ExecuteFixtures(fixtureResult, context, threadId, fixture.Children);
 
       // teardown will not run if the fixture setup errored.
-      if setupOk and fixture.HasActiveTests and Assigned(fixture.TearDownFixtureMethod) then
+      if setupOk and hasActiveTests and Assigned(fixture.TearDownFixtureMethod) then
         //TODO: Tricker yet each test above us requires errors that occur here
         ExecuteTearDownFixtureMethod(context, threadId, fixture, fixtureResult);
 
@@ -954,6 +1580,8 @@ var
   tearDownTest : ITest;
   tearDownResult : ITestResult;
 begin
+  //A failure here carries what the teardown logged, not the fixture's last test's log.
+  ClearLogMessages;
   try
     Self.Loggers_TeardownFixture(threadId, fixture as ITestFixtureInfo);
     fixture.ExecuteFixtureTearDown;     //deals with destructors in a way that stops memory leak reporting from reporting bogus leaks.
@@ -988,13 +1616,16 @@ begin
   if Supports(test, ITestExecute, testExecute) then
   begin
     BeginLeakSpan;
-    BeginRunnerAllocation;
-    FLogMessages.Clear;
-    SetLength(FLogMessagesEx, 0);
-    EndRunnerAllocation;
     FCurrentTestName := test.Name;
     try
-      Self.Loggers_ExecuteTest(threadId, test as ITestInfo);
+      //Loggers run inside the leak span; what they keep is the runner's memory, not the test's, and what they free
+      //(test memory they released) is not credited to the runner.
+      BeginRunnerAllocation;
+      try
+        Self.Loggers_ExecuteTest(threadId, test as ITestInfo);
+      finally
+        EndRunnerAllocation(True);
+      end;
       assertBeforeCount := 0;           //to shut the compiler up;
       if FFailsOnNoAsserts then
         assertBeforeCount := TDUnitX.GetAssertCount(threadId);
@@ -1041,8 +1672,7 @@ begin
       logText := FLogMessages.Text;
       Result := ExecuteSuccessfulResult(context, threadId, test, logText, FLogMessagesEx);
       logText := '';
-      FLogMessages.Clear;
-      SetLength(FLogMessagesEx, 0);
+      ClearLogMessages;
       EndRunnerAllocation;
     finally
       FCurrentTestName := '';
@@ -1074,6 +1704,10 @@ begin
     if not ShouldRunThisTest(test) then
       System.Continue;
 
+    //Each result carries what its own Setup, test and TearDown logged. Cleared here, before any measurement starts,
+    //rather than once the test starts, which lost what Setup logged and left a failed test's log for the next
+    //test's Setup error.
+    ClearLogMessages;
     memoryAllocationProvider := TDUnitXServiceLocator.DefaultContainer.Resolve<IMemoryLeakMonitor>();
     //A second monitor measures what the runner keeps while the test runs. A singleton registration
     //returns the same monitor, whose readings that would overwrite, so the runner then measures nothing.
@@ -1081,6 +1715,7 @@ begin
     if FRunnerAllocationMonitor = memoryAllocationProvider then
       FRunnerAllocationMonitor := nil;
     FRunnerAllocated := 0;
+    FRunnerAllocationDepth := 0;
     FLeakSpanMonitor := TDUnitXServiceLocator.DefaultContainer.Resolve<IMemoryLeakMonitor>();
     if (FLeakSpanMonitor = memoryAllocationProvider) or (FLeakSpanMonitor = FRunnerAllocationMonitor) then
       FLeakSpanMonitor := nil;
@@ -1176,7 +1811,12 @@ begin
 
       memoryAllocationProvider.PostSetUp;
 
-      Self.Loggers_EndSetupTest(threadId, test as ITestInfo);
+      BeginRunnerAllocation;
+      try
+        Self.Loggers_EndSetupTest(threadId, test as ITestInfo);
+      finally
+        EndRunnerAllocation(True);
+      end;
       Result := True;
     except
       on e : {$IFDEF USE_NS}System.SysUtils.{$ENDIF}Exception do
@@ -1195,7 +1835,12 @@ begin
   errorResult := nil;
 
   try
-    Self.Loggers_TeardownTest(threadId, test as ITestInfo);
+    BeginRunnerAllocation;
+    try
+      Self.Loggers_TeardownTest(threadId, test as ITestInfo);
+    finally
+      EndRunnerAllocation(True);
+    end;
 
     memoryAllocationProvider.PreTearDown;
 
@@ -1367,16 +2012,23 @@ end;
 
 procedure TDUnitXTestRunner.BeginRunnerAllocation;
 begin
-  if FRunnerAllocationMonitor <> nil then
+  //Nested calls (a logger that logs) are measured once, by the outermost pair.
+  Inc(FRunnerAllocationDepth);
+  if (FRunnerAllocationDepth = 1) and (FRunnerAllocationMonitor <> nil) then
     FRunnerAllocationMonitor.PreTest;
 end;
 
-procedure TDUnitXTestRunner.EndRunnerAllocation;
+procedure TDUnitXTestRunner.EndRunnerAllocation(const onlyGrowth : boolean);
+var
+  allocated : Int64;
 begin
-  if FRunnerAllocationMonitor <> nil then
+  Dec(FRunnerAllocationDepth);
+  if (FRunnerAllocationDepth = 0) and (FRunnerAllocationMonitor <> nil) then
   begin
     FRunnerAllocationMonitor.PostTest;
-    Inc(FRunnerAllocated, FRunnerAllocationMonitor.TestMemoryAllocated);
+    allocated := FRunnerAllocationMonitor.TestMemoryAllocated;
+    if (allocated > 0) or (not onlyGrowth) then
+      Inc(FRunnerAllocated, allocated);
   end;
 end;
 
@@ -1393,6 +2045,12 @@ procedure TDUnitXTestRunner.ExtendLeakSpan;
 begin
   if FLeakSpanStarted then
     FLeakSpanMonitor.PostTest;
+end;
+
+procedure TDUnitXTestRunner.ClearLogMessages;
+begin
+  FLogMessages.Clear;
+  SetLength(FLogMessagesEx, 0);
 end;
 
 function TDUnitXTestRunner.ShouldRunThisTest(const test : ITest) : boolean;

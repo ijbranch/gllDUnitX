@@ -46,30 +46,150 @@ uses
 {$ENDIF}
 
 type
+  /// <summary>
+  ///   A parameterless anonymous method, the form of code block passed to the WillRaise / WillNotRaise family.
+  /// </summary>
   TTestLocalMethod = TProc;
 
+  /// <summary>
+  ///   A parameterless method of an object, accepted by the WillRaise / WillNotRaise overloads that take a method
+  ///   pointer instead of an anonymous method.
+  /// </summary>
   TTestMethod = procedure of object;
 
+  /// <summary>
+  ///   The framework-neutral assertion library. Every check is a class method that raises the configured failure
+  ///   exception when the check does not hold.
+  /// </summary>
+  /// <remarks>
+  ///   <para>
+  ///     This unit holds only assertions that are not tied to DUnitX, so that it stays usable from other test
+  ///     frameworks such as DUnit; DUnitX-specific assertions belong in DUnitX.Assert.Ex.
+  ///   </para>
+  ///   <para>
+  ///     The exception classes raised for a failure, a pass and an ignore are set through <c>TestFailure</c>,
+  ///     <c>TestPass</c> and <c>TestIgnored</c>; DUnitX sets them to <c>ETestFailure</c>, <c>ETestPass</c> and
+  ///     <c>ETestIgnored</c>. Failures are raised at the caller's address so the debugger and stack trace stop on the
+  ///     test line, not inside this class.
+  ///   </para>
+  ///   <para>
+  ///     Every check except <c>Pass</c>, <c>Ignore</c> and <c>Fail</c> calls <c>OnAssert</c> first, which is how the
+  ///     runner counts assertions for FailsOnNoAsserts.
+  ///   </para>
+  /// </remarks>
   Assert = class
   private
+    /// <summary>Whether string comparisons without an ignoreCase argument ignore case; True by default.</summary>
     class var fIgnoreCaseDefault : boolean;
+    /// <summary>Called by every assertion before it checks anything; the runner uses it to count assertions.</summary>
     class var fOnAssert : TProc;
+    /// <summary>Exception class raised by a failing assertion.</summary>
     class var fTestFailure : ExceptClass;
+    /// <summary>Exception class raised by <c>Pass</c>.</summary>
     class var fTestPass : ExceptClass;
+    /// <summary>Exception class raised by <c>Ignore</c>.</summary>
     class var fTestIgnored : ExceptClass;
-    class procedure CheckExceptionClass(E : Exception; const exceptionClass : ExceptClass);
-    class procedure CheckExceptionClassDescendant(E : Exception; const exceptionClass : ExceptClass);
+    /// <summary>
+    ///   Fails unless the exception's class is exactly the expected class; a nil expected class accepts any exception.
+    /// </summary>
+    /// <param name="E">
+    ///   The exception that was raised.
+    /// </param>
+    /// <param name="exceptionClass">
+    ///   The expected class, or nil for any.
+    /// </param>
+    /// <param name="msg">
+    ///   The caller's message, added to the failure text.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   <paramref name="E" /> is not exactly <paramref name="exceptionClass" />.
+    /// </exception>
+    class procedure CheckExceptionClass(E : Exception; const exceptionClass : ExceptClass; const msg : string);
+    /// <summary>
+    ///   Fails unless the exception is the expected class or a descendant; a nil expected class accepts any exception.
+    /// </summary>
+    /// <param name="E">
+    ///   The exception that was raised.
+    /// </param>
+    /// <param name="exceptionClass">
+    ///   The expected base class, or nil for any.
+    /// </param>
+    /// <param name="msg">
+    ///   The caller's message, added to the failure text.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   <paramref name="E" /> does not inherit from <paramref name="exceptionClass" />.
+    /// </exception>
+    class procedure CheckExceptionClassDescendant(E : Exception; const exceptionClass : ExceptClass; const msg : string);
+    /// <summary>
+    ///   Decides whether an exception caught from the code under test is really a test outcome (a failure, pass or
+    ///   ignore raised by an assertion inside that code) that must be re-raised rather than treated as the exception
+    ///   being tested for.
+    /// </summary>
+    /// <param name="E">
+    ///   The caught exception.
+    /// </param>
+    /// <param name="exceptionClass">
+    ///   The class the caller is testing for, or nil.
+    /// </param>
+    /// <returns>
+    ///   True when <paramref name="E" /> is a test-outcome exception and the caller did not explicitly ask for a
+    ///   framework exception.
+    /// </returns>
     class function IsUnrequestedTestOutcome(E : Exception; const exceptionClass : ExceptClass) : boolean;
   protected
+    /// <summary>
+    ///   Compares the whole contents of two streams byte for byte, restoring both stream positions afterwards.
+    /// </summary>
+    /// <param name="stream1">
+    ///   First stream.
+    /// </param>
+    /// <param name="stream2">
+    ///   Second stream.
+    /// </param>
+    /// <returns>
+    ///   True when both are the same instance, or have the same size and identical bytes; a stream that delivers fewer
+    ///   bytes than its Size is treated as unequal.
+    /// </returns>
     class function StreamsEqual(const stream1, stream2 : TStream) : boolean;
+    /// <summary>
+    ///   Prefixes a non-empty message with a line break, for appending to a failure text.
+    /// </summary>
+    /// <param name="msg">
+    ///   The message.
+    /// </param>
+    /// <returns>
+    ///   <c>sLineBreak + msg</c>, or an empty string when <paramref name="msg" /> is empty.
+    /// </returns>
     class function AddLineBreak(const msg : string) : string;
+    /// <summary>
+    ///   Calls <c>OnAssert</c>, if assigned, to record that an assertion was made.
+    /// </summary>
     class procedure DoAssert; inline;
   public
+    /// <summary>
+    ///   Stops the test immediately and reports it as passed.
+    /// </summary>
+    /// <param name="message">
+    ///   Text recorded with the pass.
+    /// </param>
+    /// <exception cref="ETestPass">
+    ///   Always (the <c>TestPass</c> class).
+    /// </exception>
+    /// <remarks>
+    ///   Does not count as an assertion. Never use it to skip a test - use <c>Ignore</c>.
+    /// </remarks>
     class procedure Pass(const message : string = '');
     ///  <summary>
     ///    Stops the test and reports it as IGNORED - neither passed nor
     ///    failed - carrying message as the reason.
     ///  </summary>
+    ///  <param name="message">
+    ///    The reason the test was skipped.
+    ///  </param>
+    ///  <exception cref="ETestIgnored">
+    ///    Always (the <c>TestIgnored</c> class).
+    ///  </exception>
     ///  <remarks>
     ///    For a test whose PRECONDITION is absent at run time: an external
     ///    tool, a source tree, a database. Prefer the [Ignore] attribute
@@ -80,174 +200,1400 @@ type
     ///    reports PASS is indistinguishable from one that verified
     ///    something, so the gap it leaves is invisible on every later run.
     ///    That is the whole reason this exists.
+    ///
+    ///    Deliberately does not count as an assertion, so a test cannot satisfy FailsOnNoAsserts by skipping itself.
     ///  </remarks>
     class procedure Ignore(const message : string = '');
+    /// <summary>
+    ///   Fails the test unconditionally.
+    /// </summary>
+    /// <param name="message">
+    ///   The failure message.
+    /// </param>
+    /// <param name="errorAddrs">
+    ///   Address to report the failure at (normally the caller's <c>ReturnAddress</c>), or nil for this method's own
+    ///   return address.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   Always (the <c>TestFailure</c> class).
+    /// </exception>
     class procedure Fail(const message : string = ''; const errorAddrs : pointer = nil);
+    /// <summary>
+    ///   Fails the test unconditionally with a formatted, trimmed message.
+    /// </summary>
+    /// <param name="message">
+    ///   The format string.
+    /// </param>
+    /// <param name="args">
+    ///   The format arguments.
+    /// </param>
+    /// <param name="errorAddrs">
+    ///   Address to report the failure at, or nil for <c>Fail</c>'s own return address.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   Always.
+    /// </exception>
     class procedure FailFmt(const message : string; const args : array of const; const errorAddrs : pointer = nil);
 
+    /// <summary>
+    ///   Fails the test with the "Not Implemented!" message; a placeholder for an unwritten test.
+    /// </summary>
+    /// <exception cref="ETestFailure">
+    ///   Always.
+    /// </exception>
     class procedure NotImplemented;
 
+    /// <summary>
+    ///   Asserts that two strings are equal.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected string.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual string.
+    /// </param>
+    /// <param name="ignoreCase">
+    ///   True compares with <c>SameText</c>; False with <c>SameStr</c>.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The strings differ.
+    /// </exception>
     class procedure AreEqual(const expected : string; const actual : string; const ignoreCase : boolean; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that two strings are equal, IGNORING CASE unless <c>IgnoreCaseDefault</c> has been set to False.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected string.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual string.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The strings differ.
+    /// </exception>
+    /// <remarks>
+    ///   When casing is what is being tested, use the overload with <c>ignoreCase = False</c>.
+    /// </remarks>
     class procedure AreEqual(const expected : string; const actual : string; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that two Double values are equal within a tolerance.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected value.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual value.
+    /// </param>
+    /// <param name="tolerance">
+    ///   Largest permitted difference; must not be negative.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The tolerance is negative, or the values differ by more than it.
+    /// </exception>
+    /// <remarks>
+    ///   An infinity equals only itself; NaN equals nothing.
+    /// </remarks>
     class procedure AreEqual(const expected, actual : Double; const tolerance : Double; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that two Double values are equal (tolerance 0, which <c>SameValue</c> widens to its default epsilon).
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected value.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual value.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The values differ.
+    /// </exception>
     class procedure AreEqual(const expected, actual : Double; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that two Extended values are equal within a tolerance.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected value.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual value.
+    /// </param>
+    /// <param name="tolerance">
+    ///   Largest permitted difference; must not be negative.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The tolerance is negative, or the values differ by more than it.
+    /// </exception>
+    /// <remarks>
+    ///   An infinity equals only itself; NaN equals nothing.
+    /// </remarks>
     class procedure AreEqual(const expected, actual : Extended; const tolerance : Extended; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that two Extended values are equal (tolerance 0, which <c>SameValue</c> widens to its default epsilon).
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected value.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual value.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The values differ.
+    /// </exception>
     class procedure AreEqual(const expected, actual : Extended; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that two Currency values are exactly equal.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected value.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual value.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The values differ.
+    /// </exception>
     class procedure AreEqual(const expected, actual : Currency; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that two class references are the same class.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected class; may be nil.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual class; may be nil.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The classes differ.
+    /// </exception>
     class procedure AreEqual(const expected, actual : TClass; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that two streams have identical contents (compared from position 0; positions are restored).
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected stream.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual stream.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The sizes or contents differ.
+    /// </exception>
     class procedure AreEqual(const expected, actual : TStream; const message : string = ''); overload;
 {$IFDEF DELPHI_XE2_UP}
-    //Delphi 2010 and XE compiler bug breaks this
+    /// <summary>
+    ///   Asserts that two values of any type are equal according to <c>TEqualityComparer&lt;T&gt;.Default</c>.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected value.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual value.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The comparer reports the values unequal.
+    /// </exception>
+    /// <remarks>
+    ///   Uses an equality comparer rather than <c>TComparer&lt;T&gt;</c>, which reports a Double NaN equal to
+    ///   everything. Excluded before XE2 because of a Delphi 2010/XE compiler bug.
+    /// </remarks>
     class procedure AreEqual<T>(const expected, actual : T; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that two arrays have the same length and equal elements, compared with
+    ///   <c>TEqualityComparer&lt;T&gt;.Default</c>.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected array.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual array.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The lengths differ, or an element differs (the first differing index is reported).
+    /// </exception>
     class procedure AreEqual<T>(const expected, actual : TArray<T>; const message : string = ''); overload;
 {$ENDIF}
+    /// <summary>
+    ///   Asserts that two Word values are equal.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected value.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual value.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The values differ.
+    /// </exception>
     class procedure AreEqual(const expected, actual : word; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that two Integer values are equal.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected value.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual value.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The values differ.
+    /// </exception>
     class procedure AreEqual(const expected, actual : Integer; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that two Int64 values are equal.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected value.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual value.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The values differ.
+    /// </exception>
     class procedure AreEqual(const expected, actual : Int64; const message : string = ''); overload;
 {$IFDEF CPU64BITS}
-    // Count and Length are NativeInt (Int64 on 64-bit): with an Integer on the other side
-    // overload resolution picks AreEqual<T> and type inference fails with E2532.
+    /// <summary>
+    ///   Asserts that an Integer and an Int64 are equal.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected value.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual value.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The values differ.
+    /// </exception>
+    /// <remarks>
+    ///   Count and Length are NativeInt (Int64 on 64-bit): with an Integer on the other side, overload resolution would
+    ///   pick AreEqual&lt;T&gt; and type inference would fail with E2532.
+    /// </remarks>
     class procedure AreEqual(const expected : Integer; const actual : Int64; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that an Int64 and an Integer are equal.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected value.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual value.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The values differ.
+    /// </exception>
+    /// <remarks>
+    ///   The mirror of the Integer/Int64 overload; it exists for the same E2532 reason.
+    /// </remarks>
     class procedure AreEqual(const expected : Int64; const actual : Integer; const message : string = ''); overload;
 {$ENDIF}
+    /// <summary>
+    ///   Asserts that two Cardinal values are equal.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected value.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual value.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The values differ.
+    /// </exception>
     class procedure AreEqual(const expected, actual : cardinal; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that two Boolean values are equal.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected value.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual value.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The values differ.
+    /// </exception>
     class procedure AreEqual(const expected, actual : boolean; const message : string = ''); overload;
 
+    /// <summary>
+    ///   Asserts that two GUIDs are equal.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected GUID.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual GUID.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The GUIDs differ.
+    /// </exception>
     class procedure AreEqual(const expected, actual : TGUID; const message : string = ''); overload;
 
+    /// <summary>
+    ///   Asserts that two string lists have the same line count and equal lines (case-sensitive), skipping the given
+    ///   line numbers.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected lines.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual lines.
+    /// </param>
+    /// <param name="ignoreLines">
+    ///   One-based line numbers not compared.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The counts differ, or a compared line differs (reported with its line number and position).
+    /// </exception>
     class procedure AreEqual(const expected, actual : TStrings; const ignoreLines : array of integer; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that two string lists have the same line count and equal lines (case-sensitive).
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected lines.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual lines.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The counts differ, or a line differs.
+    /// </exception>
     class procedure AreEqual(const expected, actual : TStrings; const message : string = ''); overload;
 
+    /// <summary>
+    ///   Asserts that two memory blocks hold the same bytes.
+    /// </summary>
+    /// <param name="expected">
+    ///   Start of the expected block.
+    /// </param>
+    /// <param name="actual">
+    ///   Start of the actual block.
+    /// </param>
+    /// <param name="size">
+    ///   Number of bytes to compare.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The blocks differ.
+    /// </exception>
     class procedure AreEqualMemory(const expected : Pointer; const actual : Pointer; const size : Cardinal; const message : string = '');
 
+    /// <summary>
+    ///   Asserts that two strings differ.
+    /// </summary>
+    /// <param name="expected">
+    ///   The value the actual string must not equal.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual string.
+    /// </param>
+    /// <param name="ignoreCase">
+    ///   True compares with <c>SameText</c>; False with <c>SameStr</c>.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The strings are equal.
+    /// </exception>
     class procedure AreNotEqual(const expected : string; const actual : string; const ignoreCase : boolean; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that two strings differ, IGNORING CASE unless <c>IgnoreCaseDefault</c> has been set to False.
+    /// </summary>
+    /// <param name="expected">
+    ///   The value the actual string must not equal.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual string.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The strings are equal.
+    /// </exception>
     class procedure AreNotEqual(const expected : string; const actual : string; const message : string = ''); overload;
 
+    /// <summary>
+    ///   Asserts that two Extended values differ by more than a tolerance.
+    /// </summary>
+    /// <param name="expected">
+    ///   The value the actual value must not equal.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual value.
+    /// </param>
+    /// <param name="tolerance">
+    ///   Difference within which the values count as equal; must not be negative.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The tolerance is negative, or the values are equal within it.
+    /// </exception>
     class procedure AreNotEqual(const expected, actual : Extended; const tolerance : Extended; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that two Extended values differ (tolerance 0, which <c>SameValue</c> widens to its default epsilon).
+    /// </summary>
+    /// <param name="expected">
+    ///   The value the actual value must not equal.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual value.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The values are equal.
+    /// </exception>
     class procedure AreNotEqual(const expected, actual : Extended; const message : string = ''); overload;
 
+    /// <summary>
+    ///   Asserts that two Double values differ by more than a tolerance.
+    /// </summary>
+    /// <param name="expected">
+    ///   The value the actual value must not equal.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual value.
+    /// </param>
+    /// <param name="tolerance">
+    ///   Difference within which the values count as equal; must not be negative.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The tolerance is negative, or the values are equal within it.
+    /// </exception>
     class procedure AreNotEqual(const expected, actual : Double; const tolerance : double; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that two Double values differ (tolerance 0, which <c>SameValue</c> widens to its default epsilon).
+    /// </summary>
+    /// <param name="expected">
+    ///   The value the actual value must not equal.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual value.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The values are equal.
+    /// </exception>
     class procedure AreNotEqual(const expected, actual : Double; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that two Currency values differ.
+    /// </summary>
+    /// <param name="expected">
+    ///   The value the actual value must not equal.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual value.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The values are equal.
+    /// </exception>
     class procedure AreNotEqual(const expected, actual : Currency; const message : string = ''); overload;
 
+    /// <summary>
+    ///   Asserts that two class references are different classes.
+    /// </summary>
+    /// <param name="expected">
+    ///   The class the actual class must not be; may be nil.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual class; may be nil.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The classes are the same.
+    /// </exception>
     class procedure AreNotEqual(const expected, actual : TClass; const message : string = ''); overload;
 
+    /// <summary>
+    ///   Asserts that two streams differ in size or contents.
+    /// </summary>
+    /// <param name="expected">
+    ///   The stream the actual stream must not match.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual stream.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The streams are the same instance or have identical contents.
+    /// </exception>
     class procedure AreNotEqual(const expected, actual : TStream; const message : string = ''); overload;
 {$IFDEF DELPHI_XE2_UP}
-    //Delphi 2010 and XE compiler bug breaks this
+    /// <summary>
+    ///   Asserts that two values of any type differ according to <c>TEqualityComparer&lt;T&gt;.Default</c>.
+    /// </summary>
+    /// <param name="expected">
+    ///   The value the actual value must not equal.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual value.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The comparer reports the values equal.
+    /// </exception>
+    /// <remarks>
+    ///   Excluded before XE2 because of a Delphi 2010/XE compiler bug.
+    /// </remarks>
     class procedure AreNotEqual<T>(const expected, actual : T; const message : string = ''); overload;
 {$ENDIF}
+    /// <summary>
+    ///   Asserts that two Integer values differ.
+    /// </summary>
+    /// <param name="expected">
+    ///   The value the actual value must not equal.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual value.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The values are equal.
+    /// </exception>
     class procedure AreNotEqual(const expected, actual : Integer; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that two Int64 values differ.
+    /// </summary>
+    /// <param name="expected">
+    ///   The value the actual value must not equal.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual value.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The values are equal.
+    /// </exception>
     class procedure AreNotEqual(const expected, actual : Int64; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that two GUIDs differ.
+    /// </summary>
+    /// <param name="expected">
+    ///   The GUID the actual GUID must not equal.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual GUID.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The GUIDs are equal.
+    /// </exception>
     class procedure AreNotEqual(const expected, actual : TGUID; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that two memory blocks do not hold the same bytes.
+    /// </summary>
+    /// <param name="expected">
+    ///   Start of the block the actual block must not match.
+    /// </param>
+    /// <param name="actual">
+    ///   Start of the actual block.
+    /// </param>
+    /// <param name="size">
+    ///   Number of bytes to compare.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The blocks are identical.
+    /// </exception>
     class procedure AreNotEqualMemory(const expected : Pointer; const actual : Pointer; const size : Cardinal; const message : string = '');
 
+    /// <summary>
+    ///   Asserts that two object references point to the same instance.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected instance; may be nil.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual instance; may be nil.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The references differ.
+    /// </exception>
     class procedure AreSame(const expected, actual : TObject; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that two interface references refer to the same object, compared through their IInterface identity.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected reference; may be nil.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual reference; may be nil.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The references differ.
+    /// </exception>
     class procedure AreSame(const expected, actual : IInterface; const message : string = ''); overload;
 
+    /// <summary>
+    ///   Asserts that two object references point to different instances.
+    /// </summary>
+    /// <param name="expected">
+    ///   The instance the actual reference must not be; may be nil.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual instance; may be nil.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The references are the same (including both nil).
+    /// </exception>
     class procedure AreNotSame(const expected, actual : TObject; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that two interface references refer to different objects, compared through their IInterface identity.
+    /// </summary>
+    /// <param name="expected">
+    ///   The reference the actual reference must not match; may be nil.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual reference; may be nil.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The references are the same (including both nil).
+    /// </exception>
     class procedure AreNotSame(const expected, actual : IInterface; const message : string = ''); overload;
 
 {$IFDEF DELPHI_XE_UP}
-    //Delphi 2010 compiler bug breaks this
+    /// <summary>
+    ///   Asserts that an enumerable contains a value, compared with <c>TEqualityComparer&lt;T&gt;.Default</c>.
+    /// </summary>
+    /// <param name="list">
+    ///   The collection to search.
+    /// </param>
+    /// <param name="value">
+    ///   The value that must be present.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   No element equals <paramref name="value" />.
+    /// </exception>
+    /// <remarks>
+    ///   Excluded before XE because of a Delphi 2010 compiler bug.
+    /// </remarks>
     class procedure Contains<T>(const list : IEnumerable<T>; const value : T; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that an array contains a value, compared with <c>TEqualityComparer&lt;T&gt;.Default</c>.
+    /// </summary>
+    /// <param name="arr">
+    ///   The array to search.
+    /// </param>
+    /// <param name="value">
+    ///   The value that must be present.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   No element equals <paramref name="value" />.
+    /// </exception>
     class procedure Contains<T>(const arr : array of T; const value : T; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that an enumerable does not contain a value, compared with <c>TEqualityComparer&lt;T&gt;.Default</c>.
+    /// </summary>
+    /// <param name="list">
+    ///   The collection to search.
+    /// </param>
+    /// <param name="value">
+    ///   The value that must be absent.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   An element equals <paramref name="value" />.
+    /// </exception>
     class procedure DoesNotContain<T>(const list : IEnumerable<T>; const value : T; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that an array does not contain a value, compared with <c>TEqualityComparer&lt;T&gt;.Default</c>.
+    /// </summary>
+    /// <param name="arr">
+    ///   The array to search.
+    /// </param>
+    /// <param name="value">
+    ///   The value that must be absent.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   An element equals <paramref name="value" />.
+    /// </exception>
     class procedure DoesNotContain<T>(const arr : array of T; const value : T; const message : string = ''); overload;
 {$ENDIF}
+    /// <summary>
+    ///   Asserts that an interface reference supports the interface <c>T</c> and returns it as <c>T</c>.
+    /// </summary>
+    /// <param name="value">
+    ///   The reference to query.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <returns>
+    ///   <paramref name="value" /> queried for <c>T</c>.
+    /// </returns>
+    /// <exception cref="ETestFailure">
+    ///   <paramref name="value" /> does not support <c>T</c>.
+    /// </exception>
     class function Implements<T : IInterface>(value : IInterface; const message : string = '') : T;
+    /// <summary>
+    ///   Asserts that a condition is True.
+    /// </summary>
+    /// <param name="condition">
+    ///   The condition.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   <paramref name="condition" /> is False.
+    /// </exception>
     class procedure IsTrue(const condition : boolean; const message : string = '');
+    /// <summary>
+    ///   Asserts that a condition is False.
+    /// </summary>
+    /// <param name="condition">
+    ///   The condition.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   <paramref name="condition" /> is True.
+    /// </exception>
     class procedure IsFalse(const condition : boolean; const message : string = '');
 
+    /// <summary>
+    ///   Asserts that an object reference is nil.
+    /// </summary>
+    /// <param name="condition">
+    ///   The reference.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The reference is not nil.
+    /// </exception>
     class procedure IsNull(const condition : TObject; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that a pointer is nil.
+    /// </summary>
+    /// <param name="condition">
+    ///   The pointer.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The pointer is not nil.
+    /// </exception>
     class procedure IsNull(const condition : Pointer; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that an interface reference is nil.
+    /// </summary>
+    /// <param name="condition">
+    ///   The reference.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The reference is not nil.
+    /// </exception>
     class procedure IsNull(const condition : IInterface; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that a variant is Null (an Unassigned variant is not Null).
+    /// </summary>
+    /// <param name="condition">
+    ///   The variant.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   <c>VarIsNull</c> is False.
+    /// </exception>
     class procedure IsNull(const condition : Variant; const message : string = ''); overload;
 
+    /// <summary>
+    ///   Asserts that an object reference is not nil.
+    /// </summary>
+    /// <param name="condition">
+    ///   The reference.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The reference is nil.
+    /// </exception>
     class procedure IsNotNull(const condition : TObject; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that a pointer is not nil.
+    /// </summary>
+    /// <param name="condition">
+    ///   The pointer.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The pointer is nil.
+    /// </exception>
     class procedure IsNotNull(const condition : Pointer; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that an interface reference is not nil.
+    /// </summary>
+    /// <param name="condition">
+    ///   The reference.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The reference is nil.
+    /// </exception>
     class procedure IsNotNull(const condition : IInterface; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that a variant is not Null (an Unassigned variant passes).
+    /// </summary>
+    /// <param name="condition">
+    ///   The variant.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   <c>VarIsNull</c> is True.
+    /// </exception>
     class procedure IsNotNull(const condition : Variant; const message : string = ''); overload;
 
+    /// <summary>
+    ///   Asserts that a string is empty.
+    /// </summary>
+    /// <param name="value">
+    ///   The string.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The string has any characters.
+    /// </exception>
     class procedure IsEmpty(const value : string; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that a variant is Unassigned or Null.
+    /// </summary>
+    /// <param name="value">
+    ///   The variant.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The variant holds a value.
+    /// </exception>
     class procedure IsEmpty(const value : Variant; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that a string list has no lines.
+    /// </summary>
+    /// <param name="value">
+    ///   The list; must not be nil.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The list has any lines.
+    /// </exception>
     class procedure IsEmpty(const value : TStrings; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that a pointer list has no items.
+    /// </summary>
+    /// <param name="value">
+    ///   The list; must not be nil.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The list has any items.
+    /// </exception>
     class procedure IsEmpty(const value : TList; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that an interface list has no items.
+    /// </summary>
+    /// <param name="value">
+    ///   The list; must not be nil.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The list has any items.
+    /// </exception>
     class procedure IsEmpty(const value : IInterfaceList; const message : string = ''); overload;
 {$IFDEF DELPHI_XE_UP}
-    //Delphi 2010 compiler bug breaks this
+    /// <summary>
+    ///   Asserts that an enumerable yields no elements.
+    /// </summary>
+    /// <param name="value">
+    ///   The collection.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   Enumeration yields any element.
+    /// </exception>
+    /// <remarks>
+    ///   Excluded before XE because of a Delphi 2010 compiler bug.
+    /// </remarks>
     class procedure IsEmpty<T>(const value : IEnumerable<T>; const message : string = ''); overload;
 {$ENDIF}
 
+    /// <summary>
+    ///   Asserts that a string is not empty.
+    /// </summary>
+    /// <param name="value">
+    ///   The string.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The string is empty.
+    /// </exception>
     class procedure IsNotEmpty(const value : string; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that a variant is neither Unassigned nor Null.
+    /// </summary>
+    /// <param name="value">
+    ///   The variant.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The variant is Unassigned or Null.
+    /// </exception>
     class procedure IsNotEmpty(const value : Variant; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that a string list has at least one line.
+    /// </summary>
+    /// <param name="value">
+    ///   The list; must not be nil.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The list is empty.
+    /// </exception>
     class procedure IsNotEmpty(const value : TStrings; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that a pointer list has at least one item.
+    /// </summary>
+    /// <param name="value">
+    ///   The list; must not be nil.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The list is empty.
+    /// </exception>
     class procedure IsNotEmpty(const value : TList; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that an interface list has at least one item.
+    /// </summary>
+    /// <param name="value">
+    ///   The list; must not be nil.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The list is empty.
+    /// </exception>
     class procedure IsNotEmpty(const value : IInterfaceList; const message : string = ''); overload;
 {$IFDEF DELPHI_XE_UP}
-    //Delphi 2010 compiler bug breaks this
+    /// <summary>
+    ///   Asserts that an enumerable yields at least one element.
+    /// </summary>
+    /// <param name="value">
+    ///   The collection.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   Enumeration yields nothing.
+    /// </exception>
+    /// <remarks>
+    ///   Excluded before XE because of a Delphi 2010 compiler bug.
+    /// </remarks>
     class procedure IsNotEmpty<T>(const value : IEnumerable<T>; const message : string = ''); overload;
 {$ENDIF}
 
+    /// <summary>
+    ///   Asserts that two date-times fall on the same calendar day (<c>SameDate</c>); the time parts are ignored.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected date.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual date.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The dates differ.
+    /// </exception>
     class procedure IsSameDate(const expected, actual: TDateTime; const message : string = '');
+    /// <summary>
+    ///   Asserts that two date-times have the same time of day (<c>SameTime</c>); the date parts are ignored.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected time.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual time.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The times differ.
+    /// </exception>
     class procedure IsSameTime(const expected, actual: TDateTime; const message : string = '');
+    /// <summary>
+    ///   Asserts that two date-times are the same moment (<c>SameDateTime</c>, to the millisecond).
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected date-time.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual date-time.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The date-times differ.
+    /// </exception>
     class procedure IsSameDateTime(const expected, actual: TDateTime; const message : string = '');
 
     /// <summary>
     ///   Checks that an exception exactly matching ExceptClass will be raised.
     /// </summary>
+    /// <param name="AMethod">
+    ///   The code to run.
+    /// </param>
+    /// <param name="exceptionClass">
+    ///   The exact class expected, or nil to accept any exception.
+    /// </param>
+    /// <param name="msg">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   Nothing is raised, or a different class is raised.
+    /// </exception>
+    /// <remarks>
+    ///   A failure, pass or ignore raised by an assertion inside <paramref name="AMethod" /> is re-raised as the
+    ///   test's own outcome unless <paramref name="exceptionClass" /> is itself a framework exception.
+    /// </remarks>
     class procedure WillRaise(const AMethod : TTestLocalMethod; const exceptionClass : ExceptClass = nil; const msg : string = ''); overload;
     /// <summary>
     ///   Checks that an exception exactly matching ExceptClass and Message will be raised.
     /// </summary>
+    /// <param name="AMethod">
+    ///   The code to run.
+    /// </param>
+    /// <param name="exceptionClass">
+    ///   The exact class expected, or nil to accept any exception.
+    /// </param>
+    /// <param name="exceptionMsg">
+    ///   The exact (case-sensitive) exception message expected, or empty to accept any message.
+    /// </param>
+    /// <param name="msg">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   Nothing is raised, a different class is raised, or the message differs.
+    /// </exception>
     class procedure WillRaiseWithMessage(const AMethod : TTestLocalMethod; const exceptionClass : ExceptClass = nil; const exceptionMsg : string = ''; const msg
       : string = ''); overload;
 {$IFDEF SUPPORTS_REGEX}
     /// <summary>
     ///   Checks that an exception exactly matching ExceptClass and RegExp-matching Message will be raised.
     /// </summary>
+    /// <param name="AMethod">
+    ///   The code to run.
+    /// </param>
+    /// <param name="exceptionClass">
+    ///   The exact class expected, or nil to accept any exception.
+    /// </param>
+    /// <param name="exceptionMsgRegexPattern">
+    ///   Regular expression the exception message must match, or empty to accept any message.
+    /// </param>
+    /// <param name="msg">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   Nothing is raised, a different class is raised, or the message does not match.
+    /// </exception>
     class procedure WillRaiseWithMessageRegex(const AMethod : TTestLocalMethod; const exceptionClass : ExceptClass = nil; const exceptionMsgRegexPattern :
       string = ''; const msg : string = ''); overload;
 {$ENDIF}
     /// <summary>
     ///   Checks that an exception exactly matching ExceptClass will be raised.
     /// </summary>
+    /// <param name="AMethod">
+    ///   The method to run.
+    /// </param>
+    /// <param name="exceptionClass">
+    ///   The exact class expected, or nil to accept any exception.
+    /// </param>
+    /// <param name="msg">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   Nothing is raised, or a different class is raised.
+    /// </exception>
     class procedure WillRaise(const AMethod : TTestMethod; const exceptionClass : ExceptClass = nil; const msg : string = ''); overload;
 
     /// <summary>
     ///   Checks that an exception that descends from ExceptClass will be raised.
     /// </summary>
+    /// <param name="AMethod">
+    ///   The code to run.
+    /// </param>
+    /// <param name="exceptionClass">
+    ///   The expected base class, or nil to accept any exception.
+    /// </param>
+    /// <param name="msg">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   Nothing is raised, or the raised class does not inherit from <paramref name="exceptionClass" />.
+    /// </exception>
     class procedure WillRaiseDescendant(const AMethod : TTestLocalMethod; const exceptionClass : ExceptClass = nil; const msg : string = ''); overload;
     /// <summary>
     ///   Checks that an exception that descends from ExceptClass will be raised.
     /// </summary>
+    /// <param name="AMethod">
+    ///   The method to run.
+    /// </param>
+    /// <param name="exceptionClass">
+    ///   The expected base class, or nil to accept any exception.
+    /// </param>
+    /// <param name="msg">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   Nothing is raised, or the raised class does not inherit from <paramref name="exceptionClass" />.
+    /// </exception>
     class procedure WillRaiseDescendant(const AMethod : TTestMethod; const exceptionClass : ExceptClass = nil; const msg : string = ''); overload;
 
     /// <summary>
     ///   Checks that an exception will be raised.
     /// </summary>
+    /// <param name="AMethod">
+    ///   The code to run.
+    /// </param>
+    /// <param name="msg">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   Nothing derived from Exception is raised.
+    /// </exception>
     class procedure WillRaiseAny(const AMethod : TTestLocalMethod; const msg : string = ''); overload;
     /// <summary>
     ///   Checks that an exception will be raised.
     /// </summary>
+    /// <param name="AMethod">
+    ///   The method to run.
+    /// </param>
+    /// <param name="msg">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   Nothing derived from Exception is raised.
+    /// </exception>
     class procedure WillRaiseAny(const AMethod : TTestMethod; const msg : string = ''); overload;
 
     /// <summary>
     ///   Checks that an exception exactly matching ExceptClass will not be raised.
     /// </summary>
+    /// <param name="AMethod">
+    ///   The code to run.
+    /// </param>
+    /// <param name="exceptionClass">
+    ///   The class that must not be raised (matched EXACTLY), or nil to forbid any exception.
+    /// </param>
+    /// <param name="msg">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The forbidden class (or, with nil, any exception) is raised.
+    /// </exception>
+    /// <remarks>
+    ///   Any other exception, a descendant included, propagates, so the test is reported as an error (since 2026-10-13;
+    ///   it used to be swallowed and the test passed). To forbid every exception as a failure use <c>WillNotRaiseAny</c>.
+    /// </remarks>
     class procedure WillNotRaise(const AMethod : TTestLocalMethod; const exceptionClass : ExceptClass = nil; const msg : string = ''); overload;
     /// <summary>
     ///   Checks that an exception exactly matching ExceptClass will not be raised.
     /// </summary>
+    /// <param name="AMethod">
+    ///   The method to run.
+    /// </param>
+    /// <param name="exceptionClass">
+    ///   The class that must not be raised (matched EXACTLY), or nil to forbid any exception.
+    /// </param>
+    /// <param name="msg">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The forbidden class (or, with nil, any exception) is raised.
+    /// </exception>
     class procedure WillNotRaise(const AMethod : TTestMethod; const exceptionClass : ExceptClass = nil; const msg : string = ''); overload;
 
     /// <summary>
     ///   Checks that an exception that descends from ExceptClass not will be raised.
     /// </summary>
+    /// <param name="AMethod">
+    ///   The code to run.
+    /// </param>
+    /// <param name="exceptionClass">
+    ///   The base class whose instances must not be raised, or nil to forbid any exception.
+    /// </param>
+    /// <param name="msg">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   An instance of <paramref name="exceptionClass" /> or a descendant (or, with nil, any exception) is raised.
+    /// </exception>
     class procedure WillNotRaiseDescendant(const AMethod : TTestLocalMethod; const exceptionClass : ExceptClass = nil; const msg : string = ''); overload;
     /// <summary>
     ///   Checks that an exception that descends from ExceptClass not will be raised.
     /// </summary>
+    /// <param name="AMethod">
+    ///   The method to run.
+    /// </param>
+    /// <param name="exceptionClass">
+    ///   The base class whose instances must not be raised, or nil to forbid any exception.
+    /// </param>
+    /// <param name="msg">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   An instance of <paramref name="exceptionClass" /> or a descendant (or, with nil, any exception) is raised.
+    /// </exception>
     class procedure WillNotRaiseDescendant(const AMethod : TTestMethod; const exceptionClass : ExceptClass = nil; const msg : string = ''); overload;
 
     /// <summary>
@@ -256,6 +1602,15 @@ type
     ///   WillRaiseAny</see> method, and is not required, as the default behavior of a test
     ///   is to fail when any exception is raised.
     /// </summary>
+    /// <param name="AMethod">
+    ///   The code to run.
+    /// </param>
+    /// <param name="msg">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   Anything is raised, including an object not derived from Exception.
+    /// </exception>
     class procedure WillNotRaiseAny(const AMethod : TTestLocalMethod; const msg : string = ''); overload;
     /// <summary>
     ///   Checks that an exception of Any type not will be raised. This method
@@ -263,64 +1618,408 @@ type
     ///   WillRaiseAny</see> method, and is not required, as the default behavior of a test
     ///   is to fail when any exception is raised.
     /// </summary>
+    /// <param name="AMethod">
+    ///   The method to run.
+    /// </param>
+    /// <param name="msg">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   Anything is raised, including an object not derived from Exception.
+    /// </exception>
     class procedure WillNotRaiseAny(const AMethod : TTestMethod; const msg : string = ''); overload;
 
     /// <summary>
     ///   Checks that an exception exactly matching ExceptClass and Message will not be raised.
     /// </summary>
+    /// <param name="AMethod">
+    ///   The code to run.
+    /// </param>
+    /// <param name="exceptionClass">
+    ///   The exact class that must not be raised with that message, or nil for any class.
+    /// </param>
+    /// <param name="exceptionMsg">
+    ///   The exact (case-sensitive) message that must not be raised, or empty for any message.
+    /// </param>
+    /// <param name="msg">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   An exception matching both the class and the message filters is raised.
+    /// </exception>
+    /// <remarks>
+    ///   A non-matching exception propagates, so the test is reported as an error (since 2026-10-13; it used to be
+    ///   swallowed and the test passed).
+    /// </remarks>
     class procedure WillNotRaiseWithMessage(const AMethod : TTestLocalMethod; const exceptionClass : ExceptClass = nil; const exceptionMsg : string = ''; const
       msg : string = ''); overload;
     /// <summary>
     ///   Checks that an exception exactly matching ExceptClass and Message will not be raised.
     /// </summary>
+    /// <param name="AMethod">
+    ///   The method to run.
+    /// </param>
+    /// <param name="exceptionClass">
+    ///   The exact class that must not be raised with that message, or nil for any class.
+    /// </param>
+    /// <param name="exceptionMsg">
+    ///   The exact (case-sensitive) message that must not be raised, or empty for any message.
+    /// </param>
+    /// <param name="msg">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   An exception matching both the class and the message filters is raised.
+    /// </exception>
     class procedure WillNotRaiseWithMessage(const AMethod : TTestMethod; const exceptionClass : ExceptClass = nil; const exceptionMsg : string = ''; const msg
       : string = ''); overload;
 
+    /// <summary>
+    ///   Asserts that a string contains a substring.
+    /// </summary>
+    /// <param name="theString">
+    ///   The string searched.
+    /// </param>
+    /// <param name="subString">
+    ///   The text that must occur; must not be empty.
+    /// </param>
+    /// <param name="ignoreCase">
+    ///   True compares with <c>ContainsText</c>; False with <c>ContainsStr</c>.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   <paramref name="subString" /> is empty (every string trivially contains it), or does not occur.
+    /// </exception>
     class procedure Contains(const theString : string; const subString : string; const ignoreCase : boolean; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that a string contains a substring, IGNORING CASE unless <c>IgnoreCaseDefault</c> is False.
+    /// </summary>
+    /// <param name="theString">
+    ///   The string searched.
+    /// </param>
+    /// <param name="subString">
+    ///   The text that must occur; must not be empty.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   <paramref name="subString" /> is empty, or does not occur.
+    /// </exception>
     class procedure Contains(const theString : string; const subString : string; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that a string does not contain a substring.
+    /// </summary>
+    /// <param name="theString">
+    ///   The string searched.
+    /// </param>
+    /// <param name="subString">
+    ///   The text that must not occur; must not be empty.
+    /// </param>
+    /// <param name="ignoreCase">
+    ///   True compares with <c>ContainsText</c>; False with <c>ContainsStr</c>.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   <paramref name="subString" /> is empty, or occurs.
+    /// </exception>
     class procedure DoesNotContain(const theString : string; const subString : string; const ignoreCase : boolean; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that a string does not contain a substring, IGNORING CASE unless <c>IgnoreCaseDefault</c> is False.
+    /// </summary>
+    /// <param name="theString">
+    ///   The string searched.
+    /// </param>
+    /// <param name="subString">
+    ///   The text that must not occur; must not be empty.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   <paramref name="subString" /> is empty, or occurs.
+    /// </exception>
     class procedure DoesNotContain(const theString : string; const subString : string; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that the text of a string list contains a substring (searched in <c>Text</c>, so it may span lines).
+    /// </summary>
+    /// <param name="theStrings">
+    ///   The list searched; must not be nil.
+    /// </param>
+    /// <param name="subString">
+    ///   The text that must occur; must not be empty.
+    /// </param>
+    /// <param name="ignoreCase">
+    ///   True for a case-insensitive search.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   <paramref name="subString" /> is empty, or does not occur.
+    /// </exception>
     class procedure Contains(const theStrings : TStrings; const subString : string; const ignoreCase : boolean; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that the text of a string list contains a substring, IGNORING CASE unless <c>IgnoreCaseDefault</c> is
+    ///   False.
+    /// </summary>
+    /// <param name="theStrings">
+    ///   The list searched; must not be nil.
+    /// </param>
+    /// <param name="subString">
+    ///   The text that must occur; must not be empty.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   <paramref name="subString" /> is empty, or does not occur.
+    /// </exception>
     class procedure Contains(const theStrings : TStrings; const subString : string; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that the text of a string list does not contain a substring (searched in <c>Text</c>).
+    /// </summary>
+    /// <param name="theStrings">
+    ///   The list searched; must not be nil.
+    /// </param>
+    /// <param name="subString">
+    ///   The text that must not occur; must not be empty.
+    /// </param>
+    /// <param name="ignoreCase">
+    ///   True for a case-insensitive search.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   <paramref name="subString" /> is empty, or occurs.
+    /// </exception>
     class procedure DoesNotContain(const theStrings : TStrings; const subString : string; const ignoreCase : boolean; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that the text of a string list does not contain a substring, IGNORING CASE unless
+    ///   <c>IgnoreCaseDefault</c> is False.
+    /// </summary>
+    /// <param name="theStrings">
+    ///   The list searched; must not be nil.
+    /// </param>
+    /// <param name="subString">
+    ///   The text that must not occur; must not be empty.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   <paramref name="subString" /> is empty, or occurs.
+    /// </exception>
     class procedure DoesNotContain(const theStrings : TStrings; const subString : string; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that a string starts with a given prefix. Note the argument order: the prefix comes first.
+    /// </summary>
+    /// <param name="subString">
+    ///   The prefix; must not be empty.
+    /// </param>
+    /// <param name="theString">
+    ///   The string tested.
+    /// </param>
+    /// <param name="ignoreCase">
+    ///   True compares with <c>StartsText</c>; False with <c>StartsStr</c>.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   <paramref name="subString" /> is empty, or <paramref name="theString" /> does not start with it.
+    /// </exception>
     class procedure StartsWith(const subString : string; const theString : string; const ignoreCase : boolean; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that a string starts with a given prefix, IGNORING CASE unless <c>IgnoreCaseDefault</c> is False.
+    /// </summary>
+    /// <param name="subString">
+    ///   The prefix; must not be empty.
+    /// </param>
+    /// <param name="theString">
+    ///   The string tested.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   <paramref name="subString" /> is empty, or <paramref name="theString" /> does not start with it.
+    /// </exception>
     class procedure StartsWith(const subString : string; const theString : string; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that a string ends with a given suffix. Note the argument order: the suffix comes first.
+    /// </summary>
+    /// <param name="subString">
+    ///   The suffix; must not be empty.
+    /// </param>
+    /// <param name="theString">
+    ///   The string tested.
+    /// </param>
+    /// <param name="ignoreCase">
+    ///   True compares with <c>EndsText</c>; False with <c>EndsStr</c>.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   <paramref name="subString" /> is empty, or <paramref name="theString" /> does not end with it.
+    /// </exception>
     class procedure EndsWith(const subString : string; const theString : string; const ignoreCase : boolean; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that a string ends with a given suffix, IGNORING CASE unless <c>IgnoreCaseDefault</c> is False.
+    /// </summary>
+    /// <param name="subString">
+    ///   The suffix; must not be empty.
+    /// </param>
+    /// <param name="theString">
+    ///   The string tested.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   <paramref name="subString" /> is empty, or <paramref name="theString" /> does not end with it.
+    /// </exception>
     class procedure EndsWith(const subString : string; const theString : string; const message : string = ''); overload;
+    /// <summary>
+    ///   Asserts that one class is, or descends from, another.
+    /// </summary>
+    /// <param name="descendant">
+    ///   The class tested.
+    /// </param>
+    /// <param name="parent">
+    ///   The class it must inherit from.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   Either class is nil, or <paramref name="descendant" /> does not inherit from <paramref name="parent" />.
+    /// </exception>
     class procedure InheritsFrom(const descendant : TClass; const parent : TClass; const message : string = '');
 {$IFDEF DELPHI_XE_UP}
-    //Delphi 2010 compiler bug breaks this
-    class procedure IsType<T>(const value : T; const message : string = ''); overload; deprecated 'use inheritsfrom - istype is useless';
+    /// <summary>
+    ///   Deprecated: a value of type <c>T</c> is always of type <c>T</c>, so this cannot check anything; it now always
+    ///   fails so that a test relying on it is not reported as a pass.
+    /// </summary>
+    /// <param name="value">
+    ///   Ignored.
+    /// </param>
+    /// <param name="message">
+    ///   Ignored.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   Always, directing the caller to <c>InheritsFrom</c> or <c>Implements</c>.
+    /// </exception>
+    class procedure IsType<T>(const value : T; const message : string = ''); overload;
+      deprecated 'IsType<T> always fails: it cannot check anything. Use InheritsFrom or Implements';
 {$ENDIF}
 
     /// <summary>
     ///   Checks that there is no difference between the given strings. If there is a difference, then
     ///   the test will fail with extended informations about the starting position of the difference.
     /// </summary>
+    /// <param name="expected">
+    ///   The expected string.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual string.
+    /// </param>
+    /// <param name="ignoreCase">
+    ///   True to compare upper-cased copies.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The strings differ; the message gives the first differing position and the surrounding text of each, with
+    ///   white space made visible.
+    /// </exception>
     class procedure NoDiff(const expected, actual : string; const ignoreCase : boolean; const message : string = ''); overload;
     /// <summary>
     ///   Checks that there is no difference between the given strings. If there is a difference, then
     ///   the test will fail with extended informations about the starting position of the difference.
     /// </summary>
+    /// <param name="expected">
+    ///   The expected string.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual string.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The strings differ (compared case-sensitively).
+    /// </exception>
     class procedure NoDiff(const expected, actual : string; const message : string = ''); overload;
 
 {$IFDEF SUPPORTS_REGEX}
+    /// <summary>
+    ///   Asserts that a string matches a regular expression (anywhere in the string unless the pattern is anchored).
+    /// </summary>
+    /// <param name="regexPattern">
+    ///   The regular expression.
+    /// </param>
+    /// <param name="theString">
+    ///   The string tested.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   The string does not match.
+    /// </exception>
     class procedure IsMatch(const regexPattern : string; const theString : string; const message : string = '');
 {$ENDIF}
 
+    /// <summary>
+    ///   Fails when an expectation report is non-empty; used to turn a mock or expectation verifier's unmet-expectation
+    ///   text into a test failure.
+    /// </summary>
+    /// <param name="EmptyExpectation">
+    ///   The verifier's report: empty when every expectation was met.
+    /// </param>
+    /// <param name="Message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailure">
+    ///   <paramref name="EmptyExpectation" /> is not empty.
+    /// </exception>
     class procedure CheckExpectation(const EmptyExpectation : string; const Message : string = '');
 
+    /// <summary>Called by every assertion before it checks anything; the runner uses it to count assertions.</summary>
     class property OnAssert : TProc read fOnAssert write fOnAssert;
+    /// <summary>Exception class raised by a failing assertion (<c>ETestFailure</c> under DUnitX).</summary>
     class property TestFailure : ExceptClass read fTestFailure write fTestFailure;
+    /// <summary>Exception class raised by <c>Pass</c> (<c>ETestPass</c> under DUnitX).</summary>
     class property TestPass : ExceptClass read fTestPass write fTestPass;
+    /// <summary>Exception class raised by <c>Ignore</c> (<c>ETestIgnored</c> under DUnitX).</summary>
     class property TestIgnored : ExceptClass read fTestIgnored write fTestIgnored;
+    /// <summary>
+    ///   Whether string assertions without an ignoreCase argument ignore case. True by default, so
+    ///   <c>AreEqual('a', 'A')</c> PASSES; set it False, or pass ignoreCase, when casing matters.
+    /// </summary>
     class property IgnoreCaseDefault : boolean read fIgnoreCaseDefault write fIgnoreCaseDefault;
 
+    /// <summary>
+    ///   Initialises <c>IgnoreCaseDefault</c> to True.
+    /// </summary>
     class constructor Create;
   end;
 
 {$IFNDEF DELPHI_XE2_UP}
+/// <summary>
+///   Returns the address the calling routine will return to, for compilers before XE2 that lack the intrinsic.
+/// </summary>
+/// <returns>
+///   The caller's return address, or nil when the frame pointer is invalid.
+/// </returns>
 function ReturnAddress : Pointer; assembler;
 {$ENDIF}
 
@@ -1184,13 +2883,11 @@ end;
 {$IFDEF DELPHI_XE_UP}
 //Delphi 2010 compiler bug breaks this
 class procedure Assert.IsType<T>(const value : T; const message : string);
-var
-  val : TValue;
 begin
+  //A value of type T is always of type T, so this used to pass whatever was tested. It fails instead, so a test
+  //that relies on it is not reported as a pass.
   DoAssert;
-  val := TValue.From<T>(value);
-  if not val.IsType<T> then
-    Fail(STypeError, ReturnAddress);
+  Fail(SIsTypeCannotCheck, ReturnAddress);
 end;
 {$ENDIF}
 
@@ -1246,7 +2943,10 @@ begin
       if exceptionClass <> nil then
       begin
         if e is exceptionClass then
-          FailFmt(SMethodRaisedExceptionAlt, [e.ClassName, exceptionClass.ClassName, e.message, AddLineBreak(msg)], ReturnAddress);
+          FailFmt(SMethodRaisedExceptionAlt, [e.ClassName, exceptionClass.ClassName, e.message, AddLineBreak(msg)], ReturnAddress)
+        else
+          //Another exception propagates, so the test is reported as an error rather than passing.
+          raise;
       end
       else
         // nil means any exception, as in WillNotRaise.
@@ -1277,7 +2977,10 @@ begin
         raise;
       if ((exceptionMsg = '') or SameStr(e.Message, exceptionMsg)) and
         (((exceptionClass <> nil) and (e.ClassType = exceptionClass)) or (exceptionClass = nil)) then
-        FailFmt(SMethodRaisedExceptionMessage, [e.ClassName, e.Message, AddLineBreak(msg)], ReturnAddress);
+        FailFmt(SMethodRaisedExceptionMessage, [e.ClassName, e.Message, AddLineBreak(msg)], ReturnAddress)
+      else
+        //Another exception propagates, so the test is reported as an error rather than passing.
+        raise;
     end;
   end;
 end;
@@ -1302,7 +3005,7 @@ begin
     begin
       if IsUnrequestedTestOutcome(E, exceptionClass) then
         raise;
-      CheckExceptionClass(e, exceptionClass);
+      CheckExceptionClass(e, exceptionClass, msg);
       Exit;
     end;
   end;
@@ -1322,7 +3025,11 @@ begin
       if exceptionClass <> nil then
       begin
         if e.ClassType = exceptionClass then
-          Fail(SMethodRaisedException + exceptionClass.ClassName + sLineBreak + e.Message + AddLineBreak(msg), ReturnAddress);
+          Fail(SMethodRaisedException + exceptionClass.ClassName + sLineBreak + e.Message + AddLineBreak(msg), ReturnAddress)
+        else
+          //Another exception is not what this assertion is about, but it is not a pass either: it propagates, so the
+          //test is reported as an error. It used to be swallowed and the test passed.
+          raise;
       end
       else
         FailFmt(SUnexpectedException + '%s', [e.ClassName, e.message, AddLineBreak(msg)], ReturnAddress);
@@ -1376,7 +3083,7 @@ begin
     begin
       if IsUnrequestedTestOutcome(E, exceptionClass) then
         raise;
-      CheckExceptionClassDescendant(e, exceptionClass);
+      CheckExceptionClassDescendant(e, exceptionClass, msg);
       Exit;
     end;
   end;
@@ -1403,7 +3110,7 @@ begin
     begin
       if IsUnrequestedTestOutcome(E, exceptionClass) then
         raise;
-      CheckExceptionClass(E, exceptionClass);
+      CheckExceptionClass(E, exceptionClass, msg);
       if (exceptionMsg <> '') and (not SameStr(E.Message, exceptionMsg)) then
         FailFmt(SUnexpectedExceptionMessage, [E.ClassName, E.Message, exceptionMsg, msg], ReturnAddress);
       Exit;
@@ -1424,7 +3131,7 @@ begin
     begin
       if IsUnrequestedTestOutcome(E, exceptionClass) then
         raise;
-      CheckExceptionClass(E, exceptionClass);
+      CheckExceptionClass(E, exceptionClass, msg);
       if (exceptionMsgRegexPattern <> '') and (not PerformIsMatch(exceptionMsgRegexPattern, E.Message)) then
         FailFmt(SUnexpectedExceptionMessage, [E.ClassName, E.Message, exceptionMsgRegexPattern, msg], ReturnAddress);
       Exit;
@@ -1451,24 +3158,24 @@ begin
     FailFmt(SNotEqualErrorStr, [expected, actual, message], ReturnAddress);
 end;
 
-class procedure Assert.CheckExceptionClass(E : Exception; const exceptionClass : ExceptClass);
+class procedure Assert.CheckExceptionClass(E : Exception; const exceptionClass : ExceptClass; const msg : string);
 begin
   DoAssert;
   if exceptionClass = nil then
     Exit;
 
   if E.ClassType <> exceptionClass then
-    FailFmt(SCheckExceptionClassError, [E.ClassName, exceptionClass.ClassName, E.message], ReturnAddress);
+    FailFmt(SCheckExceptionClassError + '%s', [E.ClassName, exceptionClass.ClassName, E.message, AddLineBreak(msg)], ReturnAddress);
 end;
 
-class procedure Assert.CheckExceptionClassDescendant(E : Exception; const exceptionClass : ExceptClass);
+class procedure Assert.CheckExceptionClassDescendant(E : Exception; const exceptionClass : ExceptClass; const msg : string);
 begin
   DoAssert;
   if exceptionClass = nil then
     Exit;
 
   if not (E is exceptionClass) then
-    FailFmt(SCheckExceptionClassDescError, [E.ClassName, exceptionClass.ClassName, E.message], ReturnAddress);
+    FailFmt(SCheckExceptionClassDescError + '%s', [E.ClassName, exceptionClass.ClassName, E.message, AddLineBreak(msg)], ReturnAddress);
 end;
 
 class function Assert.IsUnrequestedTestOutcome(E : Exception; const exceptionClass : ExceptClass) : boolean;

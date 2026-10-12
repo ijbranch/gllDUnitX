@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -39,22 +39,55 @@ uses
   DUnitX.ConsoleWriter.Base;
 
 type
+  /// <summary>
+  ///   Console writer for Windows: writes to standard output with <c>WriteConsoleW</c> (or <c>System.Write</c> when
+  ///   output is redirected), colours text with console attributes, and restores the original colours when freed.
+  ///   Registered as the <c>IDUnitXConsoleWriter</c> implementation when this unit initialises.
+  /// </summary>
   TDUnitXWindowsConsoleWriter = class(TDUnitXConsoleWriterBase)
   private
+    /// <summary>Foreground attribute bits in effect when the writer was created; what <c>ccDefault</c> maps to.</summary>
     FDefaultForeground : Word;
+    /// <summary>Background attribute bits in effect when the writer was created; what <c>ccDefault</c> maps to.</summary>
     FDefaultBackground : Word;
+    /// <summary>Foreground colour last applied, so an unchanged <c>SetColour</c> call is skipped.</summary>
     FLastForeground : TConsoleColour;
+    /// <summary>Background colour last applied, so an unchanged <c>SetColour</c> call is skipped.</summary>
     FLastBackground : TConsoleColour;
+    /// <summary>The standard output handle.</summary>
     FStdOut : THandle;
+    /// <summary>Maps a colour to its Windows console foreground attribute bits.</summary>
+    /// <param name="cc">The colour to map.</param>
+    /// <returns>The <c>FOREGROUND_*</c> bits; for <c>ccDefault</c>, the original foreground.</returns>
     function GetForegroundColourCode(const cc : TConsoleColour) : Word;
+    /// <summary>Maps a colour to its Windows console background attribute bits.</summary>
+    /// <param name="cc">The colour to map.</param>
+    /// <returns>The <c>BACKGROUND_*</c> bits; for <c>ccDefault</c>, the original background.</returns>
     function GetBackgroundColourCode(const cc : TConsoleColour) : Word;
+    /// <summary>Reads the console screen buffer width.</summary>
+    /// <returns>The buffer width in characters, or <c>High(Integer)</c> (unlimited) when it cannot be read.</returns>
     function GetConsoleWidth : Integer;
   protected
+    /// <summary>
+    ///   Writes one line, indented, followed by CRLF - except when the line exactly fills its last console row, where
+    ///   the console has already wrapped the cursor.
+    /// </summary>
+    /// <param name="s">The line text, without indent or line break.</param>
     procedure InternalWriteLn(const s : string); override;
+    /// <summary>Writes text, indented, with no line break.</summary>
+    /// <param name="s">The text to write.</param>
     procedure InternalWrite(const s : string); override;
   public
+    /// <summary>Sets the console text colours; does nothing if they are already the last colours applied.</summary>
+    /// <param name="foreground">The text colour.</param>
+    /// <param name="background">The background colour; <c>ccDefault</c> restores the original.</param>
     procedure SetColour(const foreground : TConsoleColour; const background : TConsoleColour = ccDefault); override;
+    /// <summary>
+    ///   Opens standard output, detects redirection (not a console handle), reads the console width and saves the
+    ///   current colours so they can be restored.
+    /// </summary>
     constructor Create; override;
+    /// <summary>Restores the original console colours.</summary>
     destructor Destroy; override;
   end;
 
@@ -157,8 +190,9 @@ begin
   //Add the indenting.
   output := TStrUtils.PadString(s, length(s) + Self.CurrentIndentLevel, True, ' ');
 
-  //If we are already going to wrap around to the next line. No need to add CRLF
-  if Length(output) < ConsoleWidth then
+  //A line that exactly fills the last console row it reaches has already moved the cursor to the next line; any other
+  //line, longer than the width or not, still needs its CRLF (dropping it for every long line ran the next line on).
+  if (ConsoleWidth <= 0) or (Length(output) = 0) or (Length(output) mod ConsoleWidth <> 0) then
     output := output + #13#10;
 
   if Self.RedirectedStdOut then

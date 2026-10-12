@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -33,28 +33,50 @@ uses
 
 type
 {$M+}
+  /// <summary>
+  ///   Fixture marked [IgnoreMemoryLeaks]: its tests deliberately leak, to demonstrate that the fixture-level
+  ///   setting suppresses leak reports and that a test-level attribute overrides it. The tests always pass; what
+  ///   differs is whether a leak-reporting monitor flags them.
+  /// </summary>
   [TestFixture]
   [IgnoreMemoryLeaks]
   TTestsNoMemoryLeaksReported = class
   published
+    /// <summary>
+    ///   Leaks 1024 bytes under the fixture's [IgnoreMemoryLeaks]; demonstrates the leak is not reported.
+    /// </summary>
     [Test]
     procedure No_Reporting_Of_Memory_Leaks;
+    /// <summary>
+    ///   Leaks 512 bytes with [IgnoreMemoryLeaks(False)] on the test; demonstrates the test-level setting overrides
+    ///   the fixture's, so the leak is reported.
+    /// </summary>
     [Test]
     [IgnoreMemoryLeaks(False)]
     procedure Override_Reporting_Of_Memory_Leaks;
   end;
 
+  /// <summary>
+  ///   Fixture marked [IgnoreMemoryLeaks(False)], which reports all leaks - the same as not specifying the attribute
+  ///   at all. Its tests deliberately leak and always pass.
+  /// </summary>
   [TestFixture]
-  // if the "IgnoreMemoryLeaks" attribute is not specified, then all memory leaks will be reported.
-  [IgnoreMemoryLeaks(False)]            // Report all leaks. This is the same as not specifying this attribute.
+  [IgnoreMemoryLeaks(False)]
   TTestsMemoryLeaksReported = class
   published
+    /// <summary>
+    ///   Leaks 256 bytes with [IgnoreMemoryLeaks(True)] on the test; demonstrates the test-level setting suppresses
+    ///   the report the fixture would otherwise make.
+    /// </summary>
     [Test]
     [IgnoreMemoryLeaks(True)]
     procedure Override_No_Reporting_Of_Memory_Leaks;
 
+    /// <summary>
+    ///   Leaks 128 bytes with no test-level attribute; demonstrates the test inherits the fixture's setting, so the
+    ///   leak is reported.
+    /// </summary>
     [Test]
-    // if the "IgnoreMemoryLeaks" attribute is not specified, it will use the fixtures setting.
     procedure Reporting_Of_Memory_Leaks;
   end;
 

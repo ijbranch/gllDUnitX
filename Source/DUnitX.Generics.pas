@@ -41,156 +41,384 @@ uses
 {$ENDIF}
 
 type
-  //Delphi does not have reference counted collection types.. so we created one here.
-  //This will typically be used where we return IEnumerbable<T> from a function
-  //TODO: need unit tests!!!
-
+  /// <summary>
+  ///   A reference-counted, read-only view of a list. Delphi has no reference-counted collection types, so DUnitX
+  ///   defines its own; typically used where a function returns an enumerable that the caller must not free.
+  /// </summary>
+  /// <remarks>
+  ///   Upstream note: this unit still needs unit tests.
+  /// </remarks>
   IReadOnlyList<T> = interface(IEnumerable<T>)
+    /// <summary>Returns the number of items the list can hold before it must grow.</summary>
+    /// <returns>The current capacity.</returns>
     function GetCapacity : integer;
+    /// <summary>Returns the number of items in the list.</summary>
+    /// <returns>The item count.</returns>
     function GetCount : integer;
+    /// <summary>Returns the item at a position.</summary>
+    /// <param name="index">Zero-based position of the item.</param>
+    /// <returns>The item at <paramref name="index" />.</returns>
     function GetItem(index : integer) : T;
+    /// <summary>Returns the handler called when items are added, removed or extracted.</summary>
+    /// <returns>The current notification handler, or nil.</returns>
     function GetOnNotify : TCollectionNotifyEvent<T>;
+    /// <summary>Sets the handler called when items are added, removed or extracted.</summary>
+    /// <param name="value">The new notification handler, or nil.</param>
     procedure SetOnNotify(value : TCollectionNotifyEvent<T>);
+    /// <summary>Returns the first item.</summary>
+    /// <returns>The item at position 0.</returns>
     function First : T;
+    /// <summary>Returns the last item.</summary>
+    /// <returns>The item at position <c>Count - 1</c>.</returns>
     function Last : T;
+    /// <summary>Reports whether the list holds a value, using the list's comparer.</summary>
+    /// <param name="Value">The value to look for.</param>
+    /// <returns>True if the value is present.</returns>
     function Contains(const Value : T) : Boolean;
+    /// <summary>Finds the first occurrence of a value, searching forwards.</summary>
+    /// <param name="Value">The value to look for.</param>
+    /// <returns>Its zero-based position, or -1 if absent.</returns>
     function IndexOf(const Value : T) : Integer;
+    /// <summary>Finds the last occurrence of a value, searching backwards.</summary>
+    /// <param name="Value">The value to look for.</param>
+    /// <returns>Its zero-based position, or -1 if absent.</returns>
     function LastIndexOf(const Value : T) : Integer;
+    /// <summary>Binary-searches a sorted list using the list's own comparer.</summary>
+    /// <param name="Item">The value to look for.</param>
+    /// <param name="Index">Receives the position found, or the position at which the item would be inserted.</param>
+    /// <returns>True if the item was found.</returns>
     function BinarySearch(const Item : T; out Index : Integer) : Boolean; overload;
+    /// <summary>Binary-searches a sorted list using the given comparer.</summary>
+    /// <param name="Item">The value to look for.</param>
+    /// <param name="Index">Receives the position found, or the position at which the item would be inserted.</param>
+    /// <param name="AComparer">The comparer the list was sorted with.</param>
+    /// <returns>True if the item was found.</returns>
     function BinarySearch(const Item : T; out Index : Integer; const AComparer : IComparer<T>) : Boolean; overload;
+    /// <summary>Number of items the list can hold before it must grow.</summary>
     property Capacity : Integer read GetCapacity;
+    /// <summary>Number of items in the list.</summary>
     property Count : Integer read GetCount;
+    /// <summary>The items, by zero-based position.</summary>
     property Items[Index : Integer] : T read GetItem; default;
+    /// <summary>Handler called when items are added, removed or extracted.</summary>
     property OnNotify : TCollectionNotifyEvent<T> read GetOnNotify write SetOnNotify;
 
   end;
 
+  /// <summary>
+  ///   A reference-counted, modifiable list: <see cref="IReadOnlyList{T}" /> plus the mutating operations of
+  ///   <c>TList&lt;T&gt;</c>.
+  /// </summary>
   IList<T> = interface(IReadOnlyList<T>)
+    /// <summary>Sets the number of items the list can hold before it must grow.</summary>
+    /// <param name="value">The new capacity.</param>
     procedure SetCapacity(const value : integer);
+    /// <summary>Sets the number of items, truncating or padding with default values.</summary>
+    /// <param name="value">The new item count.</param>
     procedure SetCount(const value : integer);
+    /// <summary>Replaces the item at a position.</summary>
+    /// <param name="index">Zero-based position of the item.</param>
+    /// <param name="value">The new item.</param>
     procedure SetItem(index : integer; value : T);
 
+    /// <summary>Appends an item.</summary>
+    /// <param name="Value">The item to append.</param>
+    /// <returns>The zero-based position it was added at.</returns>
     function Add(const Value : T) : Integer;
+    /// <summary>Appends every item of an open array.</summary>
+    /// <param name="Values">The items to append.</param>
     procedure AddRange(const Values : array of T); overload;
+    /// <summary>Appends every item of an enumerable interface.</summary>
+    /// <param name="Collection">The items to append.</param>
     procedure AddRange(const Collection : IEnumerable<T>); overload;
+    /// <summary>Appends every item of an enumerable collection object.</summary>
+    /// <param name="Collection">The items to append.</param>
     procedure AddRange(Collection : TEnumerable<T>); overload;
 
+    /// <summary>Inserts an item at a position, shifting later items up.</summary>
+    /// <param name="Index">Zero-based position to insert at.</param>
+    /// <param name="Value">The item to insert.</param>
     procedure Insert(Index : Integer; const Value : T);
 
+    /// <summary>Inserts every item of an open array at a position.</summary>
+    /// <param name="Index">Zero-based position to insert at.</param>
+    /// <param name="Values">The items to insert.</param>
     procedure InsertRange(Index : Integer; const Values : array of T); overload;
+    /// <summary>Inserts every item of an enumerable interface at a position.</summary>
+    /// <param name="Index">Zero-based position to insert at.</param>
+    /// <param name="Collection">The items to insert.</param>
     procedure InsertRange(Index : Integer; const Collection : IEnumerable<T>); overload;
+    /// <summary>Inserts every item of an enumerable collection object at a position.</summary>
+    /// <param name="Index">Zero-based position to insert at.</param>
+    /// <param name="Collection">The items to insert.</param>
     procedure InsertRange(Index : Integer; const Collection : TEnumerable<T>); overload;
 
+    /// <summary>Removes the first occurrence of a value.</summary>
+    /// <param name="Value">The value to remove.</param>
+    /// <returns>The position it was removed from, or -1 if absent.</returns>
     function Remove(const Value : T) : Integer;
+    /// <summary>Removes the item at a position.</summary>
+    /// <param name="Index">Zero-based position of the item.</param>
     procedure Delete(Index : Integer);
+    /// <summary>Removes a run of items.</summary>
+    /// <param name="AIndex">Zero-based position of the first item to remove.</param>
+    /// <param name="ACount">Number of items to remove.</param>
     procedure DeleteRange(AIndex, ACount : Integer);
+    /// <summary>Removes the first occurrence of a value and returns it, raising an extract (not remove) notification.</summary>
+    /// <param name="Value">The value to extract.</param>
+    /// <returns>The extracted value, or <c>Default(T)</c> if absent.</returns>
     function Extract(const Value : T) : T;
 
+    /// <summary>Swaps two items.</summary>
+    /// <param name="Index1">Zero-based position of the first item.</param>
+    /// <param name="Index2">Zero-based position of the second item.</param>
     procedure Exchange(Index1, Index2 : Integer);
+    /// <summary>Moves an item to a new position.</summary>
+    /// <param name="CurIndex">Zero-based current position.</param>
+    /// <param name="NewIndex">Zero-based destination position.</param>
     procedure Move(CurIndex, NewIndex : Integer);
 
+    /// <summary>Removes every item.</summary>
     procedure Clear;
 
+    /// <summary>Reverses the order of the items.</summary>
     procedure Reverse;
 
+    /// <summary>Sorts the items with the list's own comparer.</summary>
     procedure Sort; overload;
+    /// <summary>Sorts the items with the given comparer.</summary>
+    /// <param name="AComparer">The comparer to order items by.</param>
     procedure Sort(const AComparer : IComparer<T>); overload;
 
+    /// <summary>Reduces the capacity to the current count.</summary>
     procedure TrimExcess;
 
+    /// <summary>Copies the items into a new array.</summary>
+    /// <returns>A dynamic array holding the items in list order.</returns>
     function ToArray : TArray<T>;
 
+    /// <summary>Number of items the list can hold before it must grow.</summary>
     property Capacity : Integer read GetCapacity write SetCapacity;
+    /// <summary>Number of items in the list; setting it truncates or pads with default values.</summary>
     property Count : Integer read GetCount write SetCount;
+    /// <summary>The items, by zero-based position.</summary>
     property Items[Index : Integer] : T read GetItem write SetItem; default;
+    /// <summary>Handler called when items are added, removed or extracted.</summary>
     property OnNotify : TCollectionNotifyEvent<T> read GetOnNotify write SetOnNotify;
   end;
 
-  //Trying to implement IEnumerable<T> in the same class as IEnumerable does not
-  //seem to be impossible in delphi.. it's and excercise in extreme frustration!
-
-  //Simple base IEnumerable Base implementation
+  /// <summary>
+  ///   Base class implementing the non-generic IEnumerable, so that descendants can implement
+  ///   <c>IEnumerable&lt;T&gt;</c> as well.
+  /// </summary>
+  /// <remarks>
+  ///   Implementing <c>IEnumerable&lt;T&gt;</c> in the same class as <c>IEnumerable</c> is very awkward in Delphi
+  ///   because both declare <c>GetEnumerator</c>; this class maps the non-generic one to
+  ///   <c>GetNonGenEnumerator</c>.
+  /// </remarks>
   TDUnitXEnumerable = class(TInterfacedObject, IEnumerable)
   protected
+    /// <summary>Maps <c>IEnumerable.GetEnumerator</c> to <c>GetNonGenEnumerator</c>.</summary>
     function IEnumerable.GetEnumerator = GetNonGenEnumerator;
+    /// <summary>Returns a non-generic enumerator over the collection.</summary>
+    /// <returns>A new non-generic enumerator.</returns>
     function GetNonGenEnumerator : IEnumerator; virtual; abstract;
   end;
 
+  /// <summary>
+  ///   The implementation of <see cref="IList{T}" />: a reference-counted wrapper that delegates every operation to
+  ///   an owned <c>TList&lt;T&gt;</c>.
+  /// </summary>
+  /// <remarks>
+  ///   Enumerating takes an interface reference to the list, so hold instances through <see cref="IList{T}" />, not
+  ///   an object reference.
+  /// </remarks>
   TDUnitXList<T> = class(TDUnitXEnumerable, IList<T>, IEnumerable<T>)
   private
+    /// <summary>The owned list every operation delegates to.</summary>
     FList : TList<T>;
   protected
-    //IEnumerable<T>
+    /// <summary>Returns a generic enumerator over the items.</summary>
+    /// <returns>A new <see cref="TDUnitXIEnumerator{T}" /> over this list.</returns>
     function GetEnumerator : IEnumerator<T>; overload;
+    /// <summary>Returns a non-generic enumerator over the items.</summary>
+    /// <returns>A new <see cref="TDUnitXIEnumerator{T}" /> over this list.</returns>
     function GetNonGenEnumerator : IEnumerator; override;
 
-    //IList<T>
+    /// <summary>Returns the number of items the list can hold before it must grow.</summary>
+    /// <returns>The current capacity.</returns>
     function GetCapacity : integer;
+    /// <summary>Sets the number of items the list can hold before it must grow.</summary>
+    /// <param name="value">The new capacity.</param>
     procedure SetCapacity(const value : integer);
+    /// <summary>Returns the number of items in the list.</summary>
+    /// <returns>The item count.</returns>
     function GetCount : integer;
+    /// <summary>Sets the number of items, truncating or padding with default values.</summary>
+    /// <param name="value">The new item count.</param>
     procedure SetCount(const value : integer);
+    /// <summary>Returns the item at a position.</summary>
+    /// <param name="index">Zero-based position of the item.</param>
+    /// <returns>The item at <paramref name="index" />.</returns>
     function GetItem(index : integer) : T;
+    /// <summary>Replaces the item at a position.</summary>
+    /// <param name="index">Zero-based position of the item.</param>
+    /// <param name="value">The new item.</param>
     procedure SetItem(index : integer; value : T);
 
+    /// <summary>Returns the handler called when items are added, removed or extracted.</summary>
+    /// <returns>The current notification handler, or nil.</returns>
     function GetOnNotify : TCollectionNotifyEvent<T>;
+    /// <summary>Sets the handler called when items are added, removed or extracted.</summary>
+    /// <param name="value">The new notification handler, or nil.</param>
     procedure SetOnNotify(value : TCollectionNotifyEvent<T>);
 
+    /// <summary>Appends an item.</summary>
+    /// <param name="Value">The item to append.</param>
+    /// <returns>The zero-based position it was added at.</returns>
     function Add(const Value : T) : Integer;
+    /// <summary>Appends every item of an open array.</summary>
+    /// <param name="Values">The items to append.</param>
     procedure AddRange(const Values : array of T); overload;
+    /// <summary>Appends every item of an enumerable interface.</summary>
+    /// <param name="Collection">The items to append.</param>
     procedure AddRange(const Collection : IEnumerable<T>); overload;
+    /// <summary>Appends every item of an enumerable collection object.</summary>
+    /// <param name="Collection">The items to append.</param>
     procedure AddRange(Collection : TEnumerable<T>); overload;
 
+    /// <summary>Inserts an item at a position, shifting later items up.</summary>
+    /// <param name="Index">Zero-based position to insert at.</param>
+    /// <param name="Value">The item to insert.</param>
     procedure Insert(Index : Integer; const Value : T);
 
+    /// <summary>Inserts every item of an open array at a position.</summary>
+    /// <param name="Index">Zero-based position to insert at.</param>
+    /// <param name="Values">The items to insert.</param>
     procedure InsertRange(Index : Integer; const Values : array of T); overload;
+    /// <summary>Inserts every item of an enumerable interface at a position.</summary>
+    /// <param name="Index">Zero-based position to insert at.</param>
+    /// <param name="Collection">The items to insert.</param>
     procedure InsertRange(Index : Integer; const Collection : IEnumerable<T>); overload;
+    /// <summary>Inserts every item of an enumerable collection object at a position.</summary>
+    /// <param name="Index">Zero-based position to insert at.</param>
+    /// <param name="Collection">The items to insert.</param>
     procedure InsertRange(Index : Integer; const Collection : TEnumerable<T>); overload;
 
+    /// <summary>Removes the first occurrence of a value.</summary>
+    /// <param name="Value">The value to remove.</param>
+    /// <returns>The position it was removed from, or -1 if absent.</returns>
     function Remove(const Value : T) : Integer;
+    /// <summary>Removes the item at a position.</summary>
+    /// <param name="Index">Zero-based position of the item.</param>
     procedure Delete(Index : Integer);
+    /// <summary>Removes a run of items.</summary>
+    /// <param name="AIndex">Zero-based position of the first item to remove.</param>
+    /// <param name="ACount">Number of items to remove.</param>
     procedure DeleteRange(AIndex, ACount : Integer);
+    /// <summary>Removes the first occurrence of a value and returns it, raising an extract (not remove) notification.</summary>
+    /// <param name="Value">The value to extract.</param>
+    /// <returns>The extracted value, or <c>Default(T)</c> if absent.</returns>
     function Extract(const Value : T) : T;
 
+    /// <summary>Swaps two items.</summary>
+    /// <param name="Index1">Zero-based position of the first item.</param>
+    /// <param name="Index2">Zero-based position of the second item.</param>
     procedure Exchange(Index1, Index2 : Integer);
+    /// <summary>Moves an item to a new position.</summary>
+    /// <param name="CurIndex">Zero-based current position.</param>
+    /// <param name="NewIndex">Zero-based destination position.</param>
     procedure Move(CurIndex, NewIndex : Integer);
 
+    /// <summary>Returns the first item.</summary>
+    /// <returns>The item at position 0.</returns>
     function First : T;
+    /// <summary>Returns the last item.</summary>
+    /// <returns>The item at position <c>Count - 1</c>.</returns>
     function Last : T;
 
+    /// <summary>Removes every item.</summary>
     procedure Clear;
 
+    /// <summary>Reports whether the list holds a value, using the list's comparer.</summary>
+    /// <param name="Value">The value to look for.</param>
+    /// <returns>True if the value is present.</returns>
     function Contains(const Value : T) : Boolean;
+    /// <summary>Finds the first occurrence of a value, searching forwards.</summary>
+    /// <param name="Value">The value to look for.</param>
+    /// <returns>Its zero-based position, or -1 if absent.</returns>
     function IndexOf(const Value : T) : Integer;
+    /// <summary>Finds the last occurrence of a value, searching backwards.</summary>
+    /// <param name="Value">The value to look for.</param>
+    /// <returns>Its zero-based position, or -1 if absent.</returns>
     function LastIndexOf(const Value : T) : Integer;
 
+    /// <summary>Reverses the order of the items.</summary>
     procedure Reverse;
 
+    /// <summary>Sorts the items with the list's own comparer.</summary>
     procedure Sort; overload;
+    /// <summary>Sorts the items with the given comparer.</summary>
+    /// <param name="AComparer">The comparer to order items by.</param>
     procedure Sort(const AComparer : IComparer<T>); overload;
+    /// <summary>Binary-searches a sorted list using the list's own comparer.</summary>
+    /// <param name="Item">The value to look for.</param>
+    /// <param name="Index">Receives the position found, or the position at which the item would be inserted.</param>
+    /// <returns>True if the item was found.</returns>
     function BinarySearch(const Item : T; out Index : Integer) : Boolean; overload;
+    /// <summary>Binary-searches a sorted list using the given comparer.</summary>
+    /// <param name="Item">The value to look for.</param>
+    /// <param name="Index">Receives the position found, or the position at which the item would be inserted.</param>
+    /// <param name="AComparer">The comparer the list was sorted with.</param>
+    /// <returns>True if the item was found.</returns>
     function BinarySearch(const Item : T; out Index : Integer; const AComparer : IComparer<T>) : Boolean; overload;
 
+    /// <summary>Reduces the capacity to the current count.</summary>
     procedure TrimExcess;
 
+    /// <summary>Copies the items into a new array.</summary>
+    /// <returns>A dynamic array holding the items in list order.</returns>
     function ToArray : TArray<T>;
   public
+    /// <summary>Creates an empty list that compares items with the default comparer for <c>T</c>.</summary>
     constructor Create; overload;
+    /// <summary>Creates an empty list that compares items with the given comparer.</summary>
+    /// <param name="AComparer">The comparer used by searching and sorting.</param>
     constructor Create(const AComparer : IComparer<T>); overload;
+    /// <summary>Creates a list holding a copy of a collection's items.</summary>
+    /// <param name="Collection">The items to copy in.</param>
     constructor Create(Collection : TEnumerable<T>); overload;
+    /// <summary>Frees the owned list (but not the items, which it does not own).</summary>
     destructor Destroy; override;
   end;
 
+  /// <summary>
+  ///   Enumerator over an <see cref="IList{T}" />, serving both the generic and the non-generic enumerator
+  ///   interfaces.
+  /// </summary>
   TDUnitXIEnumerator<T> = class(TInterfacedObject, IEnumerator<T>, IEnumerator)
   private
+    /// <summary>The list being enumerated; the enumerator keeps it alive.</summary>
     FList : IList<T>;
+    /// <summary>Zero-based position of the current item; -1 before the first <c>MoveNext</c>.</summary>
     FIndex : integer;
   protected
+    /// <summary>Returns the current item.</summary>
+    /// <returns>The item at the current position.</returns>
     function GetCurrentGen : T;
+    /// <summary>Maps <c>IEnumerator&lt;T&gt;.GetCurrent</c> to <c>GetCurrentGen</c>.</summary>
     function IEnumerator<T>.GetCurrent = GetCurrentGen;
+    /// <summary>Returns the current item as an object, for the non-generic enumerator.</summary>
+    /// <returns>The current item when <c>T</c> is a class type; nil otherwise, as only objects can be yielded.</returns>
     function GetCurrent : TObject;
+    /// <summary>Advances to the next item; stays past the end once it has been reached.</summary>
+    /// <returns>True if there is a current item after the move.</returns>
     function MoveNext : Boolean;
+    /// <summary>Returns to the position before the first item.</summary>
     procedure Reset;
   public
+    /// <summary>Creates an enumerator positioned before the first item.</summary>
+    /// <param name="AList">The list to enumerate.</param>
     constructor Create(const AList : IList<T>);
   end;
 

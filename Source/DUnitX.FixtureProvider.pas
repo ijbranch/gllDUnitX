@@ -44,23 +44,109 @@ uses
   DUnitX.TestDataProvider;
 
 type
+  /// <summary>
+  ///   Default fixture provider: gathers fixture classes (registered ones plus, optionally, every [TestFixture] class
+  ///   found through RTTI), arranges them in a namespace hierarchy built from their unit names, and generates their
+  ///   tests, test cases and setup / teardown bindings from method attributes.
+  /// </summary>
   TDUnitXFixtureProvider = class(TInterfacedObject, IFixtureProvider)
   private class var
+      /// <summary>Shared RTTI context, kept for the life of the process so RTTI objects stay valid.</summary>
       FRttiContext : TRttiContext;
   private
+    /// <summary>The fixture classes to build, mapped to their fixture names.</summary>
     FFixtureClasses : TDictionary<TClass, string>;
 
   protected
+    /// <summary>
+    ///   Builds the display name of one repetition of a [RepeatTest] test.
+    /// </summary>
+    /// <param name="AName">
+    ///   The test method name.
+    /// </param>
+    /// <param name="ATimes">
+    ///   The 1-based repetition number.
+    /// </param>
+    /// <param name="ACount">
+    ///   The total number of repetitions.
+    /// </param>
+    /// <returns>
+    ///   AName unchanged when ACount is 1 or less; otherwise AName suffixed with <c>-ATimes-of-ACount</c>.
+    /// </returns>
     function FormatTestName(const AName : string; const ATimes, ACount : Integer) : string;
+    /// <summary>
+    ///   Builds the name of a test case produced by a test data provider.
+    /// </summary>
+    /// <param name="AName">
+    ///   The case name the provider returned.
+    /// </param>
+    /// <param name="Nr">
+    ///   The 0-based case index.
+    /// </param>
+    /// <returns>
+    ///   <c>AName (NN)</c>, with the index zero-padded to at least two digits.
+    /// </returns>
     function FormatCaseName(const AName : string; Nr : integer) : string;
+    /// <summary>
+    ///   Finds the first attribute in a list that is of, or descends from, class T.
+    /// </summary>
+    /// <param name="attributes">
+    ///   The attributes to search.
+    /// </param>
+    /// <param name="attribute">
+    ///   Receives the attribute found, or nil.
+    /// </param>
+    /// <returns>
+    ///   True when a matching attribute was found.
+    /// </returns>
     function TryGetAttributeOfType<T : class>(const attributes : TArray<TCustomAttribute>; var attribute : T) : boolean;
+    /// <summary>
+    ///   Adds every class carrying a [TestFixture] attribute to the fixture classes, named by the attribute or, when it
+    ///   gives no name, by the class name. TPersistent and TComponent descendants are included.
+    /// </summary>
     procedure RTTIDiscoverFixtureClasses;
+    /// <summary>
+    ///   Recursively generates the tests of a fixture and its children from the fixture class's method attributes:
+    ///   [SetupFixture], [TearDownFixture] (or the destructor), [Setup], [TearDown], [Test], [TestCase], test case
+    ///   sources, [TestCaseProvider], [Ignore], [Category], [RepeatTest], [MaxTime], [WillRaise] and un-attributed
+    ///   published methods.
+    /// </summary>
+    /// <param name="context">
+    ///   The provider context the fixtures were created through.
+    /// </param>
+    /// <param name="fixture">
+    ///   The fixture to populate; namespace fixtures (TestClass = TObject) only recurse into their children.
+    /// </param>
+    /// <remarks>
+    ///   An override is bound to the fixture class's own implementation and takes the attributes of the nearest
+    ///   declaration that has any, so an overridden test is one test. A [TestCaseProvider] naming an unregistered
+    ///   provider produces an error test rather than silently producing none.
+    /// </remarks>
     procedure GenerateTests(const context : IFixtureProviderContext; const fixture : ITestFixture);
+    /// <summary>
+    ///   Collects the fixture classes, builds the namespace fixture hierarchy from their unit names (and any dotted
+    ///   prefix in a fixture name) through the context, then generates every fixture's tests.
+    /// </summary>
+    /// <param name="context">
+    ///   The builder context that creates top-level fixtures and says whether RTTI discovery is wanted.
+    /// </param>
     procedure Execute(const context : IFixtureProviderContext);
   public
+    /// <summary>
+    ///   Creates the shared RTTI context when the unit initialises.
+    /// </summary>
     class constructor Create;
+    /// <summary>
+    ///   Frees the shared RTTI context when the unit finalises.
+    /// </summary>
     class destructor Destroy;
+    /// <summary>
+    ///   Creates the provider with an empty fixture class map.
+    /// </summary>
     constructor Create;
+    /// <summary>
+    ///   Frees the fixture class map.
+    /// </summary>
     destructor Destroy; override;
   end;
 
@@ -244,12 +330,79 @@ begin
   end;
 end;
 
+type
+  //A method of a fixture class as the provider takes it: the declaration whose attributes apply, the code to bind, and
+  //whether it is published.
+  TResolvedMethod = record
+    Method : TRttiMethod;
+    Code : Pointer;
+    IsPublished : boolean;
+  end;
+
+//Resolves AMethods (GetMethods order: the class itself first, then up the hierarchy) for a fixture of class ATestClass.
+//An override is listed before the ancestor method it overrides and does not inherit its attributes, so each virtual
+//method is taken once, at its most derived declaration, with the attributes of the nearest declaration that has any,
+//and is bound to ATestClass's own implementation. Binding the ancestor's static code address ran the ancestor's code
+//(an overriding [Setup] or [Test] never ran) and made an overridden test two tests.
+function ResolveFixtureMethods(const AMethods : TArray<TRttiMethod>; const ATestClass : TClass) : TArray<TResolvedMethod>;
+var
+  slotAttributes : TDictionary<Integer, TRttiMethod>;
+  slotPublished : TDictionary<Integer, Boolean>;
+  slotsTaken : TDictionary<Integer, Boolean>;
+  declared : TRttiMethod;
+  resolved : TResolvedMethod;
+  count : Integer;
+begin
+  SetLength(Result, Length(AMethods));
+  count := 0;
+  slotAttributes := TDictionary<Integer, TRttiMethod>.Create;
+  slotPublished := TDictionary<Integer, Boolean>.Create;
+  slotsTaken := TDictionary<Integer, Boolean>.Create;
+  try
+    for declared in AMethods do
+      if declared.DispatchKind = TDispatchKind.dkVtable then
+      begin
+        if (Length(declared.GetAttributes) > 0) and (not slotAttributes.ContainsKey(declared.VirtualIndex)) then
+          slotAttributes.Add(declared.VirtualIndex, declared);
+        if declared.Visibility = TMemberVisibility.mvPublished then
+          slotPublished.AddOrSetValue(declared.VirtualIndex, True);
+      end;
+
+    for declared in AMethods do
+    begin
+      if declared.DispatchKind = TDispatchKind.dkVtable then
+      begin
+        if slotsTaken.ContainsKey(declared.VirtualIndex) then
+          continue;
+        slotsTaken.Add(declared.VirtualIndex, True);
+        if not slotAttributes.TryGetValue(declared.VirtualIndex, resolved.Method) then
+          resolved.Method := declared;
+        resolved.IsPublished := slotPublished.ContainsKey(declared.VirtualIndex);
+        resolved.Code := PPointer(PByte(ATestClass) + declared.VirtualIndex * SizeOf(Pointer))^;
+      end
+      else
+      begin
+        resolved.Method := declared;
+        resolved.IsPublished := declared.Visibility = TMemberVisibility.mvPublished;
+        resolved.Code := declared.CodeAddress;
+      end;
+      Result[count] := resolved;
+      Inc(count);
+    end;
+  finally
+    slotsTaken.Free;
+    slotPublished.Free;
+    slotAttributes.Free;
+  end;
+  SetLength(Result, count);
+end;
+
 procedure TDUnitXFixtureProvider.GenerateTests(const context : IFixtureProviderContext; const fixture : ITestFixture);
 var
   childFixture : ITestFixture;
 
   rType : TRttiType;
-  methods : TArray<TRttiMethod>;
+  resolved : TResolvedMethod;
   method : TRttiMethod;
   meth : TMethod;
 
@@ -316,9 +469,12 @@ begin
   tearDownFixtureMethod := nil;
 
   //Note : Relying on the order of the methods return, ie current type, then up the heirachy
-  methods := rType.GetMethods;
-  for method in methods do
+  for resolved in ResolveFixtureMethods(rType.GetMethods, fixture.TestClass) do
   begin
+    method := resolved.Method;
+    meth.Code := resolved.Code;
+    meth.Data := fixture.FixtureInstance;
+
     ignoredTest := false;
     ignoredReason := '';
 
@@ -340,9 +496,6 @@ begin
     willRaise := nil;
     willRaiseInherit := exExact;
     currentFixture := fixture;
-
-    meth.Code := method.CodeAddress;
-    meth.Data := fixture.FixtureInstance;
 
     //if the test has a category attribute then we'll use it to override the fixtures's category.
     if method.TryGetAttributeOfType<CategoryAttribute>(categoryAttrib) then
@@ -536,7 +689,7 @@ begin
     end;
 
     //finally.. if it's a pulished method
-    if (method.Visibility = TMemberVisibility.mvPublished) and (testEnabled) then
+    if resolved.IsPublished and (testEnabled) then
     begin
       // Add Published Method that has no Attributes
       for i := 1 to repeatCount do
@@ -577,8 +730,9 @@ begin
   for rType in types do
   begin
     fixtureAttribute := nil;
-    //try and keep the iteration down as much as possible
-    if (rType.TypeKind = TTypeKind.tkClass) and (not rType.InheritsFrom(TPersistent)) then
+    //Every class is examined, TPersistent descendants included: a [TestFixture] may descend from TComponent. (A
+    //TPersistent filter here never took effect, as it asked about the TRttiType object rather than the class.)
+    if rType.TypeKind = TTypeKind.tkClass then
     begin
       attributes := rType.GetAttributes;
       if Length(attributes) > 0 then

@@ -1,4 +1,4 @@
-unit ProviderExample;
+﻿unit ProviderExample;
 
 interface
 uses
@@ -9,35 +9,106 @@ uses
   DUnitX.TestFramework;
 
 type
-  //Just a record for doing a List of Data
+  /// <summary>
+  ///   One generated test case: two operands with the expected sum and equality.
+  /// </summary>
   TTestData = Record
+                /// <summary>First and second operands (Val2 shares this declaration).</summary>
                 Val1, Val2: integer;
+                /// <summary>Expected sum, Val1 + Val2.</summary>
                 AddExpect : integer;
+                /// <summary>Expected result of Val1 = Val2.</summary>
                 isEqual   : boolean;
   End;
 
+  /// <summary>
+  ///   Example test-case provider: generates 101 random operand pairs and feeds them to Addtest and Comparetest.
+  /// </summary>
   TSampleProvider = Class(TTestDataProvider)
     private
-      flist : TList<TTestData>;  //Our list of Values we need;
+      /// <summary>The generated test cases, indexed by case number.</summary>
+      flist : TList<TTestData>;
     public
-      //The constructor, for initializing the data
+      /// <summary>
+      ///   Creates the provider and generates 101 random cases (operands 0..99).
+      /// </summary>
       Constructor Create;override;
-      //Get the amount of cases, we want to create;
+      /// <summary>
+      ///   Gives the number of cases to run for a test method.
+      /// </summary>
+      /// <param name="methodName">
+      ///   Name of the test method (the same count is given for every method).
+      /// </param>
+      /// <returns>
+      ///   The number of generated cases.
+      /// </returns>
       function GetCaseCount(const methodName : string) : Integer; override;
-      //Get the name of the cases, depending on the Test-Function
+      /// <summary>
+      ///   Gives the display name of a case, depending on the test method.
+      /// </summary>
+      /// <param name="methodName">
+      ///   Name of the test method.
+      /// </param>
+      /// <param name="caseNumber">
+      ///   Zero-based case index (unused - every case of a method shares one name).
+      /// </param>
+      /// <returns>
+      ///   'Add integer' for Addtest, 'Compare Integer' for Comparetest, otherwise the method name.
+      /// </returns>
       function GetCaseName(const methodName : string; const caseNumber : integer) : string; override;
-      //Get the Params for calling the Test-Function;Be aware of the order !
+      /// <summary>
+      ///   Gives the arguments for one call of a test method, in the method's parameter order.
+      /// </summary>
+      /// <param name="methodName">
+      ///   Name of the test method; selects the expected value passed as the third argument.
+      /// </param>
+      /// <param name="caseNumber">
+      ///   Zero-based case index.
+      /// </param>
+      /// <returns>
+      ///   Val1, Val2 and the expected sum (Addtest) or equality (Comparetest); an empty array when
+      ///   <paramref name="caseNumber" /> is out of range.
+      /// </returns>
       function GetCaseParams(const methodName : string ; const caseNumber : integer) : TValuearray; override;
-      //Cleanup the instance
+      /// <summary>
+      ///   Frees the generated cases.
+      /// </summary>
       Destructor Destroy;override;
   End;
 
+  /// <summary>
+  ///   Example fixture whose tests take their cases from <see cref="TSampleProvider" /> rather than TestCase attributes.
+  /// </summary>
   [TestFixture('ProviderExample1','Example using TestCaseProviders')]
   TProviderExample = class(TObject)
   public
+    /// <summary>
+    ///   Proves each provider case's expected sum equals v1 + v2, showing a provider feeding integer arguments.
+    /// </summary>
+    /// <param name="v1">
+    ///   First operand.
+    /// </param>
+    /// <param name="v2">
+    ///   Second operand.
+    /// </param>
+    /// <param name="expected">
+    ///   Expected sum.
+    /// </param>
     [Test]
     [TestCaseProvider(TSampleProvider)]
     Procedure Addtest(const v1, v2:integer; expected:integer);
+    /// <summary>
+    ///   Proves each provider case's expected equality matches v1 = v2, showing a provider feeding a Boolean argument.
+    /// </summary>
+    /// <param name="v1">
+    ///   First operand.
+    /// </param>
+    /// <param name="v2">
+    ///   Second operand.
+    /// </param>
+    /// <param name="expected">
+    ///   Expected result of v1 = v2.
+    /// </param>
     [Test]
     [TestCaseProvider(TSampleProvider)]
     Procedure Comparetest(const v1, v2:integer; expected:boolean);

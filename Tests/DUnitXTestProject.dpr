@@ -40,6 +40,7 @@ uses
   DUnitX.Tests.TestDataProvider in 'DUnitX.Tests.TestDataProvider.pas',
   DUnitX.Tests.IgnoreFixture in 'DUnitX.Tests.IgnoreFixture.pas',
   DUnitX.Tests.Utils in 'DUnitX.Tests.Utils.pas',
+  DUnitX.Tests.UtilsHelpers in 'DUnitX.Tests.UtilsHelpers.pas',
   DUnitX.Tests.Loggers.XML.JUnit in 'DUnitX.Tests.Loggers.XML.JUnit.pas';
 
 // Named explicitly: this file is DUnitXTestProject.dpr, but the version resource is generated beside the .dproj as

@@ -31,8 +31,44 @@ interface
 
 {$I DUnitX.inc}
 
+/// <summary>
+///   Reports whether a UTF-16 code unit may appear in an XML 1.0 document: tab, line feed, carriage return, the
+///   printable BMP ranges and either half of a surrogate pair. Every other C0 control (form feed included) is invalid.
+/// </summary>
+/// <param name="wc">
+///   The code unit to test.
+/// </param>
+/// <returns>
+///   True when the code unit is legal in XML 1.0 text; otherwise False.
+/// </returns>
 function IsValidXMLChar(const wc : WideChar) : Boolean;
+/// <summary>
+///   Returns a copy of a string with every code unit that XML 1.0 forbids replaced by a space, so the length is kept.
+/// </summary>
+/// <param name="s">
+///   The text to clean.
+/// </param>
+/// <returns>
+///   The text with each invalid XML character replaced by a space.
+/// </returns>
 function StripInvalidXML(const s : string) : string;
+/// <summary>
+///   Makes a string safe to write into an XML document: invalid characters are stripped (see
+///   <c>StripInvalidXML</c>), then the text is escaped for element content, an attribute value or a CDATA section.
+/// </summary>
+/// <param name="value">
+///   The raw text to escape.
+/// </param>
+/// <param name="isAttribute">
+///   True to also escape single and double quotes, as an attribute value requires.
+/// </param>
+/// <param name="isCDATASection">
+///   True when the text goes inside a CDATA section: entities are not used; instead each <c>]]&gt;</c> is split across
+///   two adjacent CDATA sections so that a parser reads back the original text.
+/// </param>
+/// <returns>
+///   The escaped text.
+/// </returns>
 function EscapeForXML(const value : string; const isAttribute : boolean = True; const isCDATASection : Boolean = False) : string;
 
 implementation
@@ -97,11 +133,14 @@ begin
 {$IFNDEF NEXTGEN}
   if isCDATASection then
   begin
-    Result := StringReplace(Result, ']]>', ']>', [rfReplaceAll]);
+    //A CDATA section cannot contain ']]>', so the text is split there into two adjacent sections, which an XML
+    //parser reads back as the original text. (Replacing it with ']>' changed the text, and turned ']]]>' into a
+    //']]>' that ended the section early.)
+    Result := StringReplace(Result, ']]>', ']]]]><![CDATA[>', [rfReplaceAll]);
     exit;
   end;
 
-  //note we are avoiding replacing &amp; with &amp;amp; !!
+  //An existing "&amp;" is escaped like any other "&" (to "&amp;amp;"), so the text reads back exactly as given.
   Result := StringReplace(result, '&amp;', '[[-xy-amp--]]', [rfReplaceAll]);
   Result := StringReplace(result, '&', '&amp;', [rfReplaceAll]);
   Result := StringReplace(result, '[[-xy-amp--]]', '&amp;amp;', [rfReplaceAll]);
@@ -120,7 +159,7 @@ begin
     exit;
   end;
 
-  //note we are avoiding replacing &amp; with &amp;amp; !!
+  //An existing "&amp;" is escaped like any other "&" (to "&amp;amp;"), so the text reads back exactly as given.
   Result := Result.Replace('&amp;', '[[-xy-amp--]]', [rfReplaceAll]);
   Result := Result.Replace('&', '&amp;', [rfReplaceAll]);
   Result := Result.Replace('[[-xy-amp--]]', '&amp;amp;', [rfReplaceAll]);

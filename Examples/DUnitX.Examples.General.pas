@@ -40,18 +40,27 @@ uses
 
 type
   {$M+}
+  /// <summary>
+  ///   Tour of the test attributes: TestCase and AutoNameTestCase parameters, categories, MaxTime, disabled and
+  ///   ignored tests, Setup/TearDown, logging, and published methods as implicit tests. Some tests fail on purpose.
+  /// </summary>
   [TestFixture('Examples.Fixture1','General Example Tests')]
   TMyExampleTests = class
   public
-    //Run the same test with multiple parameters.
-    //ideally we would like to implement this using
-    //[TestCase('Case 1',[1,3,4])]
-    //but the delphi compiler will not accept arrays of
-    //TValue as parameters to attributes, so we have to use
-    //a string constant.. the attribute will split the string
-    //and attempt to convert the values to the parameters of the
-    //test method.
-
+    /// <summary>
+    ///   Runs once per TestCase attribute, showing one test fed several parameter sets; it only reports the values.
+    /// </summary>
+    /// <param name="param1">
+    ///   First value from the test case.
+    /// </param>
+    /// <param name="param2">
+    ///   Second value from the test case.
+    /// </param>
+    /// <remarks>
+    ///   Ideally this would be <c>[TestCase('Case 1',[1,3,4])]</c>, but the Delphi compiler does not accept arrays of
+    ///   TValue as attribute parameters, so a string constant is used: the attribute splits it and converts the values
+    ///   to the test method's parameter types.
+    /// </remarks>
     [Test]
     [TestCase('Case 1','1,2')]
     [TestCase('Case 2','3,4')]
@@ -59,6 +68,16 @@ type
     procedure TestOne(param1 : integer; param2 : integer);
 
 
+    /// <summary>
+    ///   Runs once per AutoNameTestCase attribute, showing cases named from their values rather than given a name, and
+    ///   the Category attribute; it only reports the values.
+    /// </summary>
+    /// <param name="param1">
+    ///   First value from the test case.
+    /// </param>
+    /// <param name="param2">
+    ///   Second value from the test case.
+    /// </param>
     [Test]
     [AutoNameTestCase('1,2')]
     [AutoNameTestCase('3,4')]
@@ -66,19 +85,48 @@ type
     [Category('auto')]
     procedure TestAutoName(param1 : integer; param2 : integer);
 
+    /// <summary>
+    ///   Shows that a TestCase attribute alone, without [Test], makes a method a test; converts a string and an integer
+    ///   and only reports them.
+    /// </summary>
+    /// <param name="a">
+    ///   String value from the test case.
+    /// </param>
+    /// <param name="b">
+    ///   Integer value from the test case.
+    /// </param>
     [TestCase('Case 3','Blah,1')]
     procedure AnotherTestMethod(const a : string; const b : integer);
 
+    /// <summary>
+    ///   Shows test case values that themselves contain '=' and quotes being split correctly; it only reports them.
+    /// </summary>
+    /// <param name="AInput">
+    ///   First string from the test case.
+    /// </param>
+    /// <param name="AResult">
+    ///   Second string from the test case.
+    /// </param>
     [Test]
     [TestCase('Case4','password="",password=""')]
     procedure TestCaseWithStrings(const AInput : string; const AResult : string);
 
+    /// <summary>
+    ///   Shows status messages and Assert.InheritsFrom (a TStringList's class inherits from TStrings).
+    /// </summary>
     [Test]
     procedure TestTwo;
 
+    /// <summary>
+    ///   Fails on purpose by raising a plain Exception, showing how the runner reports an error as opposed to a
+    ///   failed assertion.
+    /// </summary>
     [Test]
     procedure TestError;
 
+    /// <summary>
+    ///   Fails on purpose: sleeps 5 seconds against a MaxTime of 2 seconds, showing the timeout being enforced.
+    /// </summary>
     [Test]
     {$IFDEF DELPHI_2010}
     [Ignore('MaxTime does not work in D2010')]
@@ -87,85 +135,164 @@ type
     procedure TooLong;
 
 
-    //Disabled test
+    /// <summary>
+    ///   Disabled with [Test(false)], so it must never run; it raises if it is ever called.
+    /// </summary>
     [Test(false)]
     procedure DontCallMe;
 
+    /// <summary>
+    ///   Runs before each test of the fixture; reports a status message.
+    /// </summary>
     [Setup]
     procedure Setup;
 
+    /// <summary>
+    ///   Runs after each test of the fixture; reports a status message.
+    /// </summary>
     [TearDown]
     procedure TearDown;
 
+    /// <summary>
+    ///   Public method with no test attribute; not being published, it is not treated as a test.
+    /// </summary>
     procedure TestMeAnyway;
 
+    /// <summary>
+    ///   Shows logging through the current runner at the Information, Warning and Error levels.
+    /// </summary>
     [Test]
     procedure LogMessageTypes;
 
+    /// <summary>
+    ///   Ignored with [Ignore], so it must be reported as ignored and never run; it raises if it is ever called.
+    /// </summary>
     [Test]
     [Ignore('Because I said so!!!')]
     procedure IgnoreMePublic;
 
   published
-    //Because this is a published method, it doesn't require the [Test] attribute
+    /// <summary>
+    ///   Published, so a test without needing [Test]; ignored with [Ignore], and raises if it is ever called.
+    /// </summary>
     [Ignore('Because he said so!!!')]
     procedure IgnoreMePublished;
   end;
 
+  /// <summary>
+  ///   Shows fixture-level setup and teardown: the teardown asserts that exactly one test ran.
+  /// </summary>
   [TestFixture]
   TExampleFixture2 = class
   private
+    /// <summary>Number of tests run in this fixture; reset by SetupFixture.</summary>
     FTestsRun : integer;
   public
+    /// <summary>
+    ///   Runs once before the fixture's tests: resets the test count and logs a message.
+    /// </summary>
     [SetupFixture]
     procedure SetupFixture;
 
+    /// <summary>
+    ///   Runs once after the fixture's tests: asserts exactly one test ran and logs a message.
+    /// </summary>
+    /// <exception cref="ETestFailure">
+    ///   When the number of tests run is not 1.
+    /// </exception>
     [TeardownFixture]
     procedure TearDownFixture;
   published
+    /// <summary>
+    ///   Published, so a test without [Test]; counts itself so TearDownFixture can check it ran once.
+    /// </summary>
     procedure IAmATest;
   end;
 
+  /// <summary>
+  ///   Shows a parameterless constructor and the destructor serving as fixture setup and teardown.
+  /// </summary>
   [TestFixture]
   TExampleFixture3 = class
   public
-    //will be used as SetupFixture
+    /// <summary>
+    ///   Used as the fixture's SetupFixture; empty here.
+    /// </summary>
     constructor Create;
-    //will be used as TeardownFixture
+    /// <summary>
+    ///   Used as the fixture's TeardownFixture; empty here.
+    /// </summary>
     destructor Destroy;override;
   published
+    /// <summary>
+    ///   Trivially passing published test, present so the fixture is created and destroyed.
+    /// </summary>
     procedure ATest;
   end;
 
   {$M+}
+  /// <summary>
+  ///   Unregistered base class whose SetupFixture/TeardownFixture methods are inherited by
+  ///   <see cref="TExampleFixture5" />.
+  /// </summary>
   TExampleFixture4 = class
   protected
+    /// <summary>Object created by SetupFixture and freed by TearDownFixture.</summary>
     FObject: TObject;
   public
+    /// <summary>
+    ///   Creates <see cref="FObject" /> once before the fixture's tests.
+    /// </summary>
     [SetupFixture]
     procedure SetupFixture;
 
+    /// <summary>
+    ///   Frees <see cref="FObject" /> once after the fixture's tests.
+    /// </summary>
     [TeardownFixture]
     procedure TearDownFixture;
   end;
 
+  /// <summary>
+  ///   Fixture that inherits its fixture setup and teardown from <see cref="TExampleFixture4" />.
+  /// </summary>
   [TestFixture]
   TExampleFixture5 = class(TExampleFixture4)
   public
+    /// <summary>
+    ///   Proves inherited [SetupFixture] methods run: the object the base class creates is assigned.
+    /// </summary>
     [Test]
     procedure Testing;
   end;
 
+  /// <summary>
+  ///   Unregistered base class whose constructor and destructor serve as fixture setup and teardown for
+  ///   <see cref="TExampleFixture7" />.
+  /// </summary>
   TExampleFixture6 = class
   protected
+    /// <summary>Object created by the constructor and freed by the destructor.</summary>
     FObject: TObject;
   public
+    /// <summary>
+    ///   Creates <see cref="FObject" />; acts as the descendant fixture's setup.
+    /// </summary>
     constructor Create;
+    /// <summary>
+    ///   Frees <see cref="FObject" />; acts as the descendant fixture's teardown.
+    /// </summary>
     destructor Destroy;override;
   end;
 
+  /// <summary>
+  ///   Fixture that inherits a constructor/destructor setup from <see cref="TExampleFixture6" />.
+  /// </summary>
   TExampleFixture7 = class(TExampleFixture6)
   public
+    /// <summary>
+    ///   Proves an inherited constructor runs as fixture setup: the object the base class creates is assigned.
+    /// </summary>
     [Test]
     procedure Testing;
   end;
@@ -252,7 +379,7 @@ end;
 
 procedure TMyExampleTests.TestOne(param1 : integer; param2 : integer);
 begin
-  TDUnitX.CurrentRunner.Status(Format('TestOnce called with %d %d',[param1, param2]));
+  TDUnitX.CurrentRunner.Status(Format('TestOne called with %d %d',[param1, param2]));
 end;
 
 procedure TMyExampleTests.TestTwo;
@@ -299,7 +426,7 @@ end;
 
 procedure TExampleFixture2.TearDownFixture;
 begin
-  Assert.AreEqual(FTestsRun, 1);
+  Assert.AreEqual(1, FTestsRun);
   TDUnitX.CurrentRunner.Log('Tearing down');
 end;
 

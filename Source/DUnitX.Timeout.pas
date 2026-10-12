@@ -73,6 +73,9 @@ type
     /// <summary>True when more than the allowed time elapsed before timing was stopped.</summary>
     function TimedOut : boolean;
     /// <summary>Raises ETimedOut when more than the allowed time elapsed, otherwise does nothing.</summary>
+    /// <exception cref="ETimedOut">
+    ///   <see cref="TimedOut" /> is True, i.e. the elapsed time exceeded the permitted duration.
+    /// </exception>
     procedure RaiseIfTimedOut;
   end;
 

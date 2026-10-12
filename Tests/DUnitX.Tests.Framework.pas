@@ -1,4 +1,4 @@
-unit DUnitX.Tests.Framework;
+﻿unit DUnitX.Tests.Framework;
 
 interface
 

@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -42,18 +42,62 @@ uses
   DUnitX.InternalDataProvider;
 
 type
+  /// <summary>
+  ///   Global registry of test data provider classes, keyed by name, used by the [TestCaseProvider] attribute to create
+  ///   the provider that supplies a test's cases.
+  /// </summary>
   TestDataProviderManager = class
   private
     class var
+      /// <summary>Registered provider classes, keyed by provider name.</summary>
       FList : TDictionary<string, TClass>;
   public
+    /// <summary>
+    ///   Creates the empty registry when the unit initialises.
+    /// </summary>
     class constructor Create;
+    /// <summary>
+    ///   Frees the registry when the unit finalises.
+    /// </summary>
     class destructor Destroy;
 
+    /// <summary>
+    ///   Registers a provider class under a name. A name that is already registered keeps its existing class.
+    /// </summary>
+    /// <param name="name">
+    ///   The provider name that [TestCaseProvider] attributes refer to.
+    /// </param>
+    /// <param name="AClass">
+    ///   The provider class to instantiate for that name.
+    /// </param>
     class procedure RegisterProvider(const name : string; const AClass : TTestDataProviderClass);
+    /// <summary>
+    ///   Removes a provider registration; does nothing when the name is not registered.
+    /// </summary>
+    /// <param name="name">
+    ///   The provider name to remove.
+    /// </param>
     class procedure UnregisterProvider(const name : string);
 
+    /// <summary>
+    ///   Creates a new instance of the provider registered under a name.
+    /// </summary>
+    /// <param name="name">
+    ///   The registered provider name.
+    /// </param>
+    /// <returns>
+    ///   A new provider instance, or nil when the name is not registered.
+    /// </returns>
     class function GetProvider(const name : string) : ITestDataProvider; overload;
+    /// <summary>
+    ///   Creates a new instance of a provider class, provided that class has been registered under some name.
+    /// </summary>
+    /// <param name="AClass">
+    ///   The provider class.
+    /// </param>
+    /// <returns>
+    ///   A new provider instance, or nil when the class is not registered.
+    /// </returns>
     class function GetProvider(const AClass : TTestDataProviderClass) : ITestDataProvider; overload;
   end;
 

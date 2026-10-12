@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -39,20 +39,40 @@ uses
   DUnitX.TestFramework;
 
 type
+  /// <summary>
+  ///   The do-nothing memory leak monitor used when no memory-manager-specific monitor is registered: it takes no
+  ///   measurements and always reports zero bytes allocated, so no test is ever reported as leaking.
+  /// </summary>
   TDUnitXDefaultMemoryLeakMonitor = class(TInterfacedObject, IMemoryLeakMonitor)
   public
+    /// <summary>Called before a test's setup runs. Does nothing.</summary>
     procedure PreSetup;
+    /// <summary>Called after a test's setup has run. Does nothing.</summary>
     procedure PostSetUp;
+    /// <summary>Called before a test method runs. Does nothing.</summary>
     procedure PreTest;
+    /// <summary>Called after a test method has run. Does nothing.</summary>
     procedure PostTest;
+    /// <summary>Called before a test's teardown runs. Does nothing.</summary>
     procedure PreTearDown;
+    /// <summary>Called after a test's teardown has run. Does nothing.</summary>
     procedure PostTearDown;
 
+    /// <summary>Reports the memory the setup left allocated.</summary>
+    /// <returns>Always 0: this monitor does not measure.</returns>
     function SetUpMemoryAllocated : Int64;
+    /// <summary>Reports the memory the teardown left allocated.</summary>
+    /// <returns>Always 0: this monitor does not measure.</returns>
     function TearDownMemoryAllocated : Int64;
+    /// <summary>Reports the memory the test method left allocated.</summary>
+    /// <returns>Always 0: this monitor does not measure.</returns>
     function TestMemoryAllocated : Int64;
   end;
 
+/// <summary>
+///   Registers <c>TDUnitXDefaultMemoryLeakMonitor</c> as the <c>IMemoryLeakMonitor</c> implementation in the default
+///   service locator container.
+/// </summary>
 procedure RegisterDefaultProvider;
 
 implementation

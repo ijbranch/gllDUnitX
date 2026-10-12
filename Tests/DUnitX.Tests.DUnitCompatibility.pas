@@ -34,42 +34,117 @@ uses
   DUnitX.DUnitCompatibility;
 
 type
+  /// <summary>
+  ///   First of two marker interfaces implemented by one object, so CheckSame(IUnknown) can be handed two different
+  ///   interface pointers to the same object.
+  /// </summary>
   ICompatFirst = interface
     ['{3C0D7B0E-5A61-4C2B-9C59-1E0A9B4C7D11}']
   end;
 
+  /// <summary>
+  ///   Second marker interface; its pointer to a <c>TCompatBoth</c> differs from the ICompatFirst pointer.
+  /// </summary>
   ICompatSecond = interface
     ['{8F7B2C44-0D3E-4B9A-A6E1-52C7D0F3B812}']
   end;
 
+  /// <summary>
+  ///   Reference-counted object implementing both marker interfaces.
+  /// </summary>
   TCompatBoth = class(TInterfacedObject, ICompatFirst, ICompatSecond)
   end;
 
-  // a typical DUnit like class
-{$M+}
-  TMyDUnitTest = class(TTestCase)
-  private
-    procedure RaiseConvertError;
-    procedure RaiseNothing;
-  published
-    procedure ATest;
-    // Proves the compatibility checks keep DUnit's semantics: string checks are case-sensitive, CheckInherits tests
-    // actual.InheritsFrom(expected), CheckException accepts a descendant and lets an exception through when no class
-    // is named, and CheckSame(IUnknown) compares object identity rather than the interface pointers passed.
-    procedure Checks_Have_DUnit_Semantics;
-    // Proves CheckEqualsBin compares the values, as DUnit does: values that differ only above the displayed digits
-    // fail. Issue #398 item 4.
-    procedure CheckEqualsBin_Compares_Values_Not_Digits;
+  /// <summary>
+  ///   Every instance equals every other, so only an identity check tells two of them apart.
+  /// </summary>
+  TCompatAlwaysEqual = class
+  public
+    /// <summary>
+    ///   Reports equality with any other TCompatAlwaysEqual instance.
+    /// </summary>
+    /// <param name="Obj">
+    ///   The object to compare with.
+    /// </param>
+    /// <returns>
+    ///   True when Obj is a TCompatAlwaysEqual (or descendant), whatever its identity.
+    /// </returns>
+    function Equals(Obj : TObject) : Boolean; override;
   end;
 
 {$M+}
+  /// <summary>
+  ///   A typical DUnit-style <c>TTestCase</c> with published test methods, run by DUnitX through the compatibility
+  ///   layer to prove the Check* methods behave as they did in classic DUnit.
+  /// </summary>
+  TMyDUnitTest = class(TTestCase)
+  private
+    /// <summary>
+    ///   Raises EConvertError; the method handed to CheckException.
+    /// </summary>
+    /// <exception cref="EConvertError">
+    ///   Always.
+    /// </exception>
+    procedure RaiseConvertError;
+    /// <summary>
+    ///   Does nothing; the method handed to CheckException when no exception should occur.
+    /// </summary>
+    procedure RaiseNothing;
+  published
+    /// <summary>
+    ///   Proves a published DUnit-style method is discovered and run, and that Status and CheckTrue work through the
+    ///   compatibility layer.
+    /// </summary>
+    procedure ATest;
+    /// <summary>
+    ///   Proves the compatibility checks keep DUnit's semantics: string checks are case-sensitive, CheckInherits tests
+    ///   actual.InheritsFrom(expected), CheckException accepts a descendant and lets an exception through when no
+    ///   class is named, and CheckSame(IUnknown) compares object identity rather than the interface pointers passed.
+    /// </summary>
+    procedure Checks_Have_DUnit_Semantics;
+    /// <summary>
+    ///   Proves CheckSame(TObject) is an identity check, as in DUnit: two distinct objects whose class overrides
+    ///   Equals to call them equal still fail, and the same object passes.
+    /// </summary>
+    procedure CheckSame_Object_Compares_Identity;
+    /// <summary>
+    ///   Proves CheckEqualsBin compares the values, as DUnit does: values that differ only above the displayed digits
+    ///   fail. Issue #398 item 4.
+    /// </summary>
+    procedure CheckEqualsBin_Compares_Values_Not_Digits;
+    /// <summary>
+    ///   Proves CheckIs fails with ETestFailure for a nil object, as DUnit does, instead of raising an access violation
+    ///   by reading the nil object's class; and that it still passes for an instance of the class and fails for an
+    ///   instance of an unrelated class.
+    /// </summary>
+    procedure CheckIs_Nil_Object_Fails;
+  end;
+
+{$M+}
+  /// <summary>
+  ///   DUnit-style test case using the SetUp/TearDown overrides, to prove DUnitX calls them around each published
+  ///   test and exposes the test's name through <c>Name</c>.
+  /// </summary>
   TMyDUnitTestSetup = class(TTestCase)
   protected
+    /// <summary>Object created by SetUp and freed by TearDown; non-nil inside every test.</summary>
     FObject : TObject;
+    /// <summary>
+    ///   Creates FObject before each test.
+    /// </summary>
     procedure SetUp; override;
+    /// <summary>
+    ///   Frees FObject after each test.
+    /// </summary>
     procedure TearDown; override;
   published
+    /// <summary>
+    ///   Proves the DUnit-style SetUp override ran before the test: FObject is assigned.
+    /// </summary>
     procedure ATest;
+    /// <summary>
+    ///   Proves <c>Name</c> returns the running published method's name, as DUnit's TTestCase.Name did.
+    /// </summary>
     procedure Test_TestName;
   end;
 
@@ -128,6 +203,32 @@ begin
 {$WARN SYMBOL_DEPRECATED ON}
 end;
 
+{ TCompatAlwaysEqual }
+
+function TCompatAlwaysEqual.Equals(Obj : TObject) : Boolean;
+begin
+  Result := Obj is TCompatAlwaysEqual;
+end;
+
+procedure TMyDUnitTest.CheckSame_Object_Compares_Identity;
+var
+  first : TCompatAlwaysEqual;
+  second : TCompatAlwaysEqual;
+begin
+  first := TCompatAlwaysEqual.Create;
+  second := TCompatAlwaysEqual.Create;
+  try
+    Assert.IsTrue(first.Equals(second), 'precondition: the two objects are Equal');
+{$WARN SYMBOL_DEPRECATED OFF}
+    CheckSame(first, first, 'CheckSame(TObject) same object');
+    Assert.WillRaiseDescendant(procedure begin CheckSame(first, second) end, ETestFailure, 'CheckSame(TObject) other object');
+{$WARN SYMBOL_DEPRECATED ON}
+  finally
+    second.Free;
+    first.Free;
+  end;
+end;
+
 procedure TMyDUnitTest.CheckEqualsBin_Compares_Values_Not_Digits;
 begin
 {$WARN SYMBOL_DEPRECATED OFF}
@@ -137,6 +238,22 @@ begin
   Assert.WillRaiseDescendant(procedure begin CheckEqualsBin($A4, $A5, '', 8) end, ETestFailure,
     'CheckEqualsBin passed different values');
 {$WARN SYMBOL_DEPRECATED ON}
+end;
+
+procedure TMyDUnitTest.CheckIs_Nil_Object_Fails;
+var
+  obj : TObject;
+begin
+  obj := EConvertError.Create('probe');
+  try
+{$WARN SYMBOL_DEPRECATED OFF}
+    CheckIs(obj, Exception, 'CheckIs descendant instance');
+    Assert.WillRaise(procedure begin CheckIs(obj, TCompatAlwaysEqual) end, ETestFailure, 'CheckIs passed an unrelated class');
+    Assert.WillRaise(procedure begin CheckIs(nil, Exception) end, ETestFailure, 'CheckIs( nil ) did not fail cleanly');
+{$WARN SYMBOL_DEPRECATED ON}
+  finally
+    obj.Free;
+  end;
 end;
 
 { TMyDUnitTestSetup }

@@ -37,43 +37,86 @@ uses
 
 type
 {$M+}
+  /// <summary>
+  ///   Service interface registered in the locator under several names and lifetimes.
+  /// </summary>
   IFoo = interface
     ['{FA01B68C-0D64-4251-91C6-F38617A56B33}']
+    /// <summary>
+    ///   Writes 'Bar' to the console; a body for the interface, not used by the tests.
+    /// </summary>
     procedure Bar;
   end;
 
 {$M+}
+  /// <summary>
+  ///   Unused sample interface for a singleton service; declared but registered nowhere.
+  /// </summary>
   ISingleton = interface
     ['{615BDB28-13D0-4CAF-B84A-3C77B479B9AE}']
+    /// <summary>
+    ///   Would report how many instances exist.
+    /// </summary>
+    /// <returns>
+    ///   An instance count (no implementation exists).
+    /// </returns>
     function HowMany : integer;
   end;
 
+  /// <summary>
+  ///   Tests for <c>TDUnitXServiceLocator</c>: activator and implementation-class registrations, singleton versus
+  ///   per-resolve lifetimes, named registrations, and a nil activator.
+  /// </summary>
   TDUnitX_IoCTests = class
   private
+    /// <summary>Locator shared by the fixture's tests, populated once in Setup.</summary>
     FContainer : TDUnitXServiceLocator;
   public
+    /// <summary>
+    ///   Fixture setup: creates the locator and registers IFoo as an unnamed activator, a named implementation
+    ///   ('test'), a named activator singleton ('activator_singleton') and a named implementation singleton
+    ///   ('impl_singleton').
+    /// </summary>
     [SetupFixture]
     procedure Setup;
 
+    /// <summary>
+    ///   Fixture teardown: frees the locator.
+    /// </summary>
     [TearDownFixture]
     procedure TearDownFixture;
 
 {$IFDEF DELPHI_XE_UP}
+    /// <summary>
+    ///   Proves a non-singleton implementation-class registration creates a new instance on every resolve.
+    /// </summary>
     [Test]
     procedure Test_Implementation_Non_Singleton;
 
+    /// <summary>
+    ///   Proves a singleton implementation-class registration returns the same instance on every resolve.
+    /// </summary>
     [Test]
     procedure Test_Implementation_Singleton;
 {$ENDIF}
 
+    /// <summary>
+    ///   Proves a non-singleton activator registration creates a new instance on every resolve.
+    /// </summary>
     [Test]
     procedure Test_Activator_Non_Singleton;
 
+    /// <summary>
+    ///   Proves a singleton activator registration returns the same instance on every resolve, and that a different
+    ///   named singleton is a different instance.
+    /// </summary>
     [Test]
     procedure Test_Activator_Singleton;
 
-    // Proves that resolving a registration that has no activator (a nil delegate) raises a clear
-    // EServiceLocatorResolutionException rather than an access violation.
+    /// <summary>
+    ///   Proves that resolving a registration that has no activator (a nil delegate) raises a clear
+    ///   EServiceLocatorResolutionException rather than an access violation.
+    /// </summary>
     [Test]
     procedure Test_Nil_Activator_Raises_Resolution_Exception;
   end;

@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -34,6 +34,9 @@ uses
   DUnitX.ComparableFormat;
 
 type
+  /// <summary>
+  ///   Marker class naming the XML comparable format; passed by class reference to select XML comparison.
+  /// </summary>
   TDUnitXComparableFormatXml = class abstract(TDUnitXComparableFormat);
 
 implementation

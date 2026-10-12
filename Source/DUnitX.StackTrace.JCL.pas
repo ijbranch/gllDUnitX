@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -44,10 +44,45 @@ uses
   DUnitX.TestFramework;
 
 type
+  /// <summary>
+  ///   Stack trace provider backed by the JEDI Code Library's <c>JclDebug</c>. It is registered as the
+  ///   <c>IStacktraceProvider</c> only when <c>USE_JCL</c> is defined; without it every method returns an empty string.
+  /// </summary>
   TJCLStackTraceProvider = class(TInterfacedObject, IStacktraceProvider)
   protected
+    /// <summary>
+    ///   Returns the stack JCL captured for the most recent exception (<c>JclLastExceptStackListToStrings</c>).
+    /// </summary>
+    /// <param name="ex">
+    ///   The exception being reported (not used: JCL supplies its last recorded exception stack).
+    /// </param>
+    /// <param name="exAddressAddress">
+    ///   The address at which the exception was raised (not used by this provider).
+    /// </param>
+    /// <returns>
+    ///   The call stack, one frame per line, or an empty string when JCL support is not compiled in.
+    /// </returns>
     function GetStackTrace(const ex : Exception; const exAddressAddress : Pointer) : string;
+    /// <summary>
+    ///   Resolves a code address to <c>file:line</c> from the map information, falling back to the module name when
+    ///   no source file is known. Borrowed from DUnit.
+    /// </summary>
+    /// <param name="Addrs">
+    ///   The code address to resolve.
+    /// </param>
+    /// <returns>
+    ///   The location text, or an empty string when JCL support is not compiled in.
+    /// </returns>
     function PointerToLocationInfo(const Addrs : Pointer) : string;
+    /// <summary>
+    ///   Resolves a code address to its procedure name followed by the address in hex (<c>Proc$Address</c>).
+    /// </summary>
+    /// <param name="Addrs">
+    ///   The code address to resolve.
+    /// </param>
+    /// <returns>
+    ///   The address text, or an empty string when JCL support is not compiled in.
+    /// </returns>
     function PointerToAddressInfo(Addrs : Pointer) : string;
   end;
 

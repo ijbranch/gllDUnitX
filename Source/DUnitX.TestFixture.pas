@@ -50,108 +50,555 @@ uses
   DUnitX.Generics;
 
 type
+  /// <summary>
+  ///   A test fixture: one test class (or, with TestClass = TObject, a namespace node) with its instance, tests,
+  ///   setup / teardown methods, categories, ignored state and child fixtures.
+  /// </summary>
   TDUnitXTestFixture = class(TWeakReferencedObject, ITestFixture, ITestFixtureInfo)
   private
     class var
+      /// <summary>Shared RTTI context, kept for the life of the process so RTTI objects stay valid.</summary>
       FRttiContext : TRttiContext;
   private
+    /// <summary>RTTI type of the test class.</summary>
     FFixtureType : TRttiType;
+    /// <summary>The test class; TObject for a namespace-only fixture.</summary>
     FTestClass : TClass;
+    /// <summary>The unit that declares the test class.</summary>
     FUnitName : string;
+    /// <summary>The fixture's name: the part of the given name after its last '.'.</summary>
     FName : string;
+    /// <summary>The part of the given name before its last '.'; the whole name when it has no '.'.</summary>
     FNameSpace : string;
+    /// <summary>The description from the class's [TestFixture] attribute.</summary>
     FDescription : string;
+    /// <summary>The fixture's categories, compared case-insensitively.</summary>
     FCategories : TList<string>;
+    /// <summary>Whether the fixture is selected to run.</summary>
     FEnabled : boolean;
+    /// <summary>The fixture's tests and test cases.</summary>
     FTests : ITestList;
+    /// <summary>The tests as ITestInfo, built on first request by ITestFixtureInfo_GetTests and then cached.</summary>
     FTestInfos : IList<ITestInfo>;
+    /// <summary>The [Setup] method, run before each test.</summary>
     FSetupMethod : TTestMethod;
+    /// <summary>The [SetupFixture] method, run once before the fixture's tests; nil when a constructor took its place.</summary>
     FSetupFixtureMethod : TTestMethod;
+    /// <summary>The [TearDown] method, run after each test.</summary>
     FTearDownMethod : TTestMethod;
+    /// <summary>The [TearDownFixture] method, or the destructor, run once after the fixture's tests.</summary>
     FTearDownFixtureMethod : TTestMethod;
+    /// <summary>The fixture instance the tests run on; owned and freed by the fixture.</summary>
     FFixtureInstance : TObject;
+    /// <summary>Whether each test is to run in its own thread.</summary>
     FTestInOwnThread : boolean;
+    /// <summary>Name of the [SetupFixture] method; kept even when the method itself is not run.</summary>
     FSetupFixtureMethodName : string;
+    /// <summary>Name of the [Setup] method.</summary>
     FSetupMethodName : string;
+    /// <summary>Name of the [TearDown] method.</summary>
     FTearDownMethodName : string;
+    /// <summary>Name of the [TearDownFixture] method or destructor.</summary>
     FTearDownFixtureMethodName : string;
+    /// <summary>Child fixtures; created on demand.</summary>
     FChildren : ITestFixtureList;
+    /// <summary>True when the fixture teardown is the class's destructor rather than a [TearDownFixture] method.</summary>
     FTearDownFixtureIsDestructor : boolean;
+    /// <summary>The class's [IgnoreMemoryLeaks] setting, the default for its tests.</summary>
     FIgnoreMemoryLeaks : Boolean;
 
+    /// <summary>
+    ///   True when the instance was created through a parameterless constructor, which then stands in for the
+    ///   [SetupFixture] method so that method is not run as well.
+    /// </summary>
     FIgnoreFixtureSetup : boolean;
+    /// <summary>Whether the class carries [Ignore].</summary>
     FIgnoredFixture : Boolean;
+    /// <summary>The reason given by the class's [Ignore].</summary>
     FIgnoredReason : string;
   protected
-    //used by GenerateFixtureFromClass to be tests from TestCaseInfo
-    function CreateTestFromTestCase(const ACaseInfo : TestCaseInfo; const ACategory : string; const AMethod : TRttiMethod; const ATestEnabled : Boolean) :
-      ITest;
-    //used by GenerateFixtureFromClass to be tests from a method with out test cases
-    function CreateTestFromMethod(const AMethod : TRttiMethod; const ACategory : string; const ATestEnabled : Boolean; const AIgnored : Boolean; const
-      AIgnoredReason : string) : ITest;
-    // Check overriding attribute, other wise uses returns fixture value
+    /// <summary>
+    ///   Decides whether a test method ignores memory leaks: its own [IgnoreMemoryLeaks] attribute overrides the
+    ///   fixture's setting.
+    /// </summary>
+    /// <param name="AMethod">
+    ///   The test method.
+    /// </param>
+    /// <returns>
+    ///   The method's setting when it has the attribute, otherwise the fixture's.
+    /// </returns>
     function GetIgnoreMemoryLeaksForMethod(AMethod : TRttiMethod) : Boolean;
 
+    /// <summary>
+    ///   Whether the fixture is selected to run.
+    /// </summary>
+    /// <returns>
+    ///   True when enabled.
+    /// </returns>
     function GetEnabled : Boolean;
+    /// <summary>
+    ///   Selects or deselects the fixture.
+    /// </summary>
+    /// <param name="value">
+    ///   True to run the fixture.
+    /// </param>
     procedure SetEnabled(const value : Boolean);
 
+    /// <summary>
+    ///   The fixture's name, without its namespace.
+    /// </summary>
+    /// <returns>
+    ///   The name.
+    /// </returns>
     function GetName : string;
+    /// <summary>
+    ///   The fixture's namespace.
+    /// </summary>
+    /// <returns>
+    ///   The part of the given name before its last '.'; the whole name when it has none.
+    /// </returns>
     function GetNameSpace : string;
+    /// <summary>
+    ///   The fixture's namespace and name joined with '.'.
+    /// </summary>
+    /// <returns>
+    ///   The full name; just the name when it has no separate namespace.
+    /// </returns>
     function GetFullName : string;
+    /// <summary>
+    ///   The unit that declares the test class.
+    /// </summary>
+    /// <returns>
+    ///   The unit name.
+    /// </returns>
     function GetUnitName : string;
+    /// <summary>
+    ///   The description from the [TestFixture] attribute.
+    /// </summary>
+    /// <returns>
+    ///   The description; empty when none was given.
+    /// </returns>
     function GetDescription : string;
+    /// <summary>
+    ///   The fixture's categories.
+    /// </summary>
+    /// <returns>
+    ///   The live list owned by the fixture; do not free it.
+    /// </returns>
     function GetCategories : TList<string>;
+    /// <summary>
+    ///   The fixture's tests.
+    /// </summary>
+    /// <returns>
+    ///   The test list.
+    /// </returns>
     function GetTests : ITestList;
+    /// <summary>ITestFixtureInfo.GetTests is implemented by ITestFixtureInfo_GetTests.</summary>
     function ITestFixtureInfo.GetTests = ITestFixtureInfo_GetTests;
+    /// <summary>
+    ///   The fixture's tests as ITestInfo, built on first call and cached.
+    /// </summary>
+    /// <returns>
+    ///   The cached list; tests added after the first call are not in it.
+    /// </returns>
     function ITestFixtureInfo_GetTests : IList<ITestInfo>;
+    /// <summary>
+    ///   The test class.
+    /// </summary>
+    /// <returns>
+    ///   The class; TObject for a namespace-only fixture.
+    /// </returns>
     function GetTestClass : TClass;
+    /// <summary>
+    ///   The [Setup] method.
+    /// </summary>
+    /// <returns>
+    ///   The method, or nil.
+    /// </returns>
     function GetSetupMethod : TTestMethod;
+    /// <summary>
+    ///   The [SetupFixture] method.
+    /// </summary>
+    /// <returns>
+    ///   The method, or nil (including when a parameterless constructor took its place).
+    /// </returns>
     function GetSetupFixtureMethod : TTestMethod;
+    /// <summary>
+    ///   The [TearDown] method.
+    /// </summary>
+    /// <returns>
+    ///   The method, or nil.
+    /// </returns>
     function GetTearDownMethod : TTestMethod;
+    /// <summary>
+    ///   The [TearDownFixture] method or destructor.
+    /// </summary>
+    /// <returns>
+    ///   The method, or nil.
+    /// </returns>
     function GetTearDownFixtureMethod : TTestMethod;
+    /// <summary>
+    ///   Whether each test is to run in its own thread.
+    /// </summary>
+    /// <returns>
+    ///   The flag set by SetTestInOwnThread.
+    /// </returns>
     function GetTestInOwnThread : boolean;
+    /// <summary>
+    ///   Name of the [SetupFixture] method.
+    /// </summary>
+    /// <returns>
+    ///   The name; set even when a constructor took the method's place, so the runner can report that it is not run.
+    /// </returns>
     function GetSetupFixtureMethodName : string;
+    /// <summary>
+    ///   Name of the [Setup] method.
+    /// </summary>
+    /// <returns>
+    ///   The name, or empty.
+    /// </returns>
     function GetSetupMethodName : string;
+    /// <summary>
+    ///   Name of the [TearDown] method.
+    /// </summary>
+    /// <returns>
+    ///   The name, or empty.
+    /// </returns>
     function GetTearDownMethodName : string;
+    /// <summary>
+    ///   Name of the [TearDownFixture] method or destructor.
+    /// </summary>
+    /// <returns>
+    ///   The name, or empty.
+    /// </returns>
     function GetTearDownFixtureMethodName : string;
+    /// <summary>
+    ///   The fixture instance the tests run on.
+    /// </summary>
+    /// <returns>
+    ///   The instance; nil when its constructor raised or after a destructor teardown.
+    /// </returns>
     function GetFixtureInstance : TObject;
+    /// <summary>
+    ///   The number of tests in the fixture, whatever their state.
+    /// </summary>
+    /// <returns>
+    ///   The test count.
+    /// </returns>
     function GetTestCount : cardinal;
+    /// <summary>
+    ///   The number of tests that will execute: enabled and not ignored.
+    /// </summary>
+    /// <returns>
+    ///   The count; 0 for an ignored fixture.
+    /// </returns>
     function GetActiveTestCount : cardinal;
+    /// <summary>
+    ///   Whether the class carries [Ignore].
+    /// </summary>
+    /// <returns>
+    ///   True when the fixture is ignored.
+    /// </returns>
     function GetIgnored : boolean;
+    /// <summary>
+    ///   Why the fixture is ignored.
+    /// </summary>
+    /// <returns>
+    ///   The reason from [Ignore]; empty otherwise.
+    /// </returns>
     function GetIgnoreReason : string;
 
+    /// <summary>
+    ///   The child fixtures, creating the list on first use.
+    /// </summary>
+    /// <returns>
+    ///   The child fixture list.
+    /// </returns>
     function GetChildren : ITestFixtureList;
+    /// <summary>
+    ///   Whether the fixture has any child fixtures.
+    /// </summary>
+    /// <returns>
+    ///   True when at least one child exists.
+    /// </returns>
     function GetHasChildren : boolean;
+    /// <summary>
+    ///   Whether the fixture has any enabled test (ignored tests count).
+    /// </summary>
+    /// <returns>
+    ///   True when at least one test is enabled.
+    /// </returns>
     function GetHasTests : boolean;
+    /// <summary>
+    ///   Whether any test will execute (enabled and not ignored), so that [SetupFixture] does not run for a fixture
+    ///   whose selected tests are all ignored.
+    /// </summary>
+    /// <returns>
+    ///   True when at least one test will execute; False for an ignored fixture.
+    /// </returns>
     function GetHasActiveTests : boolean;
+    /// <summary>
+    ///   Whether any descendant fixture, at any depth, has an enabled test.
+    /// </summary>
+    /// <returns>
+    ///   True when a child or grandchild has tests.
+    /// </returns>
     function GetHasChildTests : Boolean;
+    /// <summary>
+    ///   Whether this is a namespace node rather than a real test class.
+    /// </summary>
+    /// <returns>
+    ///   True when the test class is TObject.
+    /// </returns>
     function IsNameSpaceOnly : boolean;
+    /// <summary>
+    ///   Notifies the fixture that the runner has called one of its methods; after a destructor teardown the instance
+    ///   reference is cleared, since the instance no longer exists.
+    /// </summary>
+    /// <param name="AMethod">
+    ///   The method that was executed.
+    /// </param>
     procedure OnMethodExecuted(const AMethod : TTestMethod);
 
+    /// <summary>
+    ///   Runs the fixture teardown: frees the instance when the teardown is the destructor, otherwise calls the
+    ///   [TearDownFixture] method. Does nothing when there is no teardown.
+    /// </summary>
     procedure ExecuteFixtureTearDown;
+    /// <summary>
+    ///   Creates the fixture instance if it does not exist and rebinds every test, setup and teardown method to it.
+    /// </summary>
+    /// <remarks>
+    ///   An exception from the fixture's constructor propagates, so the runner can report it against the fixture's tests.
+    /// </remarks>
     procedure InitFixtureInstance;
+    /// <summary>
+    ///   Creates the fixture instance when there is none, through a parameterless constructor when the class declares
+    ///   one (which then replaces the [SetupFixture] method) or the plain class constructor otherwise.
+    /// </summary>
+    /// <param name="isConstructing">
+    ///   True when called from the fixture's own constructor, where no tests yet exist to rebind; False to rebind every
+    ///   test, setup and teardown method to the new instance.
+    /// </param>
     procedure InternalInitFixtureInstance(const isConstructing : boolean);
 
+    /// <summary>
+    ///   Adds a plain test, or a [WillRaise] exception test when an expected exception is given.
+    /// </summary>
+    /// <param name="AMethodName">
+    ///   The name of the fixture method.
+    /// </param>
+    /// <param name="AMethod">
+    ///   The bound method to run.
+    /// </param>
+    /// <param name="AName">
+    ///   The test's display name.
+    /// </param>
+    /// <param name="ACategory">
+    ///   Comma-separated categories.
+    /// </param>
+    /// <param name="ARttiMethod">
+    ///   The method's RTTI, read for [IgnoreMemoryLeaks].
+    /// </param>
+    /// <param name="AEnabled">
+    ///   True to run the test.
+    /// </param>
+    /// <param name="AIgnored">
+    ///   True to report the test as ignored.
+    /// </param>
+    /// <param name="AIgnoreReason">
+    ///   Why the test is ignored.
+    /// </param>
+    /// <param name="AMaxTime">
+    ///   The [MaxTime] limit in milliseconds; 0 for no limit.
+    /// </param>
+    /// <param name="AExpectedException">
+    ///   The exception class the test must raise; nil for a plain test.
+    /// </param>
+    /// <param name="AExceptionInheritance">
+    ///   exExact to require that class exactly; exDescendant to accept a descendant too.
+    /// </param>
+    /// <returns>
+    ///   The new test, already added to the fixture.
+    /// </returns>
     function AddTest(const AMethodName : string; const AMethod : TTestMethod; const AName : string; const ACategory : string; const ARttiMethod : TRttiMethod;
       const AEnabled : boolean = true; const AIgnored : boolean = false; const AIgnoreReason : string = ''; const AMaxTime : cardinal = 0; const
       AExpectedException : ExceptClass = nil; const AExceptionInheritance : TExceptionInheritance = exExact) : ITest;
+    /// <summary>
+    ///   Adds one case of a parameterised test, invoked on the current fixture instance.
+    /// </summary>
+    /// <param name="AMethodName">
+    ///   The name of the fixture method.
+    /// </param>
+    /// <param name="ACaseName">
+    ///   The case's name.
+    /// </param>
+    /// <param name="AName">
+    ///   The test's display name.
+    /// </param>
+    /// <param name="ACategory">
+    ///   Comma-separated categories.
+    /// </param>
+    /// <param name="AMethod">
+    ///   The RTTI method to invoke; also read for [IgnoreMemoryLeaks].
+    /// </param>
+    /// <param name="AEnabled">
+    ///   True to run the case.
+    /// </param>
+    /// <param name="AArgs">
+    ///   The case's values, converted to the method's parameter types.
+    /// </param>
+    /// <param name="AMaxTime">
+    ///   The [MaxTime] limit in milliseconds; 0 for no limit.
+    /// </param>
+    /// <param name="AExpectedException">
+    ///   The exception class the case must raise; nil when none is expected.
+    /// </param>
+    /// <param name="AExceptionInheritance">
+    ///   exExact to require that class exactly; exDescendant to accept a descendant too.
+    /// </param>
+    /// <returns>
+    ///   The new test case, already added to the fixture.
+    /// </returns>
     function AddTestCase(const AMethodName : string; const ACaseName : string; const AName : string; const ACategory : string; const AMethod : TRttiMethod;
       const AEnabled : boolean; const AArgs : TValueArray; const AMaxTime : cardinal = 0; const AExpectedException : ExceptClass = nil;
       const AExceptionInheritance : TExceptionInheritance = exExact) : ITest;
 
+    /// <summary>
+    ///   Creates a child fixture for a test class (TObject for a namespace node) and adds it to the children.
+    /// </summary>
+    /// <param name="ATestClass">
+    ///   The child's test class; its unit name becomes the child's unit name.
+    /// </param>
+    /// <param name="AName">
+    ///   The child's full name, namespace included.
+    /// </param>
+    /// <param name="ACategory">
+    ///   Comma-separated categories.
+    /// </param>
+    /// <returns>
+    ///   The new child fixture.
+    /// </returns>
     function AddChildFixture(const ATestClass : TClass; const AName : string; const ACategory : string) : ITestFixture; overload;
+    /// <summary>
+    ///   Creates a child fixture around an existing instance and adds it to the children. The child takes ownership of
+    ///   the instance and frees it.
+    /// </summary>
+    /// <param name="AInstance">
+    ///   The fixture instance; its class's unit name becomes the child's unit name.
+    /// </param>
+    /// <param name="AName">
+    ///   The child's full name, namespace included.
+    /// </param>
+    /// <param name="ACategory">
+    ///   Comma-separated categories.
+    /// </param>
+    /// <returns>
+    ///   The new child fixture.
+    /// </returns>
     function AddChildFixture(const AInstance : TObject; const AName : string; const ACategory : string) : ITestFixture; overload;
 
+    /// <summary>
+    ///   Sets the [Setup] method run before each test.
+    /// </summary>
+    /// <param name="AMethodName">
+    ///   The method's name.
+    /// </param>
+    /// <param name="AMethod">
+    ///   The bound method.
+    /// </param>
     procedure SetSetupTestMethod(const AMethodName : string; const AMethod : TTestMethod);
+    /// <summary>
+    ///   Sets the [SetupFixture] method. The name is always kept, but the method is not stored when a parameterless
+    ///   constructor created the instance, as that constructor has already done the fixture setup.
+    /// </summary>
+    /// <param name="AMethodName">
+    ///   The method's name.
+    /// </param>
+    /// <param name="AMethod">
+    ///   The bound method.
+    /// </param>
     procedure SetSetupFixtureMethod(const AMethodName : string; const AMethod : TTestMethod);
+    /// <summary>
+    ///   Sets the [TearDown] method run after each test.
+    /// </summary>
+    /// <param name="AMethodName">
+    ///   The method's name.
+    /// </param>
+    /// <param name="AMethod">
+    ///   The bound method.
+    /// </param>
     procedure SetTearDownTestMethod(const AMethodName : string; const AMethod : TTestMethod);
+    /// <summary>
+    ///   Sets the fixture teardown, run once after the fixture's tests.
+    /// </summary>
+    /// <param name="AMethodName">
+    ///   The method's name.
+    /// </param>
+    /// <param name="AMethod">
+    ///   The bound method.
+    /// </param>
+    /// <param name="AIsDestructor">
+    ///   True when the teardown is the class's destructor, so ExecuteFixtureTearDown frees the instance instead of
+    ///   calling the method.
+    /// </param>
     procedure SetTearDownFixtureMethod(const AMethodName : string; const AMethod : TTestMethod; const AIsDestructor : boolean);
+    /// <summary>
+    ///   Sets whether each test is to run in its own thread.
+    /// </summary>
+    /// <param name="value">
+    ///   True to run each test in its own thread.
+    /// </param>
     procedure SetTestInOwnThread(const value : Boolean);
+    /// <summary>
+    ///   Creates the shared RTTI context when the unit initialises.
+    /// </summary>
     class constructor Create;
+    /// <summary>
+    ///   Frees the shared RTTI context when the unit finalises.
+    /// </summary>
     class destructor Destroy;
   public
+    /// <summary>
+    ///   Creates a fixture around an existing instance, which the fixture then owns and frees.
+    /// </summary>
+    /// <param name="AName">
+    ///   The fixture's full name; the part after the last '.' is its name, the part before it its namespace.
+    /// </param>
+    /// <param name="ACategory">
+    ///   Comma-separated categories; each is trimmed.
+    /// </param>
+    /// <param name="AInstance">
+    ///   The fixture instance.
+    /// </param>
+    /// <param name="AUnitName">
+    ///   The unit that declares the test class.
+    /// </param>
     constructor Create(const AName : string; const ACategory : string; const AInstance : TObject; const AUnitName : string); overload;
+    /// <summary>
+    ///   Creates a fixture for a test class, reading its [TestFixture], [Ignore] and [IgnoreMemoryLeaks] attributes and
+    ///   creating its instance.
+    /// </summary>
+    /// <param name="AName">
+    ///   The fixture's full name; the part after the last '.' is its name, the part before it its namespace.
+    /// </param>
+    /// <param name="ACategory">
+    ///   Comma-separated categories; each is trimmed.
+    /// </param>
+    /// <param name="AClass">
+    ///   The test class; TObject for a namespace node.
+    /// </param>
+    /// <param name="AUnitName">
+    ///   The unit that declares the test class.
+    /// </param>
+    /// <remarks>
+    ///   A constructor that raises does not abort building every fixture: the instance stays nil, and the runner
+    ///   constructs it again (InitFixtureInstance) and reports the failure against this fixture's tests.
+    /// </remarks>
     constructor Create(const AName : string; const ACategory : string; const AClass : TClass; const AUnitName : string); overload;
+    /// <summary>
+    ///   Frees the fixture instance, the categories, the tests and the child fixtures.
+    /// </summary>
     destructor Destroy; override;
 
   end;
@@ -266,9 +713,16 @@ begin
 end;
 
 function TDUnitXTestFixture.GetActiveTestCount : cardinal;
+var
+  lTest : ITest;
 begin
-  //TODO: Return the active count, currently fudged to be the count.
-  Result := GetTestCount;
+  //The tests that will execute: enabled and not ignored.
+  Result := 0;
+  if FIgnoredFixture or (FTests = nil) then
+    exit;
+  for lTest in FTests do
+    if lTest.Enabled and (not lTest.Ignored) then
+      Inc(Result);
 end;
 
 function TDUnitXTestFixture.GetCategories : TList<string>;
@@ -315,9 +769,11 @@ begin
   if FIgnoredFixture then
     exit;
 
+  //Only a test that will execute counts: one the filters disabled does not, so [SetupFixture] does not run for a
+  //fixture whose selected tests are all ignored.
   for lTest in FTests do
   begin
-    if not lTest.Ignored then
+    if lTest.Enabled and (not lTest.Ignored) then
       exit(true);
   end;
 end;
@@ -521,8 +977,8 @@ var
   test : ITest;
   testInfo : ITestInfo;
 begin
-  //TODO: Need to test that this isn't accessed between updates to FTests.
-  if FTestInfos = nil then
+  //Rebuilt when tests have been added since it was built (the provider adds error tests to Tests directly).
+  if (FTestInfos = nil) or (FTestInfos.Count <> FTests.Count) then
   begin
     FTestInfos := TDUnitXList<ITestInfo>.Create;
     for test in FTests do
@@ -631,24 +1087,6 @@ constructor TDUnitXTestFixture.Create(const AName : string; const ACategory : st
 begin
   FFixtureInstance := AInstance;
   Create(AName, ACategory, AInstance.ClassType, AUnitName);
-end;
-
-function TDUnitXTestFixture.CreateTestFromMethod(const AMethod : TRttiMethod; const ACategory : string; const ATestEnabled, AIgnored : Boolean; const
-  AIgnoredReason : string) : ITest;
-var
-  Meth : TMethod;
-begin
-  meth.Code := AMethod.CodeAddress;
-  meth.Data := FFixtureInstance;
-  result := TDUnitXTest.Create(Self, AMethod.Name, AMethod.Name, ACategory, TTestMethod(meth), ATestEnabled, AIgnored, AIgnoredReason);
-  result.IgnoreMemoryLeaks := GetIgnoreMemoryLeaksForMethod(AMethod);
-end;
-
-function TDUnitXTestFixture.CreateTestFromTestCase(const ACaseInfo : TestCaseInfo; const ACategory : string; const AMethod : TRttiMethod; const ATestEnabled :
-  Boolean) : ITest;
-begin
-  result := TDUnitXTestCase.Create(FFixtureInstance, Self, AMethod.Name, ACaseInfo.Name, AMethod.Name, ACategory, AMethod, ATestEnabled, ACaseInfo.Values);
-  result.IgnoreMemoryLeaks := getIgnoreMemoryLeaksForMethod(AMethod);
 end;
 
 end.

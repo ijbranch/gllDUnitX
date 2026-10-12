@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -32,16 +32,58 @@ uses
   DUnitX.Extensibility;
 
 type
+  /// <summary>
+  ///   Default fixture builder: resolves the registered IFixtureProvider and acts as its context, collecting every
+  ///   fixture the provider creates into a single top-level fixture list.
+  /// </summary>
   TDUnitXFixtureBuilder = class(TInterfacedObject, IFixtureBuilder, IFixtureProviderContext)
   private
+    /// <summary>True when fixtures are to be discovered through RTTI rather than only from explicit registrations.</summary>
     FUseRtti : boolean;
+    /// <summary>The top-level fixture list that CreateFixture adds to and BuildFixtureList returns.</summary>
     FFixtureList : ITestFixtureList;
   protected
+    /// <summary>
+    ///   Tells the fixture provider whether RTTI discovery was requested.
+    /// </summary>
+    /// <returns>
+    ///   The useRtti value passed to the constructor.
+    /// </returns>
     function GetUseRtti : boolean;
+    /// <summary>
+    ///   Creates a top-level fixture for a test class and adds it to the fixture list being built.
+    /// </summary>
+    /// <param name="AFixtureClass">
+    ///   The test class the fixture wraps; its unit name becomes the fixture's unit name.
+    /// </param>
+    /// <param name="AName">
+    ///   The fixture's name.
+    /// </param>
+    /// <param name="ACategory">
+    ///   The fixture's category list, as a comma-separated string.
+    /// </param>
+    /// <returns>
+    ///   The new fixture, already added to the list.
+    /// </returns>
     function CreateFixture(const AFixtureClass : TClass; const AName : string; const ACategory : string) : ITestFixture; overload;
+    /// <summary>
+    ///   Resolves the registered fixture provider and has it populate the fixture list through this context.
+    /// </summary>
+    /// <returns>
+    ///   The populated top-level fixture list.
+    /// </returns>
+    /// <exception cref="ETestFrameworkException">
+    ///   Raised when no IFixtureProvider is registered with the service locator.
+    /// </exception>
     function BuildFixtureList : ITestFixtureList;
 
   public
+    /// <summary>
+    ///   Creates the builder with an empty fixture list.
+    /// </summary>
+    /// <param name="useRtti">
+    ///   True to have the provider discover fixtures through RTTI.
+    /// </param>
     constructor Create(useRtti : boolean);
   end;
 

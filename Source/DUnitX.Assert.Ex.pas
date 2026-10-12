@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -39,18 +39,124 @@ uses
   DUnitX.ComparableFormat;
 
 type
+  /// <summary>
+  ///   DUnitX-specific extension of the framework-neutral <c>DUnitX.Assert.Assert</c>: its string comparisons raise
+  ///   <c>ETestFailureStrCompare</c>, which carries the expected and actual text separately for loggers.
+  /// </summary>
+  /// <remarks>
+  ///   Kept in its own unit so that DUnitX.Assert stays framework neutral and usable from other test frameworks such as
+  ///   DUnit.
+  /// </remarks>
   Assert = class(DUnitX.Assert.Assert)
   private
+    /// <summary>
+    ///   Raises <c>ETestFailureStrCompare</c> for a failed string comparison, at the caller's address when one is given.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected string.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual string.
+    /// </param>
+    /// <param name="compformat">
+    ///   Formatter class used to render the values, or nil.
+    /// </param>
+    /// <param name="message">
+    ///   The caller's assertion message.
+    /// </param>
+    /// <param name="errorAddrs">
+    ///   Address to report the exception at (the assertion's caller), or nil to use this routine's return address.
+    /// </param>
+    /// <exception cref="ETestFailureStrCompare">
+    ///   Always.
+    /// </exception>
     class procedure FailStrCompare(const expected, actual : string; const compformat : TDUnitXComparableFormatClass = nil; const message : string = ''; const
       errorAddrs : pointer = nil);
   public
+    /// <summary>
+    ///   Asserts that two strings are equal, comparing case-sensitively or not as requested.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected string.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual string.
+    /// </param>
+    /// <param name="compformat">
+    ///   Formatter class a logger uses to render the values, or nil.
+    /// </param>
+    /// <param name="ignoreCase">
+    ///   True compares with <c>SameText</c>; False with <c>SameStr</c>.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailureStrCompare">
+    ///   The strings differ.
+    /// </exception>
     class procedure AreEqual(const expected, actual : string; const compformat : TDUnitXComparableFormatClass; const ignoreCase : boolean; const message :
       string = ''); overload;
+    /// <summary>
+    ///   Asserts that two strings are equal, using <c>IgnoreCaseDefault</c> to decide case sensitivity.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected string.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual string.
+    /// </param>
+    /// <param name="compformat">
+    ///   Formatter class a logger uses to render the values, or nil.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailureStrCompare">
+    ///   The strings differ.
+    /// </exception>
     class procedure AreEqual(const expected, actual : string; const compformat : TDUnitXComparableFormatClass; const message : string = ''); overload;
 
-    //Reintroduced from Assert to throw ETestFailureStrCompare
+    /// <summary>
+    ///   Asserts that two strings are equal, comparing case-sensitively or not as requested.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected string.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual string.
+    /// </param>
+    /// <param name="ignoreCase">
+    ///   True compares with <c>SameText</c>; False with <c>SameStr</c>.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailureStrCompare">
+    ///   The strings differ.
+    /// </exception>
+    /// <remarks>
+    ///   Reintroduced from the base Assert so that a failure raises <c>ETestFailureStrCompare</c>.
+    /// </remarks>
     class procedure AreEqual(const expected : string; const actual : string; const ignoreCase : boolean; const message : string = ''); reintroduce; overload;
-    //Reintroduced from Assert to throw ETestFailureStrCompare
+    /// <summary>
+    ///   Asserts that two strings are equal, using <c>IgnoreCaseDefault</c> (case-insensitive unless changed) to decide
+    ///   case sensitivity.
+    /// </summary>
+    /// <param name="expected">
+    ///   The expected string.
+    /// </param>
+    /// <param name="actual">
+    ///   The actual string.
+    /// </param>
+    /// <param name="message">
+    ///   Text added to the failure message.
+    /// </param>
+    /// <exception cref="ETestFailureStrCompare">
+    ///   The strings differ.
+    /// </exception>
+    /// <remarks>
+    ///   Reintroduced from the base Assert so that a failure raises <c>ETestFailureStrCompare</c>.
+    /// </remarks>
     class procedure AreEqual(const expected : string; const actual : string; const message : string = ''); reintroduce; overload;
   end;
 
