@@ -36,17 +36,41 @@ uses
   DUnitX.Expert.CodeGen.NewProject;
 
 type
+  /// <summary>
+  ///   Memory-leak reporting to wire into a generated test project.
+  /// </summary>
   TReportLeakOptions = (
+    /// <summary>No leak reporting; the project uses no extra units.</summary>
     rloNone,
+    /// <summary>Adds FastMM5 and DUnitX.MemoryLeakMonitor.FastMM5 to the project's uses clause.</summary>
     rloFastMM5
   );
 
+  /// <summary>
+  ///   Creator for a new DUnitX console test project, generating its .dpr from the <c>STestDPR</c> template.
+  /// </summary>
   TTestProjectFile = class(TNewProjectEx)
   private
+    /// <summary>Leak reporting chosen in the wizard; selects the extra uses entries in the .dpr.</summary>
     FReportLeakOptions : TReportLeakOptions;
   protected
+    /// <summary>
+    ///   Generates the test project's .dpr source from <c>STestDPR</c>.
+    /// </summary>
+    /// <param name="ProjectName">
+    ///   Name the IDE has given the new project; becomes the <c>program</c> name.
+    /// </param>
+    /// <returns>
+    ///   The generated project source.
+    /// </returns>
     function NewProjectSource(const ProjectName : string) : IOTAFile; override;
   public
+    /// <summary>
+    ///   Creates the creator with an empty file name, so the IDE names the project ProjectN.
+    /// </summary>
+    /// <param name="ReportLeakOptions">
+    ///   Leak reporting to wire into the generated project.
+    /// </param>
     constructor Create(const ReportLeakOptions : TReportLeakOptions);
   end;
 

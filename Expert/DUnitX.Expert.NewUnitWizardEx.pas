@@ -37,8 +37,24 @@ uses
   ;
 
 type
+  /// <summary>
+  ///   Registers the File &gt; New &gt; Other "DUnitX Unit" gallery item, which creates a test unit and adds it to the
+  ///   active project.
+  /// </summary>
   TDUnitXNewUnitWizard = class
   public
+    /// <summary>
+    ///   Registers the new-test-unit wizard with the IDE's object repository for one personality, Win32 and Win64.
+    /// </summary>
+    /// <param name="APersonality">
+    ///   IDE personality the gallery item appears under (e.g. <c>sDelphiPersonality</c>).
+    /// </param>
+    /// <remarks>
+    ///   The wizard refuses to run without an active project, shows <c>TfrmDunitXNewUnit</c>, creates the unit through
+    ///   <c>TNewTestUnit</c>, adds it to the project and advises (without changing the project) when no search path
+    ///   names DUnitX. Every exception inside the wizard is shown with <c>Application.ShowException</c> rather than
+    ///   allowed to escape into the IDE.
+    /// </remarks>
     class procedure RegisterDUnitXNewUnitWizard(const APersonality : string);
   end;
 
@@ -52,12 +68,33 @@ uses
   Vcl.Forms,
   WinApi.Windows,
   System.SysUtils,
+  System.Variants,
+  DccStrs,
   ExpertsRepository;
 
 resourcestring
   sNewTestUnitCaption = 'DUnitX Unit';
   sNewTestUnitHint = 'Create New DUnitX Test Unit';
   sNoActiveProject = 'Open or create the project the DUnitX test unit belongs to first: there is no active project to add it to.';
+  sNoTestUnit = 'The DUnitX test unit could not be created, so nothing was added to the project.';
+  sDUnitXNotOnPath = 'Neither the project''s unit search path nor the IDE library path mentions DUnitX, so the project ' +
+    'may not find DUnitX.TestFramework. If it does not compile, add $(DUnitX) (or the DUnitX Source folder) to the ' +
+    'project''s unit search path.';
+
+// True when the project's unit search path or the IDE library path names DUnitX. A heuristic: a path can find DUnitX
+// without naming it, so a False result only means the project may need the path.
+function DUnitXMayBeVisible(const AProject : IOTAProject) : Boolean;
+var
+  Configs : IOTAProjectOptionsConfigurations;
+  Services : IOTAServices;
+begin
+  if Supports(AProject.ProjectOptions, IOTAProjectOptionsConfigurations, Configs) and
+    (Configs.ActiveConfiguration <> nil) and
+    (Pos('DUNITX', UpperCase(Configs.ActiveConfiguration.GetValue(sUnitSearchPath, True))) > 0) then
+    Exit(True);
+  Result := Supports(BorlandIDEServices, IOTAServices, Services) and
+    (Pos('DUNITX', UpperCase(VarToStr(Services.GetEnvironmentOptions.Values['LibraryPath']))) > 0);
+end;
 
   { TDUnitXNewUnitWizard }
 
@@ -92,7 +129,14 @@ begin
                   WizardForm.CreateSampleMethods,
                   WizardForm.TestFixtureClassName));
               if TestUnit <> nil then
+              begin
                 Project.AddFile(TestUnit.FileName, true);
+                // Advice only: the project is the user's, so its options are left alone.
+                if not DUnitXMayBeVisible(Project) then
+                  MessageDlg(sDUnitXNotOnPath, mtInformation, [mbOK], 0);
+              end
+              else
+                MessageDlg(sNoTestUnit, mtWarning, [mbOK], 0);
             end;
           finally
             WizardForm.Free;

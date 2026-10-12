@@ -1,6 +1,7 @@
 object frmDunitXNewUnit: TfrmDunitXNewUnit
   Left = 0
   Top = 0
+  ActiveControl = edtClassName
   Caption = 'New DUnitX Unit Wizard'
   ClientHeight = 163
   ClientWidth = 262

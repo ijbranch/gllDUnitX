@@ -37,12 +37,40 @@ uses
   ToolsAPI;
 
 type
+  /// <summary>
+  ///   In-memory IOTAFile handed to the IDE by the creators: holds source text formatted from a template.
+  /// </summary>
   TSourceFile = class(TInterfacedObject, IOTAFile)
   private
+    /// <summary>The formatted source text returned to the IDE.</summary>
     FSource : string;
   public
+    /// <summary>
+    ///   Gives the IDE the file's content (IOTAFile).
+    /// </summary>
+    /// <returns>
+    ///   The source text formatted in the constructor.
+    /// </returns>
     function GetSource : string;
+    /// <summary>
+    ///   Gives the IDE the file's timestamp (IOTAFile).
+    /// </summary>
+    /// <returns>
+    ///   The current date and time.
+    /// </returns>
     function GetAge : TDateTime;
+    /// <summary>
+    ///   Creates the file by formatting a source template with <c>Format</c>.
+    /// </summary>
+    /// <param name="Source">
+    ///   Template text with <c>%s</c>-style format specifiers.
+    /// </param>
+    /// <param name="Args">
+    ///   Values substituted into the template's specifiers, in order.
+    /// </param>
+    /// <exception cref="EConvertError">
+    ///   When <paramref name="Args" /> does not match the template's specifiers.
+    /// </exception>
     constructor Create(const Source : string; const Args : array of const);
   end;
 

@@ -35,9 +35,18 @@ resourcestring
 
   { Delphi template code }
 
-  STestDPR          = 'program %0:s;'#13#10 +
+  /// <summary>
+  ///   Source of a new DUnitX console test project (.dpr): runs every RTTI-registered fixture with the console and
+  ///   NUnit XML loggers, sets <c>EXIT_ERRORS</c> on any failure or abort, and pauses only for <c>--exit:Pause</c>.
+  /// </summary>
+  /// <remarks>
+  ///   Format arguments: 0 - program name; 1 - extra uses entries for leak reporting (empty, or complete lines each
+  ///   ending in a comma and CRLF).
+  /// </remarks>
+  STestDPR          ='program %0:s;'#13#10 +
     #13#10 +
     '{$APPTYPE CONSOLE}'#13#10 +
+    '{$R *.res}'#13#10 +
     '{$STRONGLINKTYPES ON}'#13#10 +
     'uses'#13#10 +
     '%1:s' +
@@ -94,13 +103,17 @@ resourcestring
     '  end;'#13#10 +
     'end.'#13#10;
 
-  // 0 - Unit Name
-  // 1 - Class Name
-  // 2 - Setup/TearDown Methods - Interface
-  // 3 - Sample Methods - Interface
-  // 4 - Setup/TearDown Methods - Implementation
-  // 5 - Sample Methods - Implementation
-  STestUnit         = 'unit %0:s;'#13#10 +
+  /// <summary>
+  ///   Source of a new DUnitX test unit: one [TestFixture] class, registered with <c>TDUnitX.RegisterTestFixture</c>
+  ///   in the initialization section.
+  /// </summary>
+  /// <remarks>
+  ///   Format arguments: 0 - unit name; 1 - fixture class name; 2 - Setup/TearDown methods, interface
+  ///   (<see cref="SSetupTearDownIntf" /> or empty); 3 - sample methods, interface (<see cref="SSampleMethodsIntf" /> or
+  ///   empty); 4 - Setup/TearDown methods, implementation (<see cref="SSetupTearDownImpl" /> or empty); 5 - sample
+  ///   methods, implementation (<see cref="SSampleMethodsImpl" /> or empty).
+  /// </remarks>
+  STestUnit         ='unit %0:s;'#13#10 +
     #13#10 +
     'interface'#13#10 +
     #13#10 +
@@ -122,13 +135,23 @@ resourcestring
     #13#10 +
     'end.'#13#10;
 
+  /// <summary>
+  ///   Interface declarations of the fixture's [Setup] and [TearDown] methods, inserted as argument 2 of
+  ///   <see cref="STestUnit" />. Takes no format arguments.
+  /// </summary>
   SSetupTearDownIntf =
     '    [Setup]'#13#10 +
     '    procedure Setup;'#13#10 +
     '    [TearDown]'#13#10 +
     '    procedure TearDown;'#13#10;
 
-  // 0 - Class Name
+  /// <summary>
+  ///   Empty implementations of the fixture's Setup and TearDown methods, inserted as argument 4 of
+  ///   <see cref="STestUnit" />.
+  /// </summary>
+  /// <remarks>
+  ///   Format arguments: 0 - fixture class name.
+  /// </remarks>
   SSetupTearDownImpl =
     #13#10 +
     'procedure %0:s.Setup;'#13#10 +
@@ -139,6 +162,10 @@ resourcestring
     'begin'#13#10 +
     'end;'#13#10;
 
+  /// <summary>
+  ///   Interface declarations of two sample tests - a plain [Test] and one fed by two [TestCase] attributes - inserted
+  ///   as argument 3 of <see cref="STestUnit" />. Takes no format arguments.
+  /// </summary>
   SSampleMethodsIntf =
     '    // Sample Methods'#13#10 +
     '    // Simple single Test'#13#10 +
@@ -150,7 +177,12 @@ resourcestring
     '    [TestCase(''TestB'',''3,4'')]'#13#10 +
     '    procedure Test2(const AValue1 : Integer;const AValue2 : Integer);'#13#10;
 
-  // 0 - Class Name
+  /// <summary>
+  ///   Empty implementations of the two sample tests, inserted as argument 5 of <see cref="STestUnit" />.
+  /// </summary>
+  /// <remarks>
+  ///   Format arguments: 0 - fixture class name.
+  /// </remarks>
   //TODO: Show Examples of calling Assert
   SSampleMethodsImpl =
     #13#10 +
@@ -162,13 +194,30 @@ resourcestring
     'begin'#13#10 +
     'end;'#13#10;
 
+  /// <summary>Fixture class name the wizard forms offer by default.</summary>
   SDefaultClassName = 'TMyTestObject';
 
-  // 0 - Class Name
+  /// <summary>
+  ///   Message the wizard forms show when the entered fixture class name fails <see cref="IsValidFixtureClassName" />.
+  /// </summary>
+  /// <remarks>
+  ///   Format arguments: 0 - the rejected class name.
+  /// </remarks>
   SInvalidFixtureClassName = '''%0:s'' is not a valid TestFixture class name.'#13#10#13#10 +
-    'Enter a Delphi identifier (a letter or underscore, then letters, digits or underscores) that is not a reserved word.';
+    'Enter a Delphi identifier (a letter or underscore, then letters, digits or underscores) that is not a reserved word ' +
+    'and does not hide a name the generated unit uses (TDUnitX, Integer, TestAttribute, TestCaseAttribute, ' +
+    'SetupAttribute, TearDownAttribute).';
 
-// True when AName can be used as the generated fixture's class name: a valid identifier and not a reserved word.
+/// <summary>
+///   Checks whether a name can be used as the generated fixture's class name.
+/// </summary>
+/// <param name="AName">
+///   The candidate class name, as typed in the wizard.
+/// </param>
+/// <returns>
+///   True when <paramref name="AName" /> is a valid identifier, not a reserved word, and not a name the generated unit
+///   refers to unqualified (declaring it would hide the framework's or System's own); the comparisons ignore case.
+/// </returns>
 function IsValidFixtureClassName(const AName : string) : Boolean;
 
 implementation
@@ -187,15 +236,26 @@ const
     'shr', 'string', 'then', 'threadvar', 'to', 'try', 'type', 'unit', 'until', 'uses',
     'var', 'while', 'with', 'xor', 'out');
 
+  // Names the generated unit uses unqualified. A fixture class of that name hides the original: TDUnitX breaks the
+  // RegisterTestFixture call (E2003), an *Attribute name breaks the matching attribute (E2010), and Integer turns
+  // the sample Test2 parameters into the fixture class, so its TestCase values cannot be converted at run time.
+  CHiddenNames : array[0..5] of string = (
+    'TDUnitX', 'Integer', 'TestAttribute', 'TestCaseAttribute', 'SetupAttribute', 'TearDownAttribute');
+
 function IsValidFixtureClassName(const AName : string) : Boolean;
 var
   lWord : string;
 begin
   result := IsValidIdent(AName, False);
   if result then
+  begin
     for lWord in CReservedWords do
       if SameText(AName, lWord) then
         Exit(False);
+    for lWord in CHiddenNames do
+      if SameText(AName, lWord) then
+        Exit(False);
+  end;
 end;
 
 end.

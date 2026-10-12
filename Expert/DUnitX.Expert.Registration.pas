@@ -31,7 +31,13 @@ interface
 
 {$I DUnitX.inc}
 
-//Note: "Register" method name is case sensitive.
+/// <summary>
+///   Design-time package entry point: registers the DUnitX project and unit wizards for the Delphi personality.
+/// </summary>
+/// <remarks>
+///   The name "Register" is case sensitive - the IDE looks for exactly this spelling. Delphi personality only:
+///   C++Builder is out of scope for this fork.
+/// </remarks>
 procedure Register;
 
 implementation

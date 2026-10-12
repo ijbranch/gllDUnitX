@@ -44,25 +44,73 @@ uses
   VCL.StdCtrls;
 
 type
+  /// <summary>
+  ///   Options dialog of the "DUnitX Unit" wizard: fixture class name and which methods to generate. Read the choices
+  ///   through the read-only properties after a modal result of mrOk.
+  /// </summary>
   TfrmDunitXNewUnit = class(TForm)
+    /// <summary>Group box holding the test unit options.</summary>
     GroupBox1 : TGroupBox;
+    /// <summary>Accepts the options (mrOk), subject to the class-name check in FormCloseQuery.</summary>
     btnOK : TButton;
+    /// <summary>Abandons the wizard.</summary>
     btnCancel : TButton;
+    /// <summary>Caption of the fixture class name box.</summary>
     lblClassName : TLabel;
+    /// <summary>Fixture class name; blank means <c>SDefaultClassName</c>, shown as the text hint.</summary>
     edtClassName : TEdit;
+    /// <summary>Generate [Setup] and [TearDown] methods.</summary>
     chkCreateSetupTearDown : TCheckBox;
+    /// <summary>Generate the sample test methods.</summary>
     chkCreateSampleMethods : TCheckBox;
+    /// <summary>
+    ///   Shows the default fixture class name as the class name box's text hint.
+    /// </summary>
+    /// <param name="Sender">
+    ///   The form.
+    /// </param>
     procedure FormCreate(Sender : TObject);
+    /// <summary>
+    ///   Refuses OK, with an error message, while the class name would generate a unit that does not compile (see
+    ///   <c>IsValidFixtureClassName</c>).
+    /// </summary>
+    /// <param name="Sender">
+    ///   The form.
+    /// </param>
+    /// <param name="CanClose">
+    ///   Set to False to keep the dialog open.
+    /// </param>
     procedure FormCloseQuery(Sender : TObject; var CanClose : Boolean);
   private
+    /// <summary>
+    ///   Read accessor for <see cref="CreateSampleMethods" />.
+    /// </summary>
+    /// <returns>
+    ///   True when "create sample methods" is ticked.
+    /// </returns>
     function GetCreateSampleMethods : boolean;
+    /// <summary>
+    ///   Read accessor for <see cref="CreateSetupTearDownMethods" />.
+    /// </summary>
+    /// <returns>
+    ///   True when "create Setup/TearDown methods" is ticked.
+    /// </returns>
     function GetCreateSetupTearDownMethods : boolean;
+    /// <summary>
+    ///   Read accessor for <see cref="TestFixtureClassName" />.
+    /// </summary>
+    /// <returns>
+    ///   The trimmed class name, or <c>SDefaultClassName</c> when the box is blank.
+    /// </returns>
     function GetTestFixtureClassName : string;
     { Private declarations }
   public
     { Public declarations }
+    /// <summary>Fixture class name for the test unit: trimmed text, or <c>SDefaultClassName</c> when blank.</summary>
     property TestFixtureClassName : string read GetTestFixtureClassName;
+    /// <summary>True to generate [Setup] and [TearDown] methods.</summary>
     property CreateSetupTearDownMethods : boolean read GetCreateSetupTearDownMethods;
+    /// <summary>True to generate the sample test methods.</summary>
     property CreateSampleMethods : boolean read GetCreateSampleMethods;
 
   end;

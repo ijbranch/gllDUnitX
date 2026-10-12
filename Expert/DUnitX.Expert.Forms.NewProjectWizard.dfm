@@ -1,6 +1,7 @@
 object frmDunitXNewProject: TfrmDunitXNewProject
   Left = 0
   Top = 0
+  ActiveControl = edtClassName
   Caption = 'New DUnitX Project Wizard'
   ClientHeight = 324
   ClientWidth = 284

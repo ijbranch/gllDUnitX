@@ -1,4 +1,4 @@
-package DUnitX_IDE_Expert_D13Florence;
+﻿package DUnitX_IDE_Expert_D13Florence;
 
 {$R *.res}
 {$R *.dres}
@@ -28,7 +28,7 @@ package DUnitX_IDE_Expert_D13Florence;
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'DUnitX - IDE Expert'}
 {$DESIGNONLY}
-{$IMPLICITBUILD ON}
+{$IMPLICITBUILD OFF}
 
 requires
   rtl,
