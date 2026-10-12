@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -307,7 +307,7 @@ end;
 
 function TDUnitXList<T>.GetNonGenEnumerator : IEnumerator;
 begin
-  result := nil;
+  result := TDUnitXIEnumerator<T>.Create(Self);
 end;
 
 function TDUnitXList<T>.GetOnNotify : TCollectionNotifyEvent<T>;
@@ -397,7 +397,7 @@ end;
 
 function TDUnitXList<T>.ToArray : TArray<T>;
 begin
-  result := nil;                        //FList.ToArray<T>;
+  result := FList.ToArray;
 end;
 
 procedure TDUnitXList<T>.TrimExcess;
@@ -414,8 +414,17 @@ begin
 end;
 
 function TDUnitXIEnumerator<T>.GetCurrent : TObject;
+var
+  item : T;
 begin
-  result := nil;
+  //The non-generic IEnumerator can only yield objects, so Current is nil when T is not a class.
+  if GetTypeKind(T) = tkClass then
+  begin
+    item := FList[FIndex];
+    result := TObject(PPointer(@item)^);
+  end
+  else
+    result := nil;
 end;
 
 function TDUnitXIEnumerator<T>.GetCurrentGen : T;

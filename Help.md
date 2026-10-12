@@ -66,6 +66,16 @@ The last of those was rebuilt from scratch with no stray `.dcu` anywhere in `Sou
 
 **How to check any binary rather than assume:** `grep -a TestIgnored <test>.exe`. A hit means this fork; nothing means the bundled copy.
 
+**`D:\gllDUnitX` is the only DUnitX on C:, D: and E:** (Ian, 2026-10-12). On that day RAD Studio's bundled DUnitX (67 files under `Studio\37.0\lib`) was moved to `%PUBLIC%\Documents\Embarcadero\Studio\37.0\_bundled_DUnitX_removed_2026-10-12`. The other copies were deleted:
+
+- a full upstream clone that a TMS tool's test run had left in `gllTMSSmartSetup\tmstest\tmp-run`;
+- a GetIt temp extraction;
+- a vendored FMX unit in `OmniThreadLibrary-NG`;
+- an orphan `VSoft.DUnitXWinR170.bpl`;
+- every leftover fork DCU in consumer and archive folders.
+
+`D:\Tools\Check-DUnitXSingleSet.ps1` enforces the rule and exits 1 on any DUnitX source, bundled `lib` file or foreign DUnitX package outside this repo. **Run it after every RAD Studio update, patch or repair**, which writes the bundled files back into `lib`; move them aside again.
+
 **A project that needs a unit the package does not contain** (`DUnitX.Loggers.GUI.VCL`, `DUnitX.MemoryLeakMonitor.FastMM5`, the `DUnitX.StackTrace.*` units) must name `<repo>\Source` in its own `DCC_UnitSearchPath` and have a platform-varying `DCC_DcuOutput` — read §7 first. It then compiles those units, and the rest of DUnitX, from source. `gllStaticCodeAnalyser`'s test project does this.
 
 ---
@@ -93,7 +103,7 @@ The body tests `if e.ClassType = exceptionClass then Fail` — an `=` on `ClassT
 Assert.WillNotRaiseAny( procedure begin DoTheThing; end, 'must not blow up' );
 ```
 
-`WillNotRaiseAny` is almost always what was meant. Passing **no** class is also safe — that takes the `else` branch and fails on anything. `WillNotRaiseDescendant` exists for the narrower case (both its overloads match descendants since the 2026-10-12 fix; before it, the `TTestMethod` overload matched the exact class only).
+`WillNotRaiseAny` is almost always what was meant. Passing **no** class is also safe — that takes the `else` branch and fails on anything. `WillNotRaiseDescendant` exists for the narrower case (both its overloads match descendants since the 2026-10-12 fix; before it, the `TTestMethod` overload matched the exact class only). The whole `WillNotRaise*` family now lets `Assert.Pass`, `Assert.Ignore` and `Assert.Fail` inside the method through as the test's outcome. Before that, `WillNotRaiseAny` reported an inner `Assert.Pass` as "raised ETestPass", and with a named class an inner `Assert.Fail` was swallowed so the test passed.
 
 ### `WillRaise` no longer catches DUnitX's own assertion outcomes (fork change, 2026-10-12)
 

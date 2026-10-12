@@ -620,11 +620,19 @@ type
     function AsWord : Word;
 
     function ToObject : TObject;
-    function ToVarRec : TVarRec;
+    ///	<summary>
+    ///	  Converts the value to a TVarRec. A TVarRec cannot own memory, so its
+    ///	  pointers refer into AStorage, which must outlive the result unchanged.
+    ///	</summary>
+    function ToVarRec(var AStorage : TValue) : TVarRec;
 
     class function ToString(const Value : TValue) : string; overload; static;
     class function ToString(const Values : array of TValue) : string; overload; static;
-    class function ToVarRecs(const Values : array of TValue) : TArray<TVarRec>; static;
+    ///	<summary>
+    ///	  Converts the values to TVarRecs whose pointers refer into AStorage,
+    ///	  which must outlive the result unchanged.
+    ///	</summary>
+    class function ToVarRecs(const Values : array of TValue; out AStorage : TArray<TValue>) : TArray<TVarRec>; static;
     class function Equals(const Left, Right : TArray<TValue>) : Boolean; overload; static;
     class function Equals<T>(const Left, Right : T) : Boolean; overload; static;
 
@@ -3050,8 +3058,10 @@ begin
   end;
 end;
 
-function TValueHelper.ToVarRec : TVarRec;
+function TValueHelper.ToVarRec(var AStorage : TValue) : TVarRec;
 begin
+  // A TVarRec cannot own memory, so every pointer in the result refers into AStorage, never into a temporary.
+  AStorage := Self;
   case Kind of
     tkInteger :
       begin
@@ -3065,6 +3075,11 @@ begin
         Result.VChar := AsType<AnsiChar>;
       end;
 {$ENDIF}
+    tkWChar :
+      begin
+        Result.VType := vtWideChar;
+        Result.VWideChar := AsType<WideChar>;
+      end;
     tkEnumeration :
       begin
         if IsBoolean then
@@ -3078,40 +3093,52 @@ begin
           Result.VInteger := AsInteger;
         end;
       end;
+    tkInt64 :
+      begin
+        Result.VType := vtInt64;
+        Result.VInt64 := AStorage.GetReferenceToRawData;
+      end;
     tkFloat :
       begin
         if IsCurrency then
         begin
           Result.VType := vtCurrency;
-          Result.VCurrency := GetReferenceToRawData;
+          Result.VCurrency := AStorage.GetReferenceToRawData;
         end
         else
         begin
+          // vtExtended is read as an Extended (10 bytes on Win32), so a Single or Double is widened first.
+          AStorage := TValue.From<Extended>(AsExtended);
           Result.VType := vtExtended;
-          Result.VExtended := GetReferenceToRawData;
+          Result.VExtended := AStorage.GetReferenceToRawData;
         end;
       end;
-    tkString, tkUString :
+    tkString, tkLString, tkWString, tkUString :
       begin
+        AStorage := TValue.From<string>(AsString);
         Result.VType := vtUnicodeString;
-        Result.VUnicodeString := Pointer(AsString);
+        Result.VUnicodeString := PPointer(AStorage.GetReferenceToRawData)^;
       end;
     tkClass, tkInterface :
       begin
+        AStorage := TValue.From<string>(ToObject.ToString);
         Result.VType := vtUnicodeString;
-        Result.VUnicodeString := Pointer(ToObject.ToString);
+        Result.VUnicodeString := PPointer(AStorage.GetReferenceToRawData)^;
       end;
+  else
+    raise EInvalidCast.CreateFmt('Cannot convert a %s value to a TVarRec', [GetEnumName(System.TypeInfo(TTypeKind), Ord(Kind))]);
   end;
 end;
 
 class function TValueHelper.ToVarRecs(
-  const Values : array of TValue) : TArray<TVarRec>;
+  const Values : array of TValue; out AStorage : TArray<TValue>) : TArray<TVarRec>;
 var
   i : Integer;
 begin
   SetLength(Result, Length(Values));
+  SetLength(AStorage, Length(Values));
   for i := Low(Values) to High(Values) do
-    Result[i] := Values[i].ToVarRec;
+    Result[i] := Values[i].ToVarRec(AStorage[i]);
 end;
 
 class function TValueHelper.ToString(const Value : TValue) : string;

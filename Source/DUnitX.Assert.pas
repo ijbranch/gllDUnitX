@@ -1211,6 +1211,8 @@ begin
   except
     on e : TObject do                   // For those who throw exceptions not descending from Exception.
     begin
+      if (e is Exception) and IsUnrequestedTestOutcome(Exception(e), nil) then
+        raise;
       // msg is an argument, never part of the format string, so '%' in it is literal.
       if e is Exception then
         FailFmt(SUnexpectedException + '%s', [e.ClassName, exception(e).message, AddLineBreak(msg)], ReturnAddress)
@@ -1238,6 +1240,8 @@ begin
   except
     on e : Exception do
     begin
+      if IsUnrequestedTestOutcome(e, exceptionClass) then
+        raise;
       if exceptionClass <> nil then
       begin
         if e is exceptionClass then
@@ -1268,6 +1272,8 @@ begin
   except
     on E : Exception do
     begin
+      if IsUnrequestedTestOutcome(E, exceptionClass) then
+        raise;
       if ((exceptionMsg = '') or SameStr(e.Message, exceptionMsg)) and
         (((exceptionClass <> nil) and (e.ClassType = exceptionClass)) or (exceptionClass = nil)) then
         FailFmt(SMethodRaisedExceptionMessage, [e.ClassName, e.Message, AddLineBreak(msg)], ReturnAddress);
@@ -1310,6 +1316,8 @@ begin
   except
     on e : Exception do
     begin
+      if IsUnrequestedTestOutcome(e, exceptionClass) then
+        raise;
       if exceptionClass <> nil then
       begin
         if e.ClassType = exceptionClass then

@@ -154,6 +154,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Other DUnitX sets on this machine could be compiled or linked instead of this fork** (2026-10-12) — `Help.md` §2,
+  `D:\Tools\Check-DUnitXSingleSet.ps1` (GITLAKTools). Rule (Ian, 2026-10-12): `D:\gllDUnitX` is the only DUnitX on
+  C:, D: and E:. RAD Studio's bundled DUnitX (67 files in `Studio\37.0\lib`, written by its install/update, without
+  `Assert.Ignore` or any fork fix) was moved to `_bundled_DUnitX_removed_2026-10-12` by an elevated script; deleted: an
+  upstream clone left by a TMS tool test run (`gllTMSSmartSetup\tmstest\tmp-run`, git-ignored), a GetIt temp
+  extraction, a vendored FMX unit in `OmniThreadLibrary-NG`, an orphan `VSoft.DUnitXWinR170.bpl`, the earlier
+  moved-aside stray DCUs, and every leftover fork DCU in temp, third-party and archive build folders. The new check
+  exits 1 on any DUnitX source, bundled `lib` file or foreign DUnitX package outside this repo (proved with a decoy);
+  run it after every RAD Studio update. The sweep that kept writing stray DCUs into `Source` built projects with only
+  an exe-output override; `D:\Tools\Check-DcuCollisions.ps1` now also fails a project with no `DCC_DcuOutput`.
+- **`CheckEqualsBin` passed values that differed above the requested digits** (2026-10-12) —
+  `Source/DUnitX.DUnitCompatibility.pas`, `Tests/DUnitX.Tests.DUnitCompatibility.pas`. It compared the digit-truncated
+  binary strings, so `CheckEqualsBin($1A5, $A5, '', 8)` passed. As in DUnit it now compares the values and uses
+  `digits` only for the display, widening it to 32 when the difference lies above the requested digits so the failure
+  does not show two equal strings. Red test `CheckEqualsBin_Compares_Values_Not_Digits` (red seen). Issue #398.
+  Divergence from upstream (offered back in VSoftTechnologies/DUnitX#398).
+- **The `WillNotRaise` family turned `Assert.Pass` / `Assert.Ignore` inside the method into a failure, and swallowed
+  `Assert.Fail`** (2026-10-12) — `Source/DUnitX.Assert.pas`, `Tests/DUnitX.Tests.Assert.pas`. `WillNotRaiseAny` and
+  `WillNotRaise` / `WillNotRaiseDescendant` / `WillNotRaiseWithMessage` with a nil class reported "Method raised
+  [ETestPass]"; with a named class they silently swallowed an inner `ETestFailure`, so the test passed. They now
+  re-raise DUnitX's own outcome exceptions through `IsUnrequestedTestOutcome`, as the `WillRaise` family already does
+  (unless that exception class was the one named). Red test `WillNotRaise_Family_Passes_Test_Outcomes_Through` (red
+  seen). Issue #398. Divergence from upstream (offered back in VSoftTechnologies/DUnitX#398).
+- **`TValueHelper.ToVarRec` / `ToVarRecs` returned dangling or misread pointers** (2026-10-12) —
+  `Source/DUnitX.Utils.pas`, `Tests/DUnitX.Tests.Utils.pas`. `vtExtended` pointed at a `Single` / `Double`'s own bytes
+  (read as a 10-byte `Extended` on Win32, and as 8 bytes over a 4-byte `Single` on Win64), strings and objects pointed
+  at a temporary string freed on return, and `tkInt64` (like any other unhandled kind) left the result uninitialised.
+  A `TVarRec` cannot own memory, so the API changed: `ToVarRec(var AStorage : TValue)` and
+  `ToVarRecs(const Values; out AStorage : TArray<TValue>)` point every pointer into caller-held storage (floats are
+  widened to `Extended` there, strings and `ToObject.ToString` stored as `string`); `tkInt64` and `tkWChar` are
+  handled, and an unsupported kind raises `EInvalidCast`. **Breaking** for any external caller of the parameterless
+  forms (none in DUnitX or the indexed estate; they were unsafe to call). Red test `ToVarRec_Reads_Back_The_Value`
+  (red seen on the `Int64` VType). Issue #398. Divergence from upstream (offered back in VSoftTechnologies/DUnitX#398).
+- **`TDUnitXList<T>.ToArray` returned nil and its non-generic `IEnumerable` enumerator was nil** (2026-10-12) —
+  `Source/DUnitX.Generics.pas`, `Tests/DUnitX.Tests.Utils.pas`. `ToArray` now returns the items;
+  `GetNonGenEnumerator` returns a real enumerator whose `Current` yields the item when `T` is a class (nil otherwise,
+  since the non-generic `IEnumerator` can only yield objects). Red tests `ToArray_Returns_The_Items` and
+  `NonGeneric_Enumerator_Yields_Objects` (new `TDUnitXList` fixture; both red seen). Issue #398. Divergence from
+  upstream (offered back in VSoftTechnologies/DUnitX#398).
 - **Consumers resolved DUnitX through `Source` on the Win64 library path, or would have got RAD Studio's bundled
   copy without it** (2026-10-12) — IDE library path (`HKCU\...\BDS\37.0\Library\Win64` / `Win32` `Search Path`,
   `%APPDATA%\Embarcadero\BDS\37.0\EnvOptions.proj`), `Help.md` §2 and §7. Win64 listed `$(DUNITX)` (`Source`) ahead

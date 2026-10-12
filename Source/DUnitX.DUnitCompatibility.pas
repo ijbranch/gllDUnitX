@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -302,11 +302,11 @@ end;
 
 procedure TTestCase.CheckEqualsBin(const expected, actual : longword; const msg : string; digits : integer);
 begin
-{$IFDEF DELPHI_XE2_UP}
-  Assert.AreEqual(IntToBin(expected, digits), IntToBin(actual, digits), msg);
-{$ELSE}
-  Assert.IsTrue(IntToBin(expected, digits) = IntToBin(actual, digits), msg);
-{$ENDIF}
+  //As in DUnit, the values are compared and digits only sets the display width; show all 32 bits when the
+  //difference lies above the requested digits, or the failure would show two equal strings.
+  if (expected <> actual) and (IntToBin(expected, digits) = IntToBin(actual, digits)) then
+    digits := 32;
+  Assert.AreEqual(IntToBin(expected, digits), IntToBin(actual, digits), false, msg);
 end;
 
 procedure TTestCase.CheckEqualsHex(const expected, actual : longword; const msg : string; digits : integer);

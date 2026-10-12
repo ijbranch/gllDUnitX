@@ -56,6 +56,9 @@ type
     // actual.InheritsFrom(expected), CheckException accepts a descendant and lets an exception through when no class
     // is named, and CheckSame(IUnknown) compares object identity rather than the interface pointers passed.
     procedure Checks_Have_DUnit_Semantics;
+    // Proves CheckEqualsBin compares the values, as DUnit does: values that differ only above the displayed digits
+    // fail. Issue #398 item 4.
+    procedure CheckEqualsBin_Compares_Values_Not_Digits;
   end;
 
 {$M+}
@@ -121,6 +124,17 @@ begin
   second := first as ICompatSecond;
   CheckSame(first, second, 'CheckSame(IUnknown) same object');
   Assert.WillRaiseDescendant(procedure begin CheckSame(first, TCompatBoth.Create as ICompatFirst) end, ETestFailure, 'CheckSame(IUnknown) other object');
+{$WARN SYMBOL_DEPRECATED ON}
+end;
+
+procedure TMyDUnitTest.CheckEqualsBin_Compares_Values_Not_Digits;
+begin
+{$WARN SYMBOL_DEPRECATED OFF}
+  CheckEqualsBin($A5, $A5, 'CheckEqualsBin equal values', 8);
+  Assert.WillRaiseDescendant(procedure begin CheckEqualsBin($1A5, $A5, '', 8) end, ETestFailure,
+    'CheckEqualsBin passed values differing above the displayed digits');
+  Assert.WillRaiseDescendant(procedure begin CheckEqualsBin($A4, $A5, '', 8) end, ETestFailure,
+    'CheckEqualsBin passed different values');
 {$WARN SYMBOL_DEPRECATED ON}
 end;
 

@@ -116,6 +116,25 @@ type
     // An ambiguous numeric date has the same meaning on every machine (ISO 8601 / invariant first).
     [Test]
     procedure TryConvert_Date_Meaning_Does_Not_Depend_On_Locale;
+
+    // ToVarRec gives a TVarRec whose VType matches the value and whose pointers read back the value: Int64 is
+    // handled, a float other than Extended is not read as 10 bytes, and strings point into the caller's storage,
+    // not at a freed temporary. Issue #398 item 2.
+    [Test]
+    procedure ToVarRec_Reads_Back_The_Value;
+  end;
+
+  [TestFixture('TDUnitXList')]
+  [Category('Utils')]
+  TDUnitXListTests = class
+  public
+    // ToArray returns the items in order, not nil. Issue #398 item 2.
+    [Test]
+    procedure ToArray_Returns_The_Items;
+
+    // The non-generic IEnumerable enumerator exists and yields the objects of a list of objects. Issue #398 item 2.
+    [Test]
+    procedure NonGeneric_Enumerator_Yields_Objects;
   end;
 
 
@@ -135,6 +154,7 @@ uses
   TypInfo,
   Windows,
 {$ENDIF}
+  DUnitX.Generics,
   DUnitX.Utils;
 
 { TValueHelperTests }
@@ -298,6 +318,35 @@ begin
   end;
 end;
 
+procedure TValueHelperTests.ToVarRec_Reads_Back_The_Value;
+var
+  storage : TValue;
+  storages : TArray<TValue>;
+  rec : TVarRec;
+  recs : TArray<TVarRec>;
+begin
+  rec := TValue.From<Int64>(1234567890123).ToVarRec(storage);
+  Assert.AreEqual(Integer(vtInt64), Integer(rec.VType), 'Int64 VType');
+  Assert.AreEqual<Int64>(1234567890123, rec.VInt64^, 'Int64 value');
+
+  rec := TValue.From<Single>(1.5).ToVarRec(storage);
+  Assert.AreEqual(Integer(vtExtended), Integer(rec.VType), 'Single VType');
+  Assert.AreEqual(1.5, rec.VExtended^, 0, 'Single value');
+
+  rec := TValue.From<Double>(2.5).ToVarRec(storage);
+  Assert.AreEqual(Integer(vtExtended), Integer(rec.VType), 'Double VType');
+  Assert.AreEqual(2.5, rec.VExtended^, 0, 'Double value');
+
+  // Built from a string that is not a literal, so a dangling pointer would read freed memory.
+  rec := TValue.From<string>(StringOfChar('x', 3) + 'y').ToVarRec(storage);
+  Assert.AreEqual(Integer(vtUnicodeString), Integer(rec.VType), 'string VType');
+  Assert.AreEqual('xxxy', UnicodeString(rec.VUnicodeString), False, 'string value');
+
+  recs := TValue.ToVarRecs([TValue.From<Integer>(7), TValue.From<ShortString>('short'), TValue.From<string>('long'),
+    TValue.From<Currency>(1.25), TValue.From<Double>(0.5)], storages);
+  Assert.AreEqual('7 short long 1.25 0.50', Format('%d %s %s %.2f %.2f', recs, TFormatSettings.Invariant), False);
+end;
+
 procedure TValueHelperTests.TestDateConversion(const locale, text : string);
 var
   asTValue : TValue;
@@ -349,8 +398,52 @@ begin
   Assert.IsSameTime(expectedTime, actual, 'SameTime(..)');
 end;
 
+{ TDUnitXListTests }
+
+procedure TDUnitXListTests.ToArray_Returns_The_Items;
+var
+  list : IList<Integer>;
+  items : TArray<Integer>;
+begin
+  list := TDUnitXList<Integer>.Create;
+  list.AddRange([3, 1, 2]);
+  items := list.ToArray;
+  Assert.AreEqual(3, Length(items), 'Length');
+  Assert.AreEqual(3, items[0]);
+  Assert.AreEqual(1, items[1]);
+  Assert.AreEqual(2, items[2]);
+end;
+
+procedure TDUnitXListTests.NonGeneric_Enumerator_Yields_Objects;
+var
+  list : IList<TObject>;
+  first, second : TObject;
+  enumerable : IEnumerable;
+  enumerator : IEnumerator;
+begin
+  first := TObject.Create;
+  second := TObject.Create;
+  try
+    list := TDUnitXList<TObject>.Create;
+    list.Add(first);
+    list.Add(second);
+    enumerable := list;
+    enumerator := enumerable.GetEnumerator;
+    Assert.IsNotNull(enumerator, 'GetEnumerator');
+    Assert.IsTrue(enumerator.MoveNext, 'MoveNext 1');
+    Assert.AreSame(first, enumerator.Current, 'Current 1');
+    Assert.IsTrue(enumerator.MoveNext, 'MoveNext 2');
+    Assert.AreSame(second, enumerator.Current, 'Current 2');
+    Assert.IsFalse(enumerator.MoveNext, 'MoveNext 3');
+  finally
+    second.Free;
+    first.Free;
+  end;
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TValueHelperTests);
+  TDUnitX.RegisterTestFixture(TDUnitXListTests);
 
 end.
 

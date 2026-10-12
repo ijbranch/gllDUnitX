@@ -485,6 +485,14 @@ type
     procedure WillNotRaise_Nil_Class_Fails_Readably;
 
     /// <summary>
+    ///   Proves the WillNotRaise family lets Assert.Pass, Assert.Ignore and Assert.Fail inside the method through as
+    ///   the outcome they set, instead of reporting "Method raised ETestPass" or swallowing a failure because its
+    ///   class is not the one named. Issue #398 item 3.
+    /// </summary>
+    [Test]
+    procedure WillNotRaise_Family_Passes_Test_Outcomes_Through;
+
+    /// <summary>
     ///   Proves AreSame and AreNotSame( TObject ) compare identity, ignoring an overridden Equals, and handle nil
     ///   without an access violation. Issue #398 item 3.3.
     /// </summary>
@@ -2024,6 +2032,35 @@ begin
     begin
       Assert.WillRaiseDescendant(procedure begin Assert.Ignore('inner ignore') end, Exception);
     end, ETestIgnored, 'inner ignore', 'WillRaiseDescendant( Exception ) swallowed Assert.Ignore');
+end;
+
+procedure TTestsAssert.WillNotRaise_Family_Passes_Test_Outcomes_Through;
+begin
+  Assert.WillRaiseWithMessage(
+    procedure
+    begin
+      Assert.WillNotRaiseAny(procedure begin Assert.Pass('inner pass') end);
+    end, ETestPass, 'inner pass', 'WillNotRaiseAny converted Assert.Pass');
+  Assert.WillRaiseWithMessage(
+    procedure
+    begin
+      Assert.WillNotRaise(procedure begin Assert.Ignore('inner ignore') end, nil);
+    end, ETestIgnored, 'inner ignore', 'WillNotRaise( nil ) converted Assert.Ignore');
+  Assert.WillRaiseWithMessage(
+    procedure
+    begin
+      Assert.WillNotRaise(procedure begin Assert.Fail('inner fail') end, EConvertError);
+    end, ETestFailure, 'inner fail', 'WillNotRaise( EConvertError ) swallowed Assert.Fail');
+  Assert.WillRaiseWithMessage(
+    procedure
+    begin
+      Assert.WillNotRaiseDescendant(procedure begin Assert.Pass('inner pass') end, nil);
+    end, ETestPass, 'inner pass', 'WillNotRaiseDescendant( nil ) converted Assert.Pass');
+  Assert.WillRaiseWithMessage(
+    procedure
+    begin
+      Assert.WillNotRaiseWithMessage(procedure begin Assert.Pass('inner pass') end, nil, '');
+    end, ETestPass, 'inner pass', 'WillNotRaiseWithMessage( nil ) converted Assert.Pass');
 end;
 
 procedure TTestsAssert.WillNotRaise_User_Message_Is_Not_A_Format_String;
