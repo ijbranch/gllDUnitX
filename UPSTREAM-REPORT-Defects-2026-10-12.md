@@ -200,6 +200,14 @@ equality comparer, so class and Variant comparisons are unchanged. For 1.4, a te
 caller named a matching class other than `Exception`, which uses only the `fTestFailure` / `fTestPass` hooks that
 `DUnitX.Assert.pas` already has.
 
+**Outside the batches: [#372](https://github.com/VSoftTechnologies/DUnitX/issues/372) (bitmask exit codes) ->
+[PR #411](https://github.com/VSoftTechnologies/DUnitX/pull/411)**, branch `feature/bitmask-exit-codes`, posted
+2026-10-12 after a reviewer pointed at it from #404. It is someone else's feature request, which the maintainer had
+said he would accept, so we sent it as goodwill. **It is deliberately NOT in this fork** (Ian, 2026-10-12): nothing
+here would use it, and carrying it ourselves would add divergence for no benefit. It reaches the fork only if
+upstream merges it. The branch has two commits because the shared `pre-commit` hook stripped upstream's
+`DUnitXTest_D12.dproj` (the worktree shares this repo's `.git\hooks`); the net diff adds one `DCCReference` there.
+
 ---
 
 *We have deliberately left out anything that is our fork's own policy, such as platform scope and pre-XE
