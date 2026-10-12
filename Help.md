@@ -49,7 +49,7 @@ This is **fork-local divergence that will conflict** on any future merge touchin
 
 ## 2. Which DUnitX are you actually compiling against?
 
-RAD Studio 13 ships its own DUnitX, as compiled DCUs in `lib\win64\release` (59 of them), and the two differ:
+RAD Studio 13 ships its own DUnitX, as compiled DCUs in `lib\win64\release` (59 of them; on this machine they are moved aside, see below), and the two differ:
 
 - **`Assert.Ignore` does not exist in the bundled copy.** Compiling against it alone gives `E2003 Undeclared identifier: 'Ignore'`. The symbols `TestIgnored`/`fTestIgnored` appear in this fork's compiled `DUnitX.Assert.dcu` and in the bundled one they do not — which makes them a reliable way to tell the two apart.
 - None of §1's fixes are in the bundled copy, `[MaxTime]` included.
@@ -64,7 +64,7 @@ RAD Studio 13 ships its own DUnitX, as compiled DCUs in `lib\win64\release` (59 
 
 The last of those was rebuilt from scratch with no stray `.dcu` anywhere in `Source`, and still linked this fork. The likely mechanism: the compiler looks in the project's own DCU output folder before the library path, and once a project had compiled this fork from `Source`, its own copies of the fork's DCUs won from then on.
 
-**Since 2026-10-12 the arrangement is explicit, and the paragraph above is history.** On both platforms the package's Release DCU folder (`$(GLLDUNITX_RAD_STUDIO_13_0_WI)\Release`, `..._WI_2\Release` for Win32) is the **first** Search Path entry, ahead of `$(BDSLIB)`, and `Source` (`$(DUNITX)`) is on **neither** platform's Search Path. Win32 was already that way (see `standards\ide-environment.md`); Win64 had `$(DUNITX)` instead, and removing it alone exposed the bundled copy (`E2003 'Ignore'` in GITLAKLib's tests). The 3,486 copies of the fork's DCUs left in 79 consumer output folders by the old arrangement were deleted the same day, so every consumer now links the package's DCUs and never compiles DUnitX itself. The Debug DCU Path already listed the package's Debug folder first. Backups of the two registry keys and of `EnvOptions.proj` are in that session's scratchpad.
+**Since 2026-10-12 the arrangement is explicit, and the paragraph above is history.** On both platforms the package's Release DCU folder (`$(GLLDUNITX_RAD_STUDIO_13_0_WI)\Release`, `..._WI_2\Release` for Win32) is the **first** Search Path entry, ahead of `$(BDSLIB)`, and `Source` (`$(DUNITX)`) is on **neither** platform's Search Path. Win32 was already that way (see `standards\ide-environment.md`); Win64 had `$(DUNITX)` instead, and removing it alone exposed the bundled copy (`E2003 'Ignore'` in GITLAKLib's tests). The 3,486 copies of the fork's DCUs left in 79 consumer output folders by the old arrangement were deleted the same day, so every consumer now links the package's DCUs and never compiles DUnitX itself. The Debug DCU Path lists the package's Debug folder first on Win32 and second on Win64 (after gllFastMM5's Debug folder), ahead of every RAD Studio entry on both. Backups of the two registry keys and of `EnvOptions.proj` are in that session's scratchpad. **Re-checked 2026-10-13:** the package's Release folder is entry 0 of both Search Paths, `$(BDSLIB)` is entry 7 (Win32) and 6 (Win64), `$(DUNITX)` is on neither, and the `DUNITX` IDE environment variable is `D:\gllDUnitX\Source` (the IDE expert writes it into new test projects).
 
 **How to check any binary rather than assume:** `grep -a TestIgnored <test>.exe`. A hit means this fork; nothing means the bundled copy.
 
@@ -77,6 +77,14 @@ The last of those was rebuilt from scratch with no stray `.dcu` anywhere in `Sou
 - every leftover fork DCU in consumer and archive folders.
 
 `D:\Tools\Check-DUnitXSingleSet.ps1` enforces the rule and exits 1 on any DUnitX source, bundled `lib` file or foreign DUnitX package outside this repo. **Run it after every RAD Studio update, patch or repair**, which writes the bundled files back into `lib`; move them aside again.
+
+**Re-checked 2026-10-13:** `lib` holds no DUnitX file, and the moved-aside folder holds all 67 (the 59 Win64 Release DCUs among them). The check nevertheless **exits 1**, on three source copies, none of them on any search path:
+
+- `D:\gllDUnitX-upstream`, the worktree that carries the upstream PR branches (created 2026-10-12, after the rule was written) - deliberate;
+- `D:\gllTMSSmartSetup\tmstest\tmp-run\clone-or-update-git\...\taurustls\src\submodules\DUnitX`, recreated at 08:30 on 2026-10-13 by a gllTMSSmartSetup test run: its clone test checks out TaurusTLS, which carries DUnitX as a git submodule, so deleting it only lasts until the next run;
+- another session's scratchpad (temporary).
+
+It also lists DUnitX `.dcu` folders in session scratchpads, which are compile checks and harmless.
 
 **A project that needs a unit the package does not contain** (`DUnitX.Loggers.GUI.VCL`, `DUnitX.MemoryLeakMonitor.FastMM5`, the `DUnitX.StackTrace.*` units) must name `<repo>\Source` in its own `DCC_UnitSearchPath` and have a platform-varying `DCC_DcuOutput` — read §7 first. It then compiles those units, and the rest of DUnitX, from source. `gllStaticCodeAnalyser`'s test project does this.
 
@@ -340,7 +348,7 @@ Parsed by `TDUnitX.CheckCommandLine`, which exits on an invalid option. A switch
 - **A method-level `[Category]` replaces the fixture's category** rather than adding to it, so `-e:Integration` still runs a `[Category('Slow')]` method inside an `[Category('Integration')]` fixture. This is upstream's intent and changing it would change test selection in every suite, so it is left as is.
 - **`FailsOnNoAsserts` counts assertions per thread**: asserts made on another thread do not count. Durations use `Now()`, so a clock change can skew them.
 - **The command-line parser does not enforce `AllowMultiple`**: a repeated option takes the last value. Enforcing it would reject an options file combined with command-line overrides.
-- **A Win32 build of the test project leaves `Tests/DUnitXTest_D13.res` without version information** (found 2026-10-12). Win32 and Win64 write the same `.res`, and only the Win64 groups carry `VerInfo_IncludeVerInfo`, so a Win32 build rewrites it as a 96-byte file holding only `PLATFORMTARGETS`. Enabling version info for Win32 too would not settle it: the two platforms would overwrite each other's version numbers. **Build Win64 last** before committing; that restores the 588-byte `.res`. The same shape applies to `Examples/DUnitXExamples_D13.dproj`.
+- **A Win32 build of the test project leaves `Tests/DUnitXTest_D13.res` without version information** (found 2026-10-12). Win32 and Win64 write the same `.res`, and only the Win64 groups carry `VerInfo_IncludeVerInfo`, so a Win32 build rewrites it as a 96-byte file holding only `PLATFORMTARGETS`. Enabling version info for Win32 too would not settle it: the two platforms would overwrite each other's version numbers. **Build Win64 last** before committing; that restores the version information (about 590 bytes; the size moves with the build number). The same applies to `Examples/DUnitXExamples_D13.dproj`, whose `.res` keeps its icon but loses `VS_VERSION_INFO` in a Win32 build. **Re-checked 2026-10-13:** Tests 588 -> 96 -> 592 bytes and Examples 154,444 -> 153,940 -> 154,444 bytes across a Win32 then a Win64 Release build, with `VS_VERSION_INFO` gone after the Win32 build and back after the Win64 one.
 - **Stray `.dcu` files in `Source\` keep coming back** (third time 2026-10-12; see `CHANGELOG.md`, Fixed). The producer is a build with no DCU output directory, run by the estate exe build sweep, not anything in this repository; cleaning here does not stop it. **Route closed the same day:** `Source` is no longer on either platform's library path (see Fixed), so only a project that names `Source` in its own search path and has no DCU output directory can still do it.
 
 ---
