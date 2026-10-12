@@ -157,6 +157,8 @@ By design here (see §1): it is an assertion about elapsed time, checked once th
 
 ### Runner behaviours changed on 2026-10-12 (fork fixes, offered upstream in #398)
 
+**Checked against the estate the same day:** all 28 other registered suites, plus GITLAKLib's, were rebuilt against these changes. Every one linked this fork (`grep -a TestIgnored`) and built with no hints or warnings. Only gllTaurusTLS needed changes: seven of its `[TestCase]` values had never converted (a stray space before an enum name, and fields in the wrong order), so those cases had always run with the wrong arguments. They are now errors, and their data was fixed.
+
 - **A run that executes no tests is not a pass.** If the filters match nothing, or every test is ignored, `IRunResults.AllPassed` is `False`, a warning is logged, and a runner that maps `AllPassed` to `EXIT_ERRORS` exits non-zero.
 - **`[WillRaise]` works on test cases.** It used to be silently dropped on any method that also had `[TestCase]` or `[TestCaseProvider]`.
 - **TearDown is skipped when Setup fails**, as in DUnit and NUnit. When a test fails and its TearDown also fails, the test's failure stays the main message and "TearDown also failed: ..." is appended.
