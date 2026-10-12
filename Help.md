@@ -117,6 +117,10 @@ An `override` does not inherit the attribute. The provider walks up the hierarch
 
 Delphi 13 made `TList<T>.Count` a `NativeInt`, so on Win64 an `Integer` on one side and an `Int64` on the other matched no overload, fell through to `AreEqual<T>`, and generic inference failed with `E2532`. Since 2026-10-10 (upstream `1bdc297`, #397) `Assert.AreEqual( Integer, Int64 )` and `( Int64, Integer )` exist under `{$IFDEF CPU64BITS}`, so the plain form compiles on both platforms. An overload taking `NativeInt` itself still cannot be added (on Win64 it is the same type as `Int64`); the mixed pair is the fix. The older workaround, `Assert.AreEqual<NativeInt>( 3, List.Count )`, still compiles and need not be changed.
 
+### NaN never equals anything — no `IsNan` guard needed
+
+`Assert.AreEqual` on `Double`/`Extended` fails if either value is NaN, whatever the tolerance, and `AreNotEqual` passes. Both go through `System.Math.SameValue`, which returns `False` for NaN on Win32 (x87 `Extended`) and Win64 alike. Proved by six tests in `Tests\DUnitX.Tests.Assert.pas` (2026-10-12); a 2018 fork's extra `IsNan` check was surveyed and is unnecessary. To assert that a result *is* NaN, use `Assert.IsTrue( IsNan( Value ) )` — `AreEqual( NaN, Value )` always fails.
+
 ### `[MaxTime]` cannot interrupt a test that never returns
 
 By design here (see §1): it is an assertion about elapsed time, checked once the method returns.

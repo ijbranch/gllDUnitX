@@ -36,6 +36,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Reviewed and deliberately NOT taken from upstream, so they are not re-derived later
 
+- **GitHub-wide survey 2026-10-12: no DUnitX anywhere is newer or more complete than this fork.**
+  `upstream/master` is fully in (its tip `1bdc297`, #397, is our `cf2248c`). Of upstream's 217 forks, 29 are ahead
+  of master; already here in equivalent form: bero (help-screen leak), luebbe (`IsSameDate` / `IsSameTime` /
+  `IsSameDateTime`), henriquewerlang (`DUnitX.Banner.pas` uses), ArneSaathoffORGADATA #263
+  (`DUnitX.TestDataProvider.pas` include), gskoczylas (runtime ignore). NOT taken: LiaHombrinkORGADATA #244
+  (`[Ignore]` on a whole fixture; ours honours it on methods only — open as a possible feature), bernd5 (virtual
+  `DoCreateFixture`, an extension hook with no consumer), TASC-Git / celeburdi (VCL GUI runner tweaks; celeburdi's
+  2018 rewrite conflicts), fabiorizzuto (NaN `IsNan` check — unnecessary, proved by the NaN tests under Added). The
+  rest are pre-XE2 compatibility, FMX, path edits or merge noise. The 17 non-fork repos named DUnitX and the 6
+  vendored copies found by code search are tutorials, demos or stale snapshots (latest 2017).
+
 - **Upstream swept 2026-09-18: `upstream/dev` reviewed, nothing taken.** This fork is **0 commits
   behind `upstream/master`** (tip `a69a10b`, 2026-08-24). `dev`'s tip `f40670c` is **2025-05-05** -
   fifteen months OLDER than master and 45 commits behind it, never merged.
@@ -62,6 +73,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **NaN tests for `Assert.AreEqual` / `AreNotEqual` on `Double` and `Extended`** (2026-10-12) —
+  `Tests/DUnitX.Tests.Assert.pas`. Six tests: `AreEqual` must fail with NaN as either argument, and `AreNotEqual`
+  must pass when one value is NaN. Prompted by the fork survey below (fabiorizzuto's 2018 fork adds an explicit
+  `IsNan` check). **Result: no defect** — `System.Math.SameValue` already returns `False` for NaN, so all six pass on
+  Win32 (x87 `Extended`) and Win64 with `Source/` unchanged. Mutation-proved: forcing the four `SameValue` sites in
+  `Source/DUnitX.Assert.pas` to never fail / always fail turned all six red. The same run showed these are the
+  ONLY tests of `AreNotEqual( Double / Extended )` raising: no older test failed under that mutation.
 - **`Assert.AreEqual( Integer, Int64 )` and `( Int64, Integer )` overloads on 64-bit** (2026-10-10) —
   `Source/DUnitX.Assert.pas`, `Tests/DUnitX.Tests.Assert.pas`. Upstream `1bdc297` (#397), cherry-picked with `-x`.
   **Why:** on Win64 `Count`/`Length` are `NativeInt`, so `Assert.AreEqual( 1, List.Count )` mixes `Integer` and
@@ -120,6 +138,11 @@ IDE expert now compiles on Win32 as well as Win64 (2026-09-10) — `DUnitX.Exper
 
 ### Changed
 
+- **Delphi.Mocks pin moved to `59683d3` (2026-10-08) and the recorded green counts refreshed** (2026-10-12) —
+  `DEPENDENCIES.md`. The sibling `glldelphi-mocks` checkout had moved 13 commits past the old pin `2c3a51f` (a
+  descendant on `main`, not a divergence), and the suite was re-verified against it: Win64 297 found / 288 passed /
+  9 ignored, Win32 295 / 286 / 9, 0 failed, errored or leaked. The branch name was also wrong (`master` -> `main`).
+  `Help.md` gains a NaN note under the assertion gotchas.
 - **D13 language features adopted** (2026-10-08) - `Source/DUnitX.CommandLine.OptionDef.pas`, `Source/DUnitX.Loggers.GUI.VCL.pas`, `Source/DUnitX.RunResults.pas`. 2 `not ( X in S )` / `not ( X is T )` rewritten as `X not in S` / `X is not T` (generated code byte-identical: every project that built before was rebuilt and compared); 1 `IfThen(...)` call replaced by the `if ... then ... else` expression, which evaluates only the branch it picks. **Divergence accepted:** upstream was reviewed first (nothing pending was lost), and Ian's ruling for the gll* forks is that they "are our forks now", to be made "as correct as possible/practical"; these lines will need re-applying or resolving in any later upstream port.
 - Documentation brought level with the D13 / Win32+Win64 / no-C++Builder / no-non-Windows
   state (2026-09-10) — `CONTRIBUTING.md`, `README.md`, `UPSTREAM-PROPOSAL-Assert-Ignore.md`

@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -90,6 +90,46 @@ type
 
     [Test]
     procedure AreEqual_Double_Throws_ETestFailure_When_Values_Are_NotEqual;
+
+    /// <summary>
+    ///   Proves AreEqual( Double ) fails when the actual value is NaN. Every ordered comparison with NaN is false,
+    ///   so a tolerance check built on comparisons can report NaN as "within tolerance" and pass a test whose
+    ///   calculation produced no number at all.
+    /// </summary>
+    [Test]
+    procedure AreEqual_Double_Throws_ETestFailure_When_Actual_Is_NaN;
+
+    /// <summary>
+    ///   Proves AreEqual( Double ) fails when the expected value is NaN; the NaN check must not depend on which
+    ///   argument carries it.
+    /// </summary>
+    [Test]
+    procedure AreEqual_Double_Throws_ETestFailure_When_Expected_Is_NaN;
+
+    /// <summary>
+    ///   Proves AreNotEqual( Double ) passes when one value is NaN, since NaN is not equal to any number.
+    /// </summary>
+    [Test]
+    procedure AreNotEqual_Double_Throws_No_Exception_When_One_Value_Is_NaN;
+
+    /// <summary>
+    ///   Proves AreEqual( Extended ) fails when the actual value is NaN. On Win32 Extended is the 80-bit x87
+    ///   type, so its NaN comparisons take a different code path from Double's.
+    /// </summary>
+    [Test]
+    procedure AreEqual_Extended_Throws_ETestFailure_When_Actual_Is_NaN;
+
+    /// <summary>
+    ///   Proves AreEqual( Extended ) fails when the expected value is NaN.
+    /// </summary>
+    [Test]
+    procedure AreEqual_Extended_Throws_ETestFailure_When_Expected_Is_NaN;
+
+    /// <summary>
+    ///   Proves AreNotEqual( Extended ) passes when one value is NaN, since NaN is not equal to any number.
+    /// </summary>
+    [Test]
+    procedure AreNotEqual_Extended_Throws_No_Exception_When_One_Value_Is_NaN;
 
     [Test]
     procedure AreEqual_Currency_Throws_ETestFailure_When_Values_Are_NotEqual;
@@ -388,9 +428,11 @@ uses
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
+  System.Math,
 {$ELSE}
   SysUtils,
   Classes,
+  Math,
 {$ENDIF}
   DUnitX.Exceptions,
   DUnitX.Assert;
@@ -957,6 +999,96 @@ begin
     begin
       Assert.AreEqual(ACTUAL_DOUBLE, EXPECTED_DOUBLE, TOLERANCE_DOUBLE);
     end, ETestFailure, Format('[%e] with in [%e] from [%e]', [ACTUAL_DOUBLE, TOLERANCE_DOUBLE, EXPECTED_DOUBLE]));
+end;
+
+procedure TTestsAssert.AreEqual_Double_Throws_ETestFailure_When_Actual_Is_NaN;
+const
+  EXPECTED_DOUBLE  : double = 1.0;
+  TOLERANCE_DOUBLE : double = 0.001;
+var
+  ActualDouble : double;
+begin
+  ActualDouble := NaN;
+  Assert.WillRaise(
+    procedure
+    begin
+      Assert.AreEqual(EXPECTED_DOUBLE, ActualDouble, TOLERANCE_DOUBLE);
+    end, ETestFailure, 'AreEqual( Double ) passed with a NaN actual value');
+end;
+
+procedure TTestsAssert.AreEqual_Double_Throws_ETestFailure_When_Expected_Is_NaN;
+const
+  ACTUAL_DOUBLE    : double = 1.0;
+  TOLERANCE_DOUBLE : double = 0.001;
+var
+  ExpectedDouble : double;
+begin
+  ExpectedDouble := NaN;
+  Assert.WillRaise(
+    procedure
+    begin
+      Assert.AreEqual(ExpectedDouble, ACTUAL_DOUBLE, TOLERANCE_DOUBLE);
+    end, ETestFailure, 'AreEqual( Double ) passed with a NaN expected value');
+end;
+
+procedure TTestsAssert.AreNotEqual_Double_Throws_No_Exception_When_One_Value_Is_NaN;
+const
+  EXPECTED_DOUBLE  : double = 1.0;
+  TOLERANCE_DOUBLE : double = 0.001;
+var
+  ActualDouble : double;
+begin
+  ActualDouble := NaN;
+  Assert.WillNotRaiseAny(
+    procedure
+    begin
+      Assert.AreNotEqual(EXPECTED_DOUBLE, ActualDouble, TOLERANCE_DOUBLE);
+    end, 'AreNotEqual( Double ) failed although one value is NaN');
+end;
+
+procedure TTestsAssert.AreEqual_Extended_Throws_ETestFailure_When_Actual_Is_NaN;
+const
+  EXPECTED_EXTENDED  : extended = 1.0;
+  TOLERANCE_EXTENDED : extended = 0.001;
+var
+  ActualExtended : extended;
+begin
+  ActualExtended := NaN;
+  Assert.WillRaise(
+    procedure
+    begin
+      Assert.AreEqual(EXPECTED_EXTENDED, ActualExtended, TOLERANCE_EXTENDED);
+    end, ETestFailure, 'AreEqual( Extended ) passed with a NaN actual value');
+end;
+
+procedure TTestsAssert.AreEqual_Extended_Throws_ETestFailure_When_Expected_Is_NaN;
+const
+  ACTUAL_EXTENDED    : extended = 1.0;
+  TOLERANCE_EXTENDED : extended = 0.001;
+var
+  ExpectedExtended : extended;
+begin
+  ExpectedExtended := NaN;
+  Assert.WillRaise(
+    procedure
+    begin
+      Assert.AreEqual(ExpectedExtended, ACTUAL_EXTENDED, TOLERANCE_EXTENDED);
+    end, ETestFailure, 'AreEqual( Extended ) passed with a NaN expected value');
+end;
+
+procedure TTestsAssert.AreNotEqual_Extended_Throws_No_Exception_When_One_Value_Is_NaN;
+const
+  EXPECTED_EXTENDED  : extended = 1.0;
+  TOLERANCE_EXTENDED : extended = 0.001;
+var
+  ActualExtended : extended;
+begin
+  ActualExtended := NaN;
+  Assert.WillNotRaiseAny(
+    procedure
+    begin
+      Assert.AreNotEqual(EXPECTED_EXTENDED, ActualExtended, TOLERANCE_EXTENDED);
+    end, 'AreNotEqual( Extended ) failed although one value is NaN');
 end;
 
 procedure TTestsAssert.AreEqual_Currency_Throws_ETestFailure_When_Values_Are_NotEqual;
