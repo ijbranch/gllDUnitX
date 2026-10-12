@@ -1,108 +1,122 @@
-DUnitX Overview
-===============
+gllDUnitX
+=========
 
-> **GITLAK fork.** This fork targets **Delphi 13 (Florence), Windows only — Win32 and Win64**.
-> Support for earlier RAD Studio versions, OSX, Linux, Android and iOS has been removed;
-> use [upstream DUnitX](https://github.com/VSoftTechnologies/DUnitX) if you need those.
-> (Win32 was re-added to every `.dproj` on 2026-09-10, so packages can be built in all four
-> modes; before that date this fork was Win64-only.)
+GITLAK Software's fork of [DUnitX](https://github.com/VSoftTechnologies/DUnitX), the unit-test framework for
+Delphi that takes its ideas from DUnit and NUnit.
+
+> **Scope.** This fork targets **Delphi 13 (Florence), Windows only - Win32 and Win64**, VCL. Support for
+> earlier RAD Studio versions, OSX, Linux, Android and iOS has been removed; use
+> [upstream DUnitX](https://github.com/VSoftTechnologies/DUnitX) if you need those.
 >
-> **Not affiliated with VSoft Technologies.** This is an independent fork; credit for DUnitX
-> itself belongs to Vincent Parrett and its contributors - see *License* at the foot of this file.
->
-> The DPM package id is **`GITLAK.DUnitX`**, not `VSoft.DUnitX`, so it cannot shadow upstream
-> in a package feed. Building the **test project** additionally needs a sibling checkout of
-> [glldelphi-mocks](https://github.com/ijbranch/glldelphi-mocks) at the commit pinned in
-> [DEPENDENCIES.md](DEPENDENCIES.md) - a private repository, so outside GITLAK the test project
-> cannot be built as it stands; the runtime library, IDE expert and examples need nothing
-> beyond RAD Studio.
->
-> **Fork-local API:** `Assert.Ignore(reason)` skips a test at RUN time and reports it as
-> *ignored* rather than passed - for a precondition that can only be discovered by looking
-> (an external tool, a source tree, a database). Upstream has only the compile-time
-> `[Ignore]` attribute, and neither its `master` nor its `dev` branch has this, so code
-> using it will not build against upstream DUnitX. See [CHANGELOG.md](CHANGELOG.md).
+> **Not affiliated with VSoft Technologies.** This is an independent fork; credit for DUnitX itself belongs to
+> Vincent Parrett and its contributors - see *Licence* at the foot of this file.
 
-DUnitX is a new test framework, taking ideas from DUnit, NUnit and other test frameworks. This fork is designed to work with Delphi 13 (Florence) or later, and makes use of language/RTL features that are not available in older versions of Delphi.
+What the fork adds or changes
+=============================
 
+* **`Assert.Ignore(reason)`** - a fork-local API that skips a test at RUN time and reports it as *ignored*
+  rather than passed, for a precondition that can only be discovered by looking (an external tool, a source
+  tree, a database, an interactive desktop). Upstream has only the compile-time `[Ignore]` attribute, and
+  neither its `master` nor its `dev` branch has this, so code using it will not build against upstream DUnitX.
+* **Defect fixes** across the framework, the VCL GUI runner and the IDE expert - several of them cases where
+  a test passed, or a run reported success, when it should have failed. Each is in [CHANGELOG.md](CHANGELOG.md);
+  those that apply upstream have been offered back as issues and pull requests (see
+  `UPSTREAM-REPORT-Defects-2026-10-12.md`).
+* **The VCL GUI runner** (`DUnitX.Loggers.GUI.VCL`) has been fixed and updated. It is not maintained upstream,
+  which recommends the **TestInsight** IDE plug-in instead; whether to use TestInsight or this runner is your
+  choice.
+* **The DPM package id is `GITLAK.DUnitX`**, not `VSoft.DUnitX`, so it cannot shadow upstream in a package feed.
 
-DUnitX Features
-===============
+Features
+========
 
- * Any class can contain tests
- * Attribute based testing
- * An extensive Assert Class
- * Setup and TearDown per test method and per test fixture.
- * API Documented using Xml-Doc
- * Console Based Runner
- * XML Logging
-   * produces output compatible with NUnit (compatible with CI servers like [ContinuaCI](https://www.finalbuilder.com/continua-ci))
-   * produces output compatible with JUnit (compatible with [Gitlab CI](https://docs.gitlab.com/ee/ci/unit_test_reports.html))
- * Targets the Windows compilers, 32 bit and 64 bit.
- * Limited backwards compatibility with DUnit test classes. 
- * [Wizard](https://www.finalbuilder.com/Resources/Blogs/dunitx-has-a-wizard) for creating new tests.
+* Any class can contain tests
+* Attribute based testing
+* An extensive Assert class
+* Setup and TearDown per test method and per test fixture
+* Console runner, and a VCL GUI runner
+* XML logging
+  * output compatible with NUnit (for CI servers such as [ContinuaCI](https://www.finalbuilder.com/continua-ci))
+  * output compatible with JUnit (for [GitLab CI](https://docs.gitlab.com/ee/ci/unit_test_reports.html))
+* Win32 and Win64
+* Limited backwards compatibility with DUnit test classes
+* An IDE [wizard](https://www.finalbuilder.com/Resources/Blogs/dunitx-has-a-wizard) for new test projects and
+  units, and live templates for fixtures and tests
+* API documented with XML doc comments
 
-DUnitX Planned Features
-=======================
+Installing
+==========
 
-This is far from a complete list, but a few planned features are listed here to help indicate future direction.
+There is no installer: RAD Studio ships its own DUnitX, and using this fork means replacing that copy by hand.
+The steps are below; [Users Guide.md](Users%20Guide.md) §1 has the detail.
 
- * GUI Test Runner - the VCL GUI runner, `DUnitX.Loggers.GUI.VCL`, has been fixed and updated in this fork. It is
-   not maintained upstream, which recommends the **TestInsight** IDE plug-in instead; whether to use TestInsight
-   or this runner is your choice.
- * Multi-threaded tests - the ability to have test fixtures run in their own
-  threads.
- * Remote logging - Simple way to run tests on remote machines (just an idea at this point) 
- * Data driven test cases - the ability to provide a test method with a data source and test each entry in the data source. The data source will be virtualised so it can be anything (text file, db table etc).
+1. **Use the fork's source or package in your test projects** - one of:
+   * add the repository's `Source` folder to the project's search path, **and give the project a DCU output
+     directory that varies by platform and configuration**, for example
+     `<DCC_DcuOutput>.\$(Platform)\$(Config)</DCC_DcuOutput>`; or
+   * build `packages\RAD Studio 13.0\VSoft.DUnitXWinR.dproj` in all four modes (Win32 + Win64 x Debug +
+     Release) and use it as a runtime package.
 
-Tips and Tricks
-===========
-* To use this GitHub version of DUnitX in place of the bundled version included with RAD Studio, it’s pretty simple by following these steps (as the bundled version is quite a few commits behind this repo):
-  - Remove the Embarcadero Unit test package (DUnitXIDEExpertXXX.bpl) from the installed packages list.
-  - In the cloned repo, open Expert\DUnitX_IDE_Expert_D13Florence.dproj, compile and install the package.
-  - In your unit test projects, adjust your search paths to point to the repo\Source folder.
-  - **Give that project a DCU output directory that varies by platform and configuration**, for example
-    `<DCC_DcuOutput>.\$(Platform)\$(Config)</DCC_DcuOutput>`. This is not optional housekeeping. With no
-    DCU output set, the compiler writes each `.dcu` next to the `.pas` it compiled, so one build drops the
-    whole DUnitX set into `Source\` — and the next build for a different platform reads them and dies with
-    `F2048 Bad unit format: ... Expected version: 37.0, Windows Unicode(x86) Found version: 37.0, Windows
-    Unicode(x64)`. A project that sets a DCU output directory is immune, because the compiler then prefers
-    its own output folder and rebuilds from source.
-  - It follows that **`Source\` must never contain `.dcu` files**. If it does, delete them: they are build
-    output that escaped a misconfigured consumer, nothing should ever link against them, and they are
-    already covered by `.gitignore`.
+   Naming the fork explicitly matters: RAD Studio's bundled DUnitX DCUs are on the library path, and a project
+   that does not say which DUnitX it wants can silently link the bundled one - at which point `Assert.Ignore`
+   will not compile.
+2. **Optionally, the IDE expert:** remove Embarcadero's unit-test expert (`DUnitXIDEExpert*.bpl`) from the
+   installed packages, then build and install `Expert\DUnitX_IDE_Expert_D13Florence.dproj` from the 64-bit IDE
+   (`bin64\bds.exe`). File > New gains **DUnitX Project** and **DUnitX Unit**.
+3. **Optionally, the live templates:** `LiveTemplates\Install.bat` copies nine code templates
+   (`create-testfixture`, `create-testproc`, ...) into the IDE's template folder.
 
+**`Source\` must never contain `.dcu` files.** Without a DCU output directory the compiler writes each `.dcu`
+beside the `.pas` it compiled, so one build drops the whole DUnitX set into `Source\` - and the next build for
+the other platform reads them and dies with `F2048 Bad unit format`. If you find any there, delete them; they
+are build output that escaped a misconfigured project, and `.gitignore` already covers them.
+
+Building the tests
+==================
+
+`Tests\DUnitXTest_D13.dproj` needs a sibling checkout of
+[glldelphi-mocks](https://github.com/ijbranch/glldelphi-mocks) at the commit pinned in
+[DEPENDENCIES.md](DEPENDENCIES.md). That is a private repository, so outside GITLAK the test project cannot be
+built as it stands; the runtime library, IDE expert and examples need nothing beyond RAD Studio.
 
 Support
 =======
 
-A [Delphi Praxis Forum](https://en.delphipraxis.net/forum/36-dunitx/) has been setup to discuss DUnitX.
+This fork is maintained for GITLAK Software's own use and comes **without support**. For DUnitX in general, see
+upstream's [Delphi Praxis forum](https://en.delphipraxis.net/forum/36-dunitx/) and
+[repository](https://github.com/VSoftTechnologies/DUnitX).
+
+Documentation
+=============
+
+* [Help.md](Help.md) - reference: fork scope, API, building, troubleshooting by symptom
+* [Users Guide.md](Users%20Guide.md) - task-oriented walkthroughs with worked examples
+* [CHANGELOG.md](CHANGELOG.md) - every change this fork has made, with the reason
+* [DEPENDENCIES.md](DEPENDENCIES.md) - the pinned test-project dependency
+* [TestCaseProvider.md](TestCaseProvider.md) - data-driven test cases
+* `UPSTREAM-*.md` - what has been reported or proposed to upstream, and its status
 
 Contributors
-============    
+============
 
-A [recent list of contributors](https://github.com/VSoftTechnologies/DUnitX/graphs/contributors) can always be obtained on GitHub.                              
+DUnitX: a [list of contributors](https://github.com/VSoftTechnologies/DUnitX/graphs/contributors) is on GitHub,
+and their commits keep their authors in this fork's history. This fork: Ian Branch (GITLAK Software), working
+with [Claude Code](https://claude.com/claude-code), Anthropic's AI coding assistant, which wrote much of the
+fork's code, tests and documentation under his direction; commits it contributed to carry a
+`Co-Authored-By: Claude` trailer.
 
-License
-========
-Apache Version 2.0 
-Copyright (C) 2012+ Vincent Parrett
-vincent@finalbuilder.com                                         
-http://www.finalbuilder.com
+Licence
+=======
 
-See license.txt for details.
+Apache License 2.0 - see [LICENSE.txt](LICENSE.txt).
 
-**This fork.** Changes made in gllDUnitX are Copyright (C) 2026 Ian Branch (GITLAK Software) and are
-licensed under the same Apache License 2.0. Every source file this fork changed carries a
-"Modified (C) 2026 Ian Branch (GITLAK Software) - gllDUnitX fork" line beneath its original copyright
-notice, which is kept intact; per-change detail is in [CHANGELOG.md](CHANGELOG.md), and upstream
-commits taken into the fork keep their original authors in the git history. gllDUnitX is an
-independent fork and is not affiliated with or endorsed by VSoft Technologies; "DUnitX" refers to the
-upstream project it derives from.
+DUnitX: Copyright (C) 2012+ Vincent Parrett and contributors - vincent@finalbuilder.com,
+http://www.finalbuilder.com.
 
-
-
-## Documentation
-
-- [Help.md](Help.md) — reference: fork scope, API/symptoms, building, troubleshooting
-- [Users Guide.md](Users%20Guide.md) — task-oriented walkthroughs with worked examples
+**This fork.** Changes made in gllDUnitX are Copyright (C) 2026 Ian Branch (GITLAK Software) and are licensed
+under the same Apache License 2.0. They were developed with the assistance of Claude Code (Anthropic) - see
+*Contributors*. Every source file this fork changed carries a
+"Modified (C) 2026 Ian Branch (GITLAK Software) - gllDUnitX fork" line beneath its original copyright notice,
+which is kept intact; per-change detail is in [CHANGELOG.md](CHANGELOG.md), and upstream commits taken into the
+fork keep their original authors in the git history. gllDUnitX is an independent fork and is not affiliated with
+or endorsed by VSoft Technologies; "DUnitX" refers to the upstream project it derives from.

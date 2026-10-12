@@ -1,51 +1,27 @@
-## How to contribute ##
+## Contributing ##
 
-The following are the guidelines, everyone should use to contribute to DUnitX.  
-Changes are welcome from all members of the Delphi Community. 
+gllDUnitX is maintained for GITLAK Software's own use and comes **without support**; it does not take pull
+requests.
 
-## Getting Started ##
+* **A fix to DUnitX itself belongs upstream**, in [VSoftTechnologies/DUnitX](https://github.com/VSoftTechnologies/DUnitX).
+  Upstream takes one issue per problem, then a pull request with a test that fails on its `master`. This fork
+  sends its own upstream-relevant fixes that way; their status is in `UPSTREAM-REPORT-Defects-2026-10-12.md` and
+  `UPSTREAM-ISSUES-Batch1.md`.
+* **Something specific to this fork** (its scope, `Assert.Ignore`, the VCL GUI runner as fixed here) can be raised
+  as an issue on this repository, as a report; there is no commitment to act on it.
 
-1. Create a [GitHub Account](https://github.com/join).
-2. Fork the DUnitX Repository and setup your local Repository.
-     * Each of of the steps below are detailed [How to Fork](https://help.github.com/articles/fork-a-repo) article!
-     * Clone your Fork to your local machine.
-     * Configure "upstream" remote to the [master DUnitX repository](https://github.com/ijbranch/gllDUnitX).
-3. For each change you want to make:       
-     * Create a new branch for your change. 
-     * Make your change in your new branch. 
-         * Although changes can be made in the master branch, it easier long term if a new branch is used.
-     * **Verify code compiles and unit tests still pass.** 
-         * The quickest way to have a Pull Request not be accepted, is to submit code that does not compile or pass tests.
-     * Commit change to your local repository.
-     * Push change to your remote repository
-     * Submit a [Pull Request](https://help.github.com/articles/using-pull-requests).
-     * Note: local and remote branches can be deleted after pull request has been accepted.
+## Building and testing the fork itself ##
 
-**Note:** Getting changes from others requires [Syncing your Local repository](https://help.github.com/articles/syncing-a-fork) with Master DUnitX repository.    This can happen at any time.
+* Delphi 13 (Florence) or later, Windows only - Win32 and Win64.
+* The test project (`Tests\DUnitXTest_D13.dproj`) also needs
+  [glldelphi-mocks](https://github.com/ijbranch/glldelphi-mocks), checked out as a sibling of this repository at
+  the commit pinned in [DEPENDENCIES.md](DEPENDENCIES.md). It is GITLAK's own fork of Delphi-Mocks - not upstream
+  [VSoftTechnologies/Delphi-Mocks](https://github.com/VSoftTechnologies/Delphi-Mocks), and not the DPM package
+  upstream pinned - and it is a **private** repository, so outside GITLAK the test project cannot be built as it
+  stands. The runtime library, IDE expert and examples need nothing beyond RAD Studio.
+* Any project you build against `Source\` needs its own platform-varying DCU output directory - see
+  **Installing** in [README.md](README.md) for why.
 
+## Feedback ##
 
-## Dependencies ##
-
-The following both are required to run the Unit Tests on DUnitX itself.   
-
-* [glldelphi-mocks](https://github.com/ijbranch/glldelphi-mocks), checked out as a sibling of this
-  repository at the commit pinned in [DEPENDENCIES.md](DEPENDENCIES.md). This fork consumes our own
-  Delphi-Mocks fork from source — not upstream
-  [VSoftTechnologies/Delphi-Mocks](https://github.com/VSoftTechnologies/Delphi-Mocks), and not the DPM
-  package that upstream pinned.
-* Delphi 13 (Florence) or later, Windows only - Win32 and Win64 (Delphi-Mocks is required for the test project)
-* Any project you build against `Source\` needs its own platform-varying DCU output directory — see
-  **Tips and Tricks** in [README.md](README.md) for why.
-
-## New to GIT ##
-
-If you are new to GIT here are some links to help you with understanding how it works.    
-
-- [GIT Documentation](http://git-scm.com/doc)
-- [Atlassian Git Tutorial](https://www.atlassian.com/git/tutorial/git-basics)
-- [What are other resources for learning Git and GitHub](https://help.github.com/articles/what-are-other-good-resources-for-learning-git-and-github) 
-
-
-## Feedback and Collaboration ##
-
-A [Delphi Praxis forum](https://en.delphipraxis.net/forum/36-dunitx/) has been setup to discuss DUnitX.   It's a great place to get feedback on your changes if desired before submitting them as a pull request.
+DUnitX in general is discussed on upstream's [Delphi Praxis forum](https://en.delphipraxis.net/forum/36-dunitx/).
