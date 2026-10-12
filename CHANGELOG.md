@@ -94,6 +94,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Defect report addressed to the upstream maintainers** (2026-10-12) — `UPSTREAM-REPORT-Defects-2026-10-12.md`.
+  A review of `Source\`, the VCL GUI runner and the IDE expert: 49 defects, each confirmed present in
+  `upstream/master` @ `1bdc297` and cited by upstream line number (13 reproduced with probe programs, 36 traced),
+  plus 8 fixes this fork already carries that are offered back. The worst make a test pass, or a run report
+  success, when it should fail. States our environment (Delphi 13, VCL, Win32/Win64) and what was not built or run.
+  Filed as [VSoftTechnologies/DUnitX#398](https://github.com/VSoftTechnologies/DUnitX/issues/398) on 2026-10-12;
+  no response yet. **None of the defects is fixed in this fork yet**; issues specific to the fork were reported
+  separately in the same review and are not in this file.
 - **NaN tests for `Assert.AreEqual` / `AreNotEqual` on `Double` and `Extended`** (2026-10-12) —
   `Tests/DUnitX.Tests.Assert.pas`. Six tests: `AreEqual` must fail with NaN as either argument, and `AreNotEqual`
   must pass when one value is NaN. Prompted by the fork survey below (fabiorizzuto's 2018 fork adds an explicit
