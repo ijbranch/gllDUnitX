@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **The test and example projects wrote their Win64 output to shared machine folders; Win32 stayed
+  project-local** (2026-10-12) — `Tests/DUnitXTest_D13.dproj`, `Examples/DUnitXExamples_D13.dproj`. Each
+  `Base_Win64` group overrode `DCC_ExeOutput` / `DCC_DcuOutput` (plus inert `DCC_BplOutput` / `DCC_DcpOutput`) with
+  `$(BDSCOMMONDIR)\bin|dcu|dcp\$(Platform)\$(Config)`, so the Win64 exe landed in
+  `Public\Documents\Embarcadero\Studio\37.0\bin\Win64\<Config>` and DCUs of `Source\` and Delphi.Mocks in the shared
+  `dcu\Win64\<Config>` — the shape that shadows a library machine-wide if that folder is ever on a library path (it is
+  not today). The overrides are removed, so both platforms inherit Base's `.\$(Platform)\$(Config)`. The 96 stale files
+  left in the shared folders were moved to `Studio\37.0\_stale_gllDUnitX_2026-10-12` (not deleted); clean rebuilds
+  (Tests Win64 Debug/Release, Win32 Debug; Examples Win64 Debug) write nothing there and the suite stays 297 / 288 / 0.
+  `Help.md` §7 now states the exe locations and version-resource arrangement, and its output-standard snippet is
+  corrected to the per-config form adopted 2026-10-07 (it still showed the superseded `Condition=` lines).
+- **The examples project reported W1000 `Symbol 'IsType' is deprecated`** (2026-10-12) —
+  `Examples/DUnitX.Examples.General.pas`. Hidden until now because the shared DCU folder above held an up-to-date DCU,
+  so the unit never recompiled. `TestTwo` now uses `Assert.InheritsFrom`, the replacement the deprecation names, and
+  frees its list in a `try..finally`.
 - **The self-test project reported W1000 `Symbol 'CheckEqualsString' is deprecated`** (2026-10-10) —
   `Tests/DUnitX.Tests.DUnitCompatibility.pas`. The test exercises the DUnit compatibility layer on purpose, and the
   file already wraps its other deprecated calls (`CheckTrue`, `CheckNotNull`) in `{$WARN SYMBOL_DEPRECATED OFF}` /
@@ -40,8 +55,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `upstream/master` is fully in (its tip `1bdc297`, #397, is our `cf2248c`). Of upstream's 217 forks, 29 are ahead
   of master; already here in equivalent form: bero (help-screen leak), luebbe (`IsSameDate` / `IsSameTime` /
   `IsSameDateTime`), henriquewerlang (`DUnitX.Banner.pas` uses), ArneSaathoffORGADATA #263
-  (`DUnitX.TestDataProvider.pas` include), gskoczylas (runtime ignore). NOT taken: LiaHombrinkORGADATA #244
-  (`[Ignore]` on a whole fixture; ours honours it on methods only — open as a possible feature), bernd5 (virtual
+  (`DUnitX.TestDataProvider.pas` include), gskoczylas (runtime ignore), LiaHombrinkORGADATA #244 (`[Ignore]` on a
+  whole fixture: `fixture.Ignored` in `DUnitX.FixtureProvider.pas`, tested by `Tests/DUnitX.Tests.IgnoreFixture.pas`;
+  an earlier version of this entry wrongly said it was missing). NOT taken: bernd5 (virtual
   `DoCreateFixture`, an extension hook with no consumer), TASC-Git / celeburdi (VCL GUI runner tweaks; celeburdi's
   2018 rewrite conflicts), fabiorizzuto (NaN `IsNan` check — unnecessary, proved by the NaN tests under Added). The
   rest are pre-XE2 compatibility, FMX, path edits or merge noise. The 17 non-fork repos named DUnitX and the 6
@@ -138,6 +154,15 @@ IDE expert now compiles on Win32 as well as Win64 (2026-09-10) — `DUnitX.Exper
 
 ### Changed
 
+- **Build auto-increment switched on for the test and example exes, which also had no version resource at all**
+  (2026-10-12) — `Tests/DUnitXTest_D13.dproj`, `Tests/DUnitXTestProject.dpr`, `Tests/DUnitXTest_D13.res`,
+  `Examples/DUnitXExamples_D13.dproj`, `Examples/DUnitXExamples_D13.dpr`, `Examples/DUnitXExamples_D13.res`.
+  `VerInfo_IncludeVerInfo` / `VerInfo_AutoIncVersion` set in `Base_Win64` and both `Cfg_N_Win64` groups (the Tests
+  project lacked those groups; Delphi writes `VerInfo_Build` only into a config-and-platform group). Neither `.dpr`
+  linked a resource: the Examples one now has `{$R *.res}`; the Tests one names `{$R DUnitXTest_D13.res}` explicitly,
+  because the file is `DUnitXTestProject.dpr` while the resource is generated beside the `.dproj`. Verified: both
+  Win64 exes now report `1.0.0.1` / their project name, and `VerInfo_Build` moves on each build. Win64 only; the
+  runtime package and the IDE expert are unchanged (upstream fork — ask before sweeping).
 - **Delphi.Mocks pin moved to `59683d3` (2026-10-08) and the recorded green counts refreshed** (2026-10-12) —
   `DEPENDENCIES.md`. The sibling `glldelphi-mocks` checkout had moved 13 commits past the old pin `2c3a51f` (a
   descendant on `main`, not a divergence), and the suite was re-verified against it: Win64 297 found / 288 passed /

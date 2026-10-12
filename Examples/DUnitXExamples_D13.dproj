@@ -65,11 +65,11 @@
     <PropertyGroup Condition="'$(Base_Win64)'!=''">
         <VerInfo_Locale>1033</VerInfo_Locale>
         <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;$(DCC_Namespace)</DCC_Namespace>
-        <DCC_ExeOutput>$(BDSCOMMONDIR)\bin\$(Platform)\$(Config)</DCC_ExeOutput>
-        <DCC_DcuOutput>$(BDSCOMMONDIR)\dcu\$(Platform)\$(Config)</DCC_DcuOutput>
-        <DCC_DcpOutput>$(BDSCOMMONDIR)\dcp\$(Platform)\$(Config)</DCC_DcpOutput>
-        <DCC_BplOutput>$(BDSCOMMONDIR)\dcp\$(Platform)\$(Config)</DCC_BplOutput>
         <DCC_UnitSearchPath>..\Source;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
+        <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
+        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
+        <VerInfo_MajorVer>1</VerInfo_MajorVer>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
@@ -79,6 +79,8 @@
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
         <VerInfo_Locale>1033</VerInfo_Locale>
+        <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
+        <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
@@ -86,6 +88,10 @@
     <PropertyGroup Condition="'$(Cfg_2_Win64)'!=''">
         <DCC_DebugDCUs>true</DCC_DebugDCUs>
         <VerInfo_Locale>1033</VerInfo_Locale>
+        <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
+        <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
+        <VerInfo_Build>2</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=;FileDescription=DUnitXExamples_D13;FileVersion=1.0.0.2;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=DUnitXExamples_D13;ProductVersion=1.0.0.2;Comments=</VerInfo_Keys>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
@@ -191,9 +197,9 @@
                 </Excluded_Packages>
             </Delphi.Personality>
             <Platforms>
-        <Platform value="Win32">True</Platform>
-        <Platform value="Win64">True</Platform>
-    </Platforms>
+                <Platform value="Win32">True</Platform>
+                <Platform value="Win64">True</Platform>
+            </Platforms>
             <Deployment Version="5">
                 <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\22.0\bin\Win32\Debug\DUnitXExamples_D11Alexandria.exe" Configuration="Debug" Class="ProjectOutput"/>
                 <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\37.0\bin\Win32\Debug\DUnitXExamples_D13.exe" Configuration="Debug" Class="ProjectOutput">

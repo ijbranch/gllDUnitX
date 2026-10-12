@@ -209,13 +209,17 @@ Four projects, all `ProjectVersion` 20.5, all declaring `Win32` and `Win64` with
 **Packages build in all four modes** — Win32 + Win64 × Debug + Release. Both package projects carry the estate output standard:
 
 ```xml
-<DCC_BplOutput Condition="'$(Config)'=='Release'">$(BDSCOMMONDIR)\Bpl\$(Platform)</DCC_BplOutput>
-<DCC_BplOutput Condition="'$(Config)'!='Release'">$(BDSCOMMONDIR)\Bpl\$(Platform)\$(Config)</DCC_BplOutput>
-<DCC_DcpOutput Condition="'$(Config)'=='Release'">$(BDSCOMMONDIR)\Dcp\$(Platform)</DCC_DcpOutput>
-<DCC_DcpOutput Condition="'$(Config)'!='Release'">$(BDSCOMMONDIR)\Dcp\$(Platform)\$(Config)</DCC_DcpOutput>
+<!-- Base group -->
+<DCC_BplOutput>$(BDSCOMMONDIR)\Bpl\$(Platform)\$(Config)</DCC_BplOutput>
+<DCC_DcpOutput>$(BDSCOMMONDIR)\Dcp\$(Platform)\$(Config)</DCC_DcpOutput>
+<!-- Release config group -->
+<DCC_BplOutput>$(BDSCOMMONDIR)\Bpl\$(Platform)</DCC_BplOutput>
+<DCC_DcpOutput>$(BDSCOMMONDIR)\Dcp\$(Platform)</DCC_DcpOutput>
 ```
 
-Release stays in the shared platform folder, because that is what is on `PATH` and where dependent packages resolve their `requires`; only Debug is diverted. Build Debug first and Release last. All four projects set `<DCC_DcuOutput>.\$(Platform)\$(Config)</DCC_DcuOutput>`.
+One plain value per group, never `Condition=` lines in Base: the IDE re-saves the `.dproj` on an in-IDE build and keeps one value per property per group, so the conditional form loses the Release paths. Release stays in the shared platform folder, because that is what is on `PATH` and where dependent packages resolve their `requires`; only Debug is diverted. Build Debug first and Release last. All four projects set `<DCC_DcuOutput>.\$(Platform)\$(Config)</DCC_DcuOutput>`, and no platform group overrides it.
+
+The two exe projects build **project-local on both platforms**: `Tests\<Platform>\<Config>\DUnitXTestProject.exe` and `Examples\<Platform>\<Config>\DUnitXExamples_D13.exe`, DCUs alongside. Until 2026-10-12 their Win64 groups sent exe and DCUs to the shared `Studio\37.0\bin` / `dcu` folders; do not reintroduce that, because the test project compiles `Source\` itself and its DCUs there would shadow the library for anything with that folder on its path. Both exes carry version info with build auto-increment on Win64. The Tests `.dpr` links `{$R DUnitXTest_D13.res}` by name: its file name (`DUnitXTestProject.dpr`) differs from the project's, so `{$R *.res}` would miss the generated resource.
 
 ### `Source\` must never contain `.dcu` files
 

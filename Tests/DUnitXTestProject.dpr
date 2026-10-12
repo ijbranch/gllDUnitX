@@ -1,4 +1,4 @@
-program DUnitXTest_D13;
+﻿program DUnitXTest_D13;
 
 {$IFNDEF TESTINSIGHT}
 {$APPTYPE CONSOLE}
@@ -36,6 +36,9 @@ uses
   DUnitX.Tests.Utils in 'DUnitX.Tests.Utils.pas',
   DUnitX.Tests.Loggers.XML.JUnit in 'DUnitX.Tests.Loggers.XML.JUnit.pas';
 
+// Named explicitly: this file is DUnitXTestProject.dpr, but the version resource is generated beside the .dproj as
+// DUnitXTest_D13.res, so {$R *.res} would look for a DUnitXTestProject.res that does not exist.
+{$R DUnitXTest_D13.res}
 
 {$IFNDEF TESTINSIGHT}
 var

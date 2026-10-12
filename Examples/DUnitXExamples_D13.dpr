@@ -1,4 +1,4 @@
-program DUnitXExamples_D13;
+﻿program DUnitXExamples_D13;
 
 {$IFNDEF TESTINSIGHT}
 {$APPTYPE CONSOLE}
@@ -50,6 +50,8 @@ uses
   DUnitX.Filters in '..\Source\DUnitX.Filters.pas',
   DUnitX.Loggers.XML.JUnit in '..\Source\DUnitX.Loggers.XML.JUnit.pas',
   DUnitX.OptionsDefinition in '..\Source\DUnitX.OptionsDefinition.pas';
+
+{$R *.res}
 
   { keep comment here to protect the following conditional from being removed by the IDE when adding a unit }
 {$IFNDEF TESTINSIGHT}

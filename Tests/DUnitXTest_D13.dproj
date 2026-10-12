@@ -30,9 +30,21 @@
         <CfgParent>Base</CfgParent>
         <Base>true</Base>
     </PropertyGroup>
+    <PropertyGroup Condition="('$(Platform)'=='Win64' and '$(Cfg_1)'=='true') or '$(Cfg_1_Win64)'!=''">
+        <Cfg_1_Win64>true</Cfg_1_Win64>
+        <CfgParent>Cfg_1</CfgParent>
+        <Cfg_1>true</Cfg_1>
+        <Base>true</Base>
+    </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Debug' or '$(Cfg_2)'!=''">
         <Cfg_2>true</Cfg_2>
         <CfgParent>Base</CfgParent>
+        <Base>true</Base>
+    </PropertyGroup>
+    <PropertyGroup Condition="('$(Platform)'=='Win64' and '$(Cfg_2)'=='true') or '$(Cfg_2_Win64)'!=''">
+        <Cfg_2_Win64>true</Cfg_2_Win64>
+        <CfgParent>Cfg_2</CfgParent>
+        <Cfg_2>true</Cfg_2>
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
@@ -50,12 +62,12 @@
         <VerInfo_Locale>3081</VerInfo_Locale>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win64)'!=''">
-        <DCC_BplOutput>$(BDSCOMMONDIR)\dcp\$(Platform)\$(Config)</DCC_BplOutput>
-        <DCC_DcpOutput>$(BDSCOMMONDIR)\dcp\$(Platform)\$(Config)</DCC_DcpOutput>
-        <DCC_DcuOutput>$(BDSCOMMONDIR)\dcu\$(Platform)\$(Config)</DCC_DcuOutput>
-        <DCC_ExeOutput>$(BDSCOMMONDIR)\bin\$(Platform)\$(Config)</DCC_ExeOutput>
         <DCC_Namespace>System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;$(DCC_Namespace)</DCC_Namespace>
         <VerInfo_Locale>1033</VerInfo_Locale>
+        <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
+        <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
+        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
+        <VerInfo_MajorVer>1</VerInfo_MajorVer>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
         <DCC_DebugInformation>0</DCC_DebugInformation>
@@ -63,9 +75,19 @@
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
         <DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
     </PropertyGroup>
+    <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
+        <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
+        <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
+    </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
         <DCC_MapFile>3</DCC_MapFile>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Cfg_2_Win64)'!=''">
+        <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
+        <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
+        <VerInfo_Build>3</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=;FileDescription=DUnitXTest_D13;FileVersion=1.0.0.3;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=DUnitXTest_D13;ProductVersion=1.0.0.3;Comments=</VerInfo_Keys>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
@@ -147,9 +169,9 @@
                 </Parameters>
             </Delphi.Personality>
             <Platforms>
-        <Platform value="Win32">True</Platform>
-        <Platform value="Win64">True</Platform>
-    </Platforms>
+                <Platform value="Win32">True</Platform>
+                <Platform value="Win64">True</Platform>
+            </Platforms>
             <Deployment Version="5">
                 <DeployFile LocalName="$(BDS)\Redist\iossimulator\libcgunwind.1.0.dylib" Class="DependencyModule">
                 </DeployFile>
@@ -369,7 +391,6 @@
     <Import Condition="Exists('$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj')" Project="$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj"/>
     <Import Project="$(MSBuildProjectName).deployproj" Condition="Exists('$(MSBuildProjectName).deployproj')"/>
     <Target Name="CheckDelphiMocks" BeforeTargets="Build">
-        <Error Condition="!Exists('$(DelphiMocks)\Delphi.Mocks.pas')"
-               Text="Delphi.Mocks was not found at &apos;$(DelphiMocks)&apos;. Clone https://github.com/ijbranch/glldelphi-mocks as a sibling of this repository, or set the DelphiMocks property or environment variable to its Source folder. See DEPENDENCIES.md for the pinned commit." />
+        <Error Condition="!Exists('$(DelphiMocks)\Delphi.Mocks.pas')" Text="Delphi.Mocks was not found at '$(DelphiMocks)'. Clone https://github.com/ijbranch/glldelphi-mocks as a sibling of this repository, or set the DelphiMocks property or environment variable to its Source folder. See DEPENDENCIES.md for the pinned commit."/>
     </Target>
 </Project>
