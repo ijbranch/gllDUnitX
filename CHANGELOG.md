@@ -154,6 +154,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Consumers resolved DUnitX through `Source` on the Win64 library path, or would have got RAD Studio's bundled
+  copy without it** (2026-10-12) — IDE library path (`HKCU\...\BDS\37.0\Library\Win64` / `Win32` `Search Path`,
+  `%APPDATA%\Embarcadero\BDS\37.0\EnvOptions.proj`), `Help.md` §2 and §7. Win64 listed `$(DUNITX)` (`Source`) ahead
+  of the package's Release DCU folder, so every consumer compiled DUnitX from source (the route by which stray DCUs
+  kept reaching `Source`). Removing it alone exposed the bundled DUnitX DCUs in `$(BDSLIB)\$(Platform)\release`, which
+  sit earlier in the path and lack `Assert.Ignore` (`E2003` in GITLAKLib's tests). Now, on both platforms, the
+  package's Release DCU folder is the first Search Path entry and `Source` is on neither (Win32 already omitted it by
+  design, 2026-10-02). The 3,486 fork DCUs that the old arrangement had compiled into 79 consumer output folders, which
+  the compiler searches before the library path, were deleted. Verified with GITLAKLibTests (clean build compiles no
+  DUnitX unit, links the fork per `grep -a TestIgnored`, 2697 found / 2692 passed / 5 ignored / 0 failed). Registry
+  keys and `EnvOptions.proj` were backed up first.
 - **The self-test runner forced `Pause` and exited 0 when the run crashed** (2026-10-12) — `Tests/DUnitXTestProject.dpr`.
   Outside a `CI` build it assigned `ExitBehavior := Pause` after every run, overriding `--exit:continue`, so an
   unattended run waited for Enter; and its `except` handler printed the exception without setting `ExitCode`, so a run
@@ -549,4 +560,4 @@ IDE expert now compiles on Win32 as well as Win64 (2026-09-10) — `DUnitX.Exper
 - `TRttiPropertyExtension` hard-codes virtual method table slot indices derived from an older `System.Rtti`. Delphi 13 inserted `TRttiPlaceMember` and `TRttiDataMember` into the hierarchy, so the map is very likely wrong. Nothing in DUnitX constructs one, so it is unreachable today; the code now carries a warning to re-verify every index before using it.
 - Public members such as `ITestFixture.TestCount` still return `Integer` while the underlying `TList<T>.Count` is `NativeInt` in Delphi 13. The implicit narrowing is harmless at realistic test counts and widening the public API would be a breaking change. (The earlier advice here to write `Assert.AreEqual<NativeInt>` for collection counts is superseded: since 2026-10-10 the `Integer`/`Int64` overloads make `Assert.AreEqual( 3, List.Count )` compile on Win64; the generic form still works.)
 - **A Win32 build of the test project leaves `Tests/DUnitXTest_D13.res` without version information** (found 2026-10-12). Win32 and Win64 write the same `.res`, and only the Win64 groups carry `VerInfo_IncludeVerInfo`, so a Win32 build rewrites it as a 96-byte file holding only `PLATFORMTARGETS`. Enabling version info for Win32 too would not settle it: the two platforms would overwrite each other's version numbers. **Build Win64 last** before committing; that restores the 588-byte `.res`. The same shape applies to `Examples/DUnitXExamples_D13.dproj`.
-- **Stray `.dcu` files in `Source\` keep coming back** (third time 2026-10-12; see Fixed). The producer is a build with no DCU output directory, run by the estate exe build sweep, not anything in this repository; cleaning here does not stop it.
+- **Stray `.dcu` files in `Source\` keep coming back** (third time 2026-10-12; see Fixed). The producer is a build with no DCU output directory, run by the estate exe build sweep, not anything in this repository; cleaning here does not stop it. **Route closed the same day:** `Source` is no longer on either platform's library path (see Fixed), so only a project that names `Source` in its own search path and has no DCU output directory can still do it.

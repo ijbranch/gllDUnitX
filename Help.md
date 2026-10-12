@@ -60,11 +60,13 @@ RAD Studio 13 ships its own DUnitX, as compiled DCUs in `lib\win64\release` (59 
 | `gllDelphiRefactoringLight` tests | this fork |
 | `gllMarkDown4D` tests (repo retired 2026-10-01) | this fork |
 
-The last of those was rebuilt from scratch with no stray `.dcu` anywhere in `Source`, and still linked this fork. **The mechanism was not established** — unit resolution is evidently not a plain first-directory-wins over a prebuilt DCU — so treat the ordering as something that does not decide the outcome rather than something you can reason from.
+The last of those was rebuilt from scratch with no stray `.dcu` anywhere in `Source`, and still linked this fork. The likely mechanism: the compiler looks in the project's own DCU output folder before the library path, and once a project had compiled this fork from `Source`, its own copies of the fork's DCUs won from then on.
+
+**Since 2026-10-12 the arrangement is explicit, and the paragraph above is history.** On both platforms the package's Release DCU folder (`$(GLLDUNITX_RAD_STUDIO_13_0_WI)\Release`, `..._WI_2\Release` for Win32) is the **first** Search Path entry, ahead of `$(BDSLIB)`, and `Source` (`$(DUNITX)`) is on **neither** platform's Search Path. Win32 was already that way (see `standards\ide-environment.md`); Win64 had `$(DUNITX)` instead, and removing it alone exposed the bundled copy (`E2003 'Ignore'` in GITLAKLib's tests). The 3,486 copies of the fork's DCUs left in 79 consumer output folders by the old arrangement were deleted the same day, so every consumer now links the package's DCUs and never compiles DUnitX itself. The Debug DCU Path already listed the package's Debug folder first. Backups of the two registry keys and of `EnvOptions.proj` are in that session's scratchpad.
 
 **How to check any binary rather than assume:** `grep -a TestIgnored <test>.exe`. A hit means this fork; nothing means the bundled copy.
 
-**To make it certain rather than merely true today**, name `<repo>\Source` in the consuming project's own `DCC_UnitSearchPath` — and read §7 first, because that folder has a rule of its own. `gllStaticCodeAnalyser`'s test project does this; `GITLAKLib`'s and `gllSpell`'s do not, and rely on the behaviour above.
+**A project that needs a unit the package does not contain** (`DUnitX.Loggers.GUI.VCL`, `DUnitX.MemoryLeakMonitor.FastMM5`, the `DUnitX.StackTrace.*` units) must name `<repo>\Source` in its own `DCC_UnitSearchPath` and have a platform-varying `DCC_DcuOutput` — read §7 first. It then compiles those units, and the rest of DUnitX, from source. `gllStaticCodeAnalyser`'s test project does this.
 
 ---
 
@@ -255,9 +257,9 @@ The two exe projects build **project-local on both platforms**: `Tests\<Platform
 
 ### `Source\` must never contain `.dcu` files
 
-`Source` is on the Win64 library path as `$(DUNITX)` **and** is the unit search path every consumer uses. A project built against it with **no** `DCC_DcuOutput` drops its DCUs beside the `.pas` files, and the next build for the other platform reads them and dies with `F2048 Bad unit format ... Expected version: 37.0, Windows Unicode(x86) Found version: 37.0, Windows Unicode(x64)`. A project that sets a DCU output directory is immune, because the compiler then prefers its own output folder and rebuilds from source.
+Until 2026-10-12 `Source` was on the Win64 library path as `$(DUNITX)`, so every consumer compiled against it; it is now on neither platform's library path (§2), which removes the route by which builds with no DCU output directory kept writing here. A project that names `Source` in its own search path can still do it. A project built against it with **no** `DCC_DcuOutput` drops its DCUs beside the `.pas` files, and the next build for the other platform reads them and dies with `F2048 Bad unit format ... Expected version: 37.0, Windows Unicode(x86) Found version: 37.0, Windows Unicode(x64)`. A project that sets a DCU output directory is immune, because the compiler then prefers its own output folder and rebuilds from source.
 
-Forty-four such strays were cleared on 2026-09-05; the folder had forty-four again on 2026-09-18, and thirty-nine Win64 DCUs again on 2026-10-12 (all stamped 2026-10-08 10:10, during an estate-wide exe build sweep). Three recurrences mean cleaning is not the fix: the producer is a build run with no DCU output directory, and the sweep that runs such builds is the place to fix it. They are untracked and `.gitignore`d, so nothing tracked changes — delete them and give whatever produced them a platform-varying `DCC_DcuOutput`. `D:\Tools\Check-DcuCollisions.ps1` does **not** catch this shape: it looks for folders shared between the Win32 and Win64 library paths, and `Source` is on the Win64 path only.
+Forty-four such strays were cleared on 2026-09-05; the folder had forty-four again on 2026-09-18, and thirty-nine Win64 DCUs again on 2026-10-12 (all stamped 2026-10-08 10:10, during an estate-wide exe build sweep). Three recurrences mean cleaning is not the fix: the producer is a build run with no DCU output directory, and the sweep that runs such builds is the place to fix it. They are untracked and `.gitignore`d, so nothing tracked changes — delete them and give whatever produced them a platform-varying `DCC_DcuOutput`. `D:\Tools\Check-DcuCollisions.ps1` does **not** catch this shape: it looks for folders shared between the Win32 and Win64 library paths, and `Source` was on the Win64 path only.
 
 ---
 
