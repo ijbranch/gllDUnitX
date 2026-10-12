@@ -154,6 +154,15 @@ IDE expert now compiles on Win32 as well as Win64 (2026-09-10) — `DUnitX.Exper
 
 ### Changed
 
+- **Build auto-increment switched on for the runtime package and the IDE expert** (2026-10-12) —
+  `packages/RAD Studio 13.0/VSoft.DUnitXWinR.dproj`, `packages/RAD Studio 13.0/VSoft.DUnitXWinR.res`,
+  `Expert/DUnitX_IDE_Expert_D13Florence.dproj`, `Expert/DUnitX_IDE_Expert_D13Florence.res`. Same shape as
+  `GITLAKLib.dproj`: version info on both platforms, `VerInfo_AutoIncVersion` in `Base_Win64` and the `Cfg_N_Win64`
+  groups. The package had no platform groups at all (all six added) and no version info; it starts at `0.5.1`,
+  upstream's latest tag `v0.5.1`. The expert already had version info at `1.0.0` and gained the four config-platform
+  groups. Both `.dpk` files already link `{$R *.res}`. Built in all four modes, runtime before design-time, Release
+  last, zero diagnostics; all eight BPLs carry version info and `VerInfo_Build` moved. **Why:** the estate rule that
+  our libraries and packages auto-increment; approved for this upstream fork by Ian (2026-10-12).
 - **Build auto-increment switched on for the test and example exes, which also had no version resource at all**
   (2026-10-12) — `Tests/DUnitXTest_D13.dproj`, `Tests/DUnitXTestProject.dpr`, `Tests/DUnitXTest_D13.res`,
   `Examples/DUnitXExamples_D13.dproj`, `Examples/DUnitXExamples_D13.dpr`, `Examples/DUnitXExamples_D13.res`.
@@ -161,8 +170,7 @@ IDE expert now compiles on Win32 as well as Win64 (2026-09-10) — `DUnitX.Exper
   project lacked those groups; Delphi writes `VerInfo_Build` only into a config-and-platform group). Neither `.dpr`
   linked a resource: the Examples one now has `{$R *.res}`; the Tests one names `{$R DUnitXTest_D13.res}` explicitly,
   because the file is `DUnitXTestProject.dpr` while the resource is generated beside the `.dproj`. Verified: both
-  Win64 exes now report `1.0.0.1` / their project name, and `VerInfo_Build` moves on each build. Win64 only; the
-  runtime package and the IDE expert are unchanged (upstream fork — ask before sweeping).
+  Win64 exes now report `1.0.0.1` / their project name, and `VerInfo_Build` moves on each build. Win64 only.
 - **Delphi.Mocks pin moved to `59683d3` (2026-10-08) and the recorded green counts refreshed** (2026-10-12) —
   `DEPENDENCIES.md`. The sibling `glldelphi-mocks` checkout had moved 13 commits past the old pin `2c3a51f` (a
   descendant on `main`, not a divergence), and the suite was re-verified against it: Win64 297 found / 288 passed /
