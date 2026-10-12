@@ -8,6 +8,8 @@ Reference documentation for gllDUnitX, GITLAK's fork of the DUnitX test framewor
 
 Upstream is [VSoftTechnologies/DUnitX](https://github.com/VSoftTechnologies/DUnitX), wired up as the `upstream` remote and genuinely merged, so `git merge-base` works here.
 
+**Sending fixes upstream.** The maintainer wants one issue per problem, then a PR with a test that fails on his `master`, and he does not maintain the VCL GUI runner. PR branches are cut from `upstream/master` in the worktree `D:\gllDUnitX-upstream` and pushed to the public fork [`ijbranch/DUnitX`](https://github.com/ijbranch/DUnitX) (remote `dunitx-fork`). Status per item: `UPSTREAM-REPORT-Defects-2026-10-12.md` §9 and `UPSTREAM-ISSUES-Batch1.md`. One trap: upstream's `Tests\DUnitXTest_D12.dproj` writes its Win64 output to `C:\Users\Public\Documents\Embarcadero\Studio\37.0\dcu` and `\bin`, so delete those folders after building it.
+
 **Taken away, permanently.** These are not disabled, they are deleted, and a merge that reinstates them is a regression:
 
 | Removed | Detail |
@@ -155,7 +157,7 @@ Delphi 13 made `TList<T>.Count` a `NativeInt`, so on Win64 an `Integer` on one s
 
 By design here (see §1): it is an assertion about elapsed time, checked once the method returns. Since 2026-10-12 the body is timed by a stopwatch started on the test's own thread immediately before the method, with no watchdog thread, so an overrun of any size is caught (the earlier watchdog polled every 20 ms and could miss one). `[MaxTime]` also applies to `[TestCase]` / `[TestCaseProvider]` cases and to `[WillRaise]` tests, where it used to be dropped.
 
-### Runner behaviours changed on 2026-10-12 (fork fixes, offered upstream in #398)
+### Runner behaviours changed on 2026-10-12 (fork fixes, offered upstream in #398; see §1 for the issues and PRs)
 
 **Checked against the estate the same day:** all 28 other registered suites, plus GITLAKLib's, were rebuilt against these changes. Every one linked this fork (`grep -a TestIgnored`) and built with no hints or warnings. Only gllTaurusTLS needed changes: seven of its `[TestCase]` values had never converted (a stray space before an enum name, and fields in the wrong order), so those cases had always run with the wrong arguments. They are now errors, and their data was fixed.
 

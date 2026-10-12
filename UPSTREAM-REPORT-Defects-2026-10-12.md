@@ -170,6 +170,36 @@ Found after filing; each confirmed in `master` @ `1bdc297` and fixed in our fork
 - **F.** `TDUnitXList<T>.ToArray` and the non-generic enumerator return nil.
 - **G.** `TValueHelper.ToVarRec` / `ToVarRecs` return dangling or mis-sized pointers.
 
+## 9. Maintainer response, and how the items are now being sent (2026-10-12)
+
+The maintainer replied on 2026-10-12: he does not have time for a long report, and asked for **one issue per
+problem, then a PR with tests that show it**, which he will get to when he can. He also said the **VCL GUI runner is
+unmaintained** (he does not use it) and recommended TestInsight. Consequences for this file:
+
+- **Section 4 (GUI runner) will not be offered upstream.** The fixes stay fork-local.
+- **TestInsight is not taken up:** it was removed from our IDE on purpose.
+- **The remaining items go in small batches,** each as an issue plus a PR whose test fails on upstream `master`.
+  The next batch waits until he has responded to the current one.
+
+**Batch 1**, posted 2026-10-12 against `1bdc297`. Branches were rebuilt on `upstream/master` (not cherry-picked
+from this fork) in the worktree `D:\gllDUnitX-upstream`, and pushed to the public GitHub fork
+[`ijbranch/DUnitX`](https://github.com/ijbranch/DUnitX), which exists only to carry PRs. Detail and the exact
+texts are in [UPSTREAM-ISSUES-Batch1.md](UPSTREAM-ISSUES-Batch1.md).
+
+| Item | Issue | PR |
+|---|---|---|
+| 1.1 `Assert.IsEmpty(Variant)` inverted | [#399](https://github.com/VSoftTechnologies/DUnitX/issues/399) | [#405](https://github.com/VSoftTechnologies/DUnitX/pull/405) |
+| 1.2 `WillNotRaiseDescendant(TTestMethod)` | [#400](https://github.com/VSoftTechnologies/DUnitX/issues/400) | [#406](https://github.com/VSoftTechnologies/DUnitX/pull/406) |
+| 1.3 NaN in the generic compares | [#401](https://github.com/VSoftTechnologies/DUnitX/issues/401) | [#407](https://github.com/VSoftTechnologies/DUnitX/pull/407) |
+| 1.4 `WillRaise*` swallow test outcomes | [#402](https://github.com/VSoftTechnologies/DUnitX/issues/402) | [#408](https://github.com/VSoftTechnologies/DUnitX/pull/408) |
+| 1.9 category operator in last position | [#403](https://github.com/VSoftTechnologies/DUnitX/issues/403) | [#409](https://github.com/VSoftTechnologies/DUnitX/pull/409) |
+| 1.10 runner exits 0 on abort | [#404](https://github.com/VSoftTechnologies/DUnitX/issues/404) | [#410](https://github.com/VSoftTechnologies/DUnitX/pull/410) |
+
+The upstream fixes are deliberately narrower than ours in two places. For 1.3, only float types switch to the
+equality comparer, so class and Variant comparisons are unchanged. For 1.4, a test outcome is re-raised unless the
+caller named a matching class other than `Exception`, which uses only the `fTestFailure` / `fTestPass` hooks that
+`DUnitX.Assert.pas` already has.
+
 ---
 
 *We have deliberately left out anything that is our fork's own policy, such as platform scope and pre-XE

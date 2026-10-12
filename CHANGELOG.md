@@ -6,13 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **First batch of upstream issues and pull requests** (2026-10-12) — `UPSTREAM-ISSUES-Batch1.md`,
+  `UPSTREAM-REPORT-Defects-2026-10-12.md`. The maintainer answered #398 by asking for one issue per problem, each
+  followed by a PR with a test that shows it. He also said the VCL GUI runner is unmaintained, so its fixes (report
+  section 4) stay fork-local. Six items (1.1, 1.2, 1.3, 1.4, 1.9, 1.10) were filed as issues #399-#404, with PRs
+  #405-#410. Each PR branch was rebuilt on `upstream/master` @ `1bdc297` rather than cherry-picked. Five have a test
+  that failed on master on its own assertion before the fix; 1.10 is in the program's main block and was verified by
+  exit code. Branches live in the worktree `D:\gllDUnitX-upstream` (remote `dunitx-fork`) and on the public GitHub
+  fork `ijbranch/DUnitX`, which exists only to carry PRs. Report section 9 records the response and the batch.
+  **Why small batches:** the maintainer asked to have no long report sent, and each PR has to be re-derived against
+  upstream's tree.
 - **Defect report addressed to the upstream maintainers** (2026-10-12) — `UPSTREAM-REPORT-Defects-2026-10-12.md`.
   A review of `Source\`, the VCL GUI runner and the IDE expert: 49 defects, each confirmed present in
   `upstream/master` @ `1bdc297` and cited by upstream line number (13 reproduced with probe programs, 36 traced),
   plus 8 fixes this fork already carries that are offered back. The worst make a test pass, or a run report
   success, when it should fail. States our environment (Delphi 13, VCL, Win32/Win64) and what was not built or run.
   Filed as [VSoftTechnologies/DUnitX#398](https://github.com/VSoftTechnologies/DUnitX/issues/398) on 2026-10-12;
-  no response yet. Issues specific to the fork were reported separately in the same review and are not in this
+  the maintainer replied the same day (see the batch entry above). Issues specific to the fork were reported separately in the same review and are not in this
   file. **Later the same day:** item 3.12 was found to be a false positive and is marked withdrawn, and every other item
   was fixed in this fork (see Fixed and Changed) except 2.8, deliberately left as upstream intends; each fix is a
   divergence until upstream takes it. The file carries a per-item fork status. Two follow-up comments were posted on
