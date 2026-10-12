@@ -155,6 +155,21 @@ Any of these can be offered as pull requests.
   DUnit-compatibility string checks are case-sensitive; `[RepeatTest]` names are `Method-1-of-N`; TearDown is skipped
   after a failed Setup.
 
+## 8. Further findings, posted to #398 on 2026-10-12
+
+Found after filing; each confirmed in `master` @ `1bdc297` and fixed in our fork. Posted as a follow-up comment on
+[#398](https://github.com/VSoftTechnologies/DUnitX/issues/398#issuecomment-6117424810), lettered A–G:
+
+- **A.** The leak check adds up the setup, test and teardown phases, so memory freed in a gap between them is
+  reported as leaked (a 1 MB connection buffer).
+- **B.** `TDUnitXTestRunner.Log` keeps the caller's string, so a `Log` / `Status` message counts against the test.
+- **C.** The FastMM5 monitor reads `AllocatedBytes` without `FastMM_ProcessAllPendingFrees`.
+- **D.** `WillNotRaise` with a named class swallows a failing assertion; `WillNotRaiseAny` reports an inner
+  `Assert.Pass` as an unexpected exception.
+- **E.** `CheckEqualsBin` compares digit-truncated strings, so values differing above `digits` pass.
+- **F.** `TDUnitXList<T>.ToArray` and the non-generic enumerator return nil.
+- **G.** `TValueHelper.ToVarRec` / `ToVarRecs` return dangling or mis-sized pointers.
+
 ---
 
 *We have deliberately left out anything that is our fork's own policy, such as platform scope and pre-XE

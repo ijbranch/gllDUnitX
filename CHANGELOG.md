@@ -13,9 +13,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   success, when it should fail. States our environment (Delphi 13, VCL, Win32/Win64) and what was not built or run.
   Filed as [VSoftTechnologies/DUnitX#398](https://github.com/VSoftTechnologies/DUnitX/issues/398) on 2026-10-12;
   no response yet. Issues specific to the fork were reported separately in the same review and are not in this
-  file. **Later the same day:** item 3.12 was found to be a false positive and is marked withdrawn in the file (not
-  yet corrected on GitHub), and every other item was fixed in this fork (see Fixed and Changed) except 2.8, deliberately
-  left as upstream intends; each fix is a divergence until upstream takes it. The file carries a per-item fork status.
+  file. **Later the same day:** item 3.12 was found to be a false positive and is marked withdrawn, and every other item
+  was fixed in this fork (see Fixed and Changed) except 2.8, deliberately left as upstream intends; each fix is a
+  divergence until upstream takes it. The file carries a per-item fork status. Two follow-up comments were posted on
+  #398: one withdrawing 3.12 and offering the fixes as pull requests, and one with seven further defects found
+  afterwards (file section 8: leak-check false positives, `WillNotRaise*`, `CheckEqualsBin`, `ToArray`, `ToVarRec`).
 - **NaN tests for `Assert.AreEqual` / `AreNotEqual` on `Double` and `Extended`** (2026-10-12) —
   `Tests/DUnitX.Tests.Assert.pas`. Six tests: `AreEqual` must fail with NaN as either argument, and `AreNotEqual`
   must pass when one value is NaN. Prompted by the fork survey below (fabiorizzuto's 2018 fork adds an explicit
