@@ -79,6 +79,9 @@ type
 implementation
 {$WARN SYMBOL_DEPRECATED DEFAULT}
 
+uses
+  System.SysUtils;
+
 { TNewProject }
 
 function TNewProject.GetCreatorType : string;
@@ -164,8 +167,18 @@ begin
 end;
 
 procedure TNewProjectEx.SetInitialOptions(const NewProject : IOTAProject);
+var
+  Platforms : IOTAProjectPlatforms;
+  PlatformName : string;
 begin
-  // Nothing to set: the C++Builder options (UsingDelphiRTL, ILINK_LinkwithDUnitXRuntime) were removed.
+  // GetPlatforms only declares what the project may target; the IDE still enables just its default
+  // platform (Win64 on the 64-bit IDE), so enable both Windows platforms explicitly.
+  if Supports(NewProject, IOTAProjectPlatforms, Platforms) then
+    for PlatformName in GetPlatforms do
+    begin
+      Platforms.Supported[PlatformName] := True;
+      Platforms.Enabled[PlatformName] := True;
+    end;
 end;
 
 end.

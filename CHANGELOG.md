@@ -154,6 +154,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **The New DUnitX Project wizard created Win64-only projects** (2026-10-12) —
+  `Expert/DUnitX.Expert.CodeGen.NewProject.pas`. Found by driving the rebuilt expert in the IDE: `GetPlatforms` declared
+  Win32 and Win64, but the IDE still enabled only its default platform. `TNewProjectEx.SetInitialOptions` now marks both
+  Windows platforms supported and enabled through `IOTAProjectPlatforms`. Re-verified in the IDE: a new project lists
+  Windows 32-bit and Windows 64-bit. The same IDE run confirmed the rest of today's expert changes: no load errors, no
+  C++Builder entries, FastMM 5 selected by default, `begin` and `1Test` refused as class names, and a generated `.dpr`
+  with no TestInsight that sets `EXIT_ERRORS` on failure or crash.
 - **Other DUnitX sets on this machine could be compiled or linked instead of this fork** (2026-10-12) — `Help.md` §2,
   `D:\Tools\Check-DUnitXSingleSet.ps1` (GITLAKTools). Rule (Ian, 2026-10-12): `D:\gllDUnitX` is the only DUnitX on
   C:, D: and E:. RAD Studio's bundled DUnitX (67 files in `Studio\37.0\lib`, written by its install/update, without
