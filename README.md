@@ -76,8 +76,8 @@ Building the tests
 
 `Tests\DUnitXTest_D13.dproj` needs a sibling checkout of
 [glldelphi-mocks](https://github.com/ijbranch/glldelphi-mocks) at the commit pinned in
-[DEPENDENCIES.md](DEPENDENCIES.md). That is a private repository, so outside GITLAK the test project cannot be
-built as it stands; the runtime library, IDE expert and examples need nothing beyond RAD Studio.
+[DEPENDENCIES.md](DEPENDENCIES.md) (a public repository: GITLAK's fork of Delphi Mocks). The runtime library, IDE
+expert and examples need nothing beyond RAD Studio.
 
 Support
 =======

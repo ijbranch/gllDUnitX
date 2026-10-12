@@ -17,8 +17,8 @@ requests.
   [glldelphi-mocks](https://github.com/ijbranch/glldelphi-mocks), checked out as a sibling of this repository at
   the commit pinned in [DEPENDENCIES.md](DEPENDENCIES.md). It is GITLAK's own fork of Delphi-Mocks - not upstream
   [VSoftTechnologies/Delphi-Mocks](https://github.com/VSoftTechnologies/Delphi-Mocks), and not the DPM package
-  upstream pinned - and it is a **private** repository, so outside GITLAK the test project cannot be built as it
-  stands. The runtime library, IDE expert and examples need nothing beyond RAD Studio.
+  upstream pinned - and, like this repository, it is public. The runtime library, IDE expert and examples need
+  nothing beyond RAD Studio.
 * Any project you build against `Source\` needs its own platform-varying DCU output directory - see
   **Installing** in [README.md](README.md) for why.
 
