@@ -17,11 +17,11 @@ It's done as simple as possible. So a user has to do 3 Steps.
 3. The Attribute
 
 The first step, is to write and implement a class derived from
-TTestDataProviderBase. This class has to provider 5 Methods
+TTestDataProvider (declared in DUnitX.InternalDataProvider). A provider overrides the constructor and the three abstract GetCase* functions; the destructor is optional.
 
-The constructor, called only once, to initialize the data to provide. The destructor for clean up works.
+The constructor, called only once, to initialise the data to provide. Override the destructor if the provider has anything to clean up.
 
-The GetCaseAmount function, that is called for each test function, with the TestCaseProvider-Attribute. The result of the function has to be the amount of test cases, that has to be created.
+The GetCaseCount function, that is called for each test function, with the TestCaseProvider-Attribute. The result of the function has to be the amount of test cases, that has to be created.
 
 The GetCaseName function, that is also called for each test function, with the TestCaseProvider-Attribute. The result has to be the name of the cases. A numbering is automatically append to this. 
 
@@ -46,7 +46,7 @@ The last step, is simply use this class. To do so, just define a TestCaseProvide
 
 ##And then ?##
 
-The rest, is done internally and works like the normal Test case-Attribute. In compare to that, it just calls the GetCaseAmount and GetCaseName function, to get the amount and desired name, then loop from 0 to amount-1 and calls the GetCaseParams function, to get the data. With this, it creates the test case for that function.
+The rest, is done internally and works like the normal Test case-Attribute. In compare to that, it just calls the GetCaseCount and GetCaseName function, to get the amount and desired name, then loop from 0 to amount-1 and calls the GetCaseParams function, to get the data. With this, it creates the test case for that function.
 
 
 ##Finally##

@@ -32,12 +32,10 @@
 ###################
 /Win32
 /Win64
-/OSX32
-/__history
+**/__history/
+**/__recovery/
 /Tests/Win32
 /Tests/Win64
-/Test/__history
-Expert/__history
 Expert/Win32/
 Expert/Win64/
 packages/RAD Studio 13.0/Win32/
@@ -54,7 +52,6 @@ Examples/dunitx-results.xml
 *.fbpInf
 Examples/Win32/
 Examples/Win64/
-Examples/OSX32/
 
 
 *.lnk

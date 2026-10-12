@@ -63,6 +63,12 @@ The steps are below; [Users Guide.md](Users%20Guide.md) §1 has the detail.
 2. **Optionally, the IDE expert:** remove Embarcadero's unit-test expert (`DUnitXIDEExpert*.bpl`) from the
    installed packages, then build and install `Expert\DUnitX_IDE_Expert_D13Florence.dproj` from the 64-bit IDE
    (`bin64\bds.exe`). File > New gains **DUnitX Project** and **DUnitX Unit**.
+
+   The project wizard writes `$(DUnitX)` into each new project's unit search path, so set the IDE environment
+   variable `DUnitX` to this repository's `Source` folder (Tools > Options > IDE > Environment Variables, a
+   user override); the wizard warns when it is not set. Its default leak-reporting option, **FastMM5**, puts
+   `FastMM5` in the new project's `uses` clause, so `FastMM5.pas` (for example from gllFastMM5) must be on the
+   project's search path or the library path; choose **None** otherwise.
 3. **Optionally, the live templates:** `LiveTemplates\Install.bat` copies nine code templates
    (`create-testfixture`, `create-testproc`, ...) into the IDE's template folder.
 
@@ -95,6 +101,7 @@ Documentation
 * [DEPENDENCIES.md](DEPENDENCIES.md) - the pinned test-project dependency
 * [TestCaseProvider.md](TestCaseProvider.md) - data-driven test cases
 * `UPSTREAM-*.md` - what has been reported or proposed to upstream, and its status
+* [UPSTREAM-NOT-TAKEN.md](UPSTREAM-NOT-TAKEN.md) - upstream changes reviewed and deliberately not taken, and why
 
 Contributors
 ============

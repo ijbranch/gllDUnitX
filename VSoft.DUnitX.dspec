@@ -22,6 +22,7 @@ variables:
 targetPlatforms:
   - compiler: delphi13.0
     platforms:
+      - win32
       - win64
 templates:
   - name: default

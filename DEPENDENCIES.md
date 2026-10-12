@@ -14,13 +14,13 @@ examples.
 |---|---|
 | Repository | `https://github.com/ijbranch/glldelphi-mocks` |
 | Branch | `main` |
-| **Commit** | **`59683d371bd8f99c8e623b36119e3e9834d64460`** |
-| Short | `59683d3` |
-| Dated | 2026-10-08 |
-| Subject | Adopt D13 not in / is not; IfThen -> if expression; simplify boolean assignments |
+| **Commit** | **`da3ece2a9db1593ec59f0e6de32cdfa6955d08f3`** |
+| Short | `da3ece2` |
+| Dated | 2026-10-13 |
+| Subject | Bring the CHANGELOG, Help, Users Guide and README in line with the fixes |
 
-This is the commit the suite was last verified green against (2026-10-12, Debug): **Win64 297 tests found,
-288 passed, 9 ignored; Win32 295 found, 286 passed, 9 ignored; 0 failed, 0 errored, 0 leaked on both**
+This is the commit the suite was last verified green against (2026-10-13, Release): **Win64 388 tests found,
+379 passed, 9 ignored; Win32 386 found, 377 passed, 9 ignored; 0 failed, 0 errored, 0 leaked on both**
 (the two Win64-only tests are the `CPU64BITS` Integer / Int64 overloads).
 
 Upstream DUnitX pinned `VSoft.DelphiMocks 0.2.2` through a DPM `PackageReference`. That pin was
@@ -58,7 +58,7 @@ Compare against the commit above. To move to that exact commit:
 
 ```
 git -C ..\glldelphi-mocks fetch origin
-git -C ..\glldelphi-mocks checkout 59683d371bd8f99c8e623b36119e3e9834d64460
+git -C ..\glldelphi-mocks checkout da3ece2a9db1593ec59f0e6de32cdfa6955d08f3
 ```
 
 ### When the pin should change

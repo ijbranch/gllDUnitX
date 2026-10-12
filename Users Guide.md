@@ -8,7 +8,7 @@ How to build and run a test suite with gllDUnitX, in the order you will need it.
 
 There are two ways, and they are not equivalent.
 
-**From source (what the estate does).** Put this repository's `Source` folder on the test project's **own** unit search path:
+**From source (what a project needing a unit outside the package does; since 2026-10-12 the estate otherwise links the package's DCUs from the library path — Help.md §2).** Put this repository's `Source` folder on the test project's **own** unit search path:
 
 ```xml
 <DCC_UnitSearchPath>..\..\gllDUnitX\Source;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
@@ -17,7 +17,7 @@ There are two ways, and they are not equivalent.
 
 **The `DCC_DcuOutput` line is not housekeeping.** With no DCU output directory the compiler writes each `.dcu` beside the `.pas` it compiled, so one build drops the whole DUnitX set into `Source\` — and the next build for the other platform reads them and dies with `F2048 Bad unit format: ... Expected version: 37.0, Windows Unicode(x86) Found version: 37.0, Windows Unicode(x64)`. A project that sets one is immune, because the compiler then prefers its own output folder and rebuilds from source.
 
-Naming `Source` explicitly also settles *which* DUnitX you get. RAD Studio 13 ships its own copy as DCUs, and on this machine that copy sits earlier on the Win64 library path than the `$(DUNITX)` entry — so a project that stays silent links Embarcadero's DUnitX, not this fork, and `Assert.Ignore` will not compile. See Help.md §2.
+Naming `Source` explicitly also settles *which* DUnitX you get. RAD Studio 13 ships its own copy as DCUs, and wherever that copy is on the library path a project that stays silent can link Embarcadero's DUnitX, not this fork, and `Assert.Ignore` will not compile. On this machine the bundled copy was moved out of `lib` on 2026-10-12 and the package's Release DCU folder heads both library paths, with `Source` on neither. See Help.md §2.
 
 **From the package.** Build `packages\RAD Studio 13.0\VSoft.DUnitXWinR.dproj` in all four modes (Win32 + Win64 × Debug + Release), Debug first and Release last, then add `VSoft.DUnitXWinR` to the project's `DCC_UsePackage`. Release output lands in the shared `Bpl\$(Platform)` / `Dcp\$(Platform)` folders; Debug is diverted to a `$(Config)` subfolder so a Debug build cannot replace the installed Release package.
 
@@ -135,7 +135,7 @@ type
 
 Three things to know before you lay a hierarchy over this:
 
-- **Do not `override` an attributed set-up method.** An `override` does not inherit the attribute, so the provider walks up, finds the *ancestor's* attributed method and binds its static code address. Your override never runs. Either re-apply the attribute to the override, or give it a new name and call the inherited method from it.
+- **Overriding an attributed set-up method runs the override** (fork fix, 2026-10-13). An `override` does not inherit the attribute; the provider used to bind the *ancestor's* attributed method by its static code address, so your override never ran. It now takes the attributes of the nearest declaration that has any and binds through the virtual method table. Against any other DUnitX, re-apply the attribute to the override, or give it a new name and call the inherited method from it.
 - **Do not descend one fixture from another.** RTTI returns inherited methods, so the descendant re-runs every ancestor `[Test]` under its own name. Share helper classes instead and copy the scaffolding.
 - **A `published` method with no attributes is a test.** If you want a published helper, do not publish it.
 
@@ -160,12 +160,12 @@ Categories drive the `-i:` and `-e:` switches, so `MyTests.exe -e:slow` runs eve
 
 **Bad test-case data is an error, not a zero** (fork change, 2026-10-12). Each value must convert to its parameter's type, and there must be exactly one value per parameter: RTTI cannot see Pascal default parameter values, so a trailing parameter you leave out is not defaulted. A case that breaks either rule is reported as an **Error** naming the case, parameter, value and type; before the fix it silently ran with 0, `''` or 30/12/1899. Values are read without reference to the machine's locale:
 
-- **Numbers** use `.` as the decimal point, and a `,` is also read as one. So `'1,000'` is 1.0, not one thousand: to pass a comma-containing value, use another separator (`[TestCase( 'Big', '1000|2', '|' )]`).
+- **Numbers** use `.` as the decimal point, and a `,` is also read as one (`'2,5'` is 2.5). A comma that could be a thousands separator (`'1,000'`, `'-12,500'`) is a conversion error, not 1.0 (since 2026-10-13): to pass a comma-containing value, use another separator (`[TestCase( 'Big', '1000|2', '|' )]`).
 - **Dates and times** are read as ISO 8601 first (`2020-02-01`, `2020-02-01T13:45:00`), then in the invariant (US, month-first) format, then the local format. Use ISO 8601 and the meaning cannot change between machines.
 - **Integers and ordinals** are range-checked: `'300'` for a `Byte` parameter is an error, not 44.
 - **Enumerations** must name a member.
 
-When the data does not belong in an attribute, implement a `TTestDataProviderBase` descendant, register it in that unit's `initialization` with `TestDataProviderManager.RegisterProvider( Name, TMyProvider )`, and point a test at it with `[TestCaseProvider( 'Name' )]`. `TestCaseProvider.md` at the repository root walks through the five methods it must supply.
+When the data does not belong in an attribute, implement a `TTestDataProvider` descendant (`DUnitX.InternalDataProvider`), register it in that unit's `initialization` with `TestDataProviderManager.RegisterProvider( Name, TMyProvider )`, and point a test at it with `[TestCaseProvider( 'Name' )]`. `TestCaseProvider.md` at the repository root walks through the five methods it must supply.
 
 `[RepeatTest( 5 )]` runs the same test five times; `[MaxTime( 250 )]` fails it if it took longer than 250 ms — but note that `[MaxTime]` is checked **after** the method returns and cannot interrupt a test that never does.
 
@@ -184,10 +184,10 @@ Assert.AreEqual( 'McDonald', ProperCase( 'mcdonald' ), False );   // third argum
 
 Set `Assert.IgnoreCaseDefault := False` once in the mainline and the whole suite is strict by construction; a test that genuinely does not care then passes `True` explicitly. Do this on a new suite. On an existing one it turns currently-green tests red, so it is a change to make deliberately.
 
-**"This must not raise" needs `WillNotRaiseAny`.** `Assert.WillNotRaise( proc, SomeClass )` tests `e.ClassType = exceptionClass`, so it catches a *descendant* and then does nothing at all — the test passes while the access violation it was written to catch happens on every run:
+**"This must not raise" needs `WillNotRaiseAny`.** `Assert.WillNotRaise( proc, SomeClass )` tests `e.ClassType = exceptionClass`, so a *descendant* does not fail the assertion. Until 2026-10-13 it was caught and then nothing happened at all — the test passed while the access violation it was written to catch happened on every run; it now propagates, so the test is reported as an error rather than an assertion failure:
 
 ```pascal
-// wrong: an EAccessViolation is caught and silently ignored
+// wrong: an EAccessViolation is not what this asserts against (before 2026-10-13 it was silently ignored)
 Assert.WillNotRaise( procedure begin Widget.Rebuild; end, Exception, 'rebuild' );
 
 // right
@@ -245,13 +245,13 @@ end;
 MyTests.exe                                   verbose console, dunitx-results.xml beside the exe
 MyTests.exe -xml:MyTests-results.xml          name the XML explicitly
 MyTests.exe -cm:Quiet                         quiet console
-MyTests.exe -r:TMathFixture.AddingTwoNumbers  one test
+MyTests.exe -r:MyFixture.TMathFixture.AddingTwoNumbers  one test (full name: unit, fixture, test)
 MyTests.exe -i:fast                           only the 'fast' category
 MyTests.exe -e:slow -dsi                      everything but 'slow', hiding ignored tests
 MyTests.exe -?                                usage
 ```
 
-A switch may start `-`, `--`, `/` or `@`, and its value follows a `:`. The full list is in Help.md §8.
+A switch may start `-`, `--` or `/`, and its value follows a `:`; `@<file>` reads further options from a file (since 2026-10-13). The full list is in Help.md §8.
 
 **Name the XML file.** The estate's `test_run` tool reads `<exeBase>-results.xml`; with the default `dunitx-results.xml` it reports ERROR and an all-zero summary even though the run was green.
 

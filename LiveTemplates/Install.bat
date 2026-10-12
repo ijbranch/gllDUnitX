@@ -23,14 +23,7 @@ IF %errorLevel% == 0 (
 :: Source path of batch file
 SET "SOURCE=%~dp0"
 
-:: Get destination - check userprofile folder exists first
-SET "ROOTTEMPLATEPATH=%userprofile%\Documents\RAD Studio\code_templates\"
-
-IF NOT EXIST "%ROOTTEMPLATEPATH%" (
-  ECHO ERROR: Could not find template path: %ROOTTEMPLATEPATH%
-  ECHO Trying another path...
-)
-
+:: Get destination - RAD Studio 13 keeps its code templates here
 SET "ROOTTEMPLATEPATH=%userprofile%\Documents\Embarcadero\Studio\code_templates\"
 
 IF NOT EXIST "%ROOTTEMPLATEPATH%" (
@@ -47,7 +40,7 @@ ECHO Template path   : %ROOTTEMPLATEPATH%
 ECHO Destination path: %DESTINATION%
 ECHO.
 
-ECHO IMPORTANT: It is recommended that you close all instances of any version of the IDE before continuing. 
+ECHO IMPORTANT: It is recommended that you close RAD Studio 13 before continuing.
 ECHO IMPORTANT: If copying, duplicate files will be overwritten.
 ECHO IMPORTANT: If making symbolic link, destination path cannot exist and will require administrator privileges.
 ECHO.
