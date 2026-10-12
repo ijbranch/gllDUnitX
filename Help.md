@@ -167,7 +167,8 @@ By design here (see §1): it is an assertion about elapsed time, checked once th
 - **A parameterless constructor still replaces `[SetupFixture]`** (upstream behaviour), but a warning now names the `[SetupFixture]` method that will not run.
 - **An unregistered `[TestCaseProvider]` name is an error** for that method instead of producing no tests.
 - **`[RepeatTest]` repeats are tests of the fixture itself**, so they get the fixture's Setup/TearDown (including ones declared in a base class) and do not run after a failed `[SetupFixture]`. Their names lost one segment: `Unit.TFixture.Method.Method-1-of-3` is now `Unit.TFixture.Method-1-of-3`. No suite on D: or E: used `[RepeatTest]` when this changed.
-- **Memory-leak checks report only real growth.** Negative deltas are no longer "leaks"; the `ETestPass` raised by `Assert.Pass` and the memory kept by `Log` / `Status` calls are not counted.
+- **Memory-leak checks report only real growth.** Negative deltas are no longer "leaks"; the `ETestPass` raised by `Assert.Pass` and the memory kept by `Log` / `Status` calls (including the logged string itself) are not counted.
+- **The leak figure is the whole span from the start of setup to the end of teardown**, not the sum of the setup, test and teardown phases, so memory freed between phases (the runner releasing references, another thread finishing) is not a leak. The per-phase figures only choose the message wording. The runner resolves a second monitor instance for the span; a monitor registered as a singleton falls back to the sum of the phases.
 
 ---
 
@@ -188,7 +189,7 @@ The runtime package is `packages\RAD Studio 13.0\VSoft.DUnitXWinR.dpk` (`require
 | `DUnitX.DUnitCompatibility` | `TTestCase` with the whole `Check*` family (all marked `deprecated`) — see the guide's conversion section |
 | `DUnitX.Assert.Ex` | `Assert.AreEqual( expected, actual, compformat )` for CSV/XML comparable formats; raises `ETestFailureStrCompare` |
 | `DUnitX.TestDataProvider` | `TTestDataProviderBase` + `TestDataProviderManager.RegisterProvider` for `[TestCaseProvider]` (see `TestCaseProvider.md`) |
-| `DUnitX.MemoryLeakMonitor.FastMM5` | FastMM5 leak monitor. **Not in the package's `contains` clause** — add the unit to the project, with `FastMM5` first in the `.dpr` |
+| `DUnitX.MemoryLeakMonitor.FastMM5` | FastMM5 leak monitor. **Not in the package's `contains` clause** — add the unit to the project, with `FastMM5` first in the `.dpr`. It processes FastMM5's pending frees before every reading, since FastMM5 counts a pending free as allocated |
 | `DUnitX.MemoryLeakMonitor.FastMM4` | The FastMM4 monitor, off unless `USE_FASTMM4_LEAK_MONITOR` is defined in `DUnitX.MemoryLeaks.inc` |
 | `DUnitX.StackTrace.EurekaLog7` / `.JCL` / `.MadExcept3..5` | Optional stack-trace providers, selected in `DUnitX.Stacktrace.inc` |
 

@@ -154,6 +154,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **The leak check reported memory freed between test phases as leaked, and the FastMM5 monitor read pending frees
+  as allocated** (2026-10-12) — `Source/DUnitX.TestRunner.pas`, `Source/DUnitX.MemoryLeakMonitor.FastMM5.pas`,
+  `Tests/DUnitX.Tests.TestFixture.pas`. Found by triaging GITLAKLib's suite with the per-test FastMM5 monitor: a test
+  whose 1 MB connection buffer was freed after `PostTest` but before `PreTearDown` was reported as a 1,053,179-byte
+  leak (test +1,053,765, gap -1,053,313, teardown -6,156), because the runner summed the three phases and never measured
+  the gaps between them. The runner now resolves a second monitor instance that measures the whole span, from the
+  start of setup (or the test) to the end of teardown (or the test), and that span is the leak figure; the per-phase
+  figures only choose the message wording. Runner memory created in the span is discounted as before: the pass result
+  and its log text, and the clearing of a previous test's log lists. A monitor registered as a singleton falls back to
+  the old sum. No interface changed, so the Default, FastMM4 and third-party monitors work unchanged. The FastMM5
+  monitor now calls `FastMM_ProcessAllPendingFrees` before every reading. **A third false positive found while
+  verifying:** `Log` / `Status` stored the caller's string by reference, so a message the test built was counted as the
+  test's leak (510 bytes per `Status` call in the check below); `Log` now keeps its own copy, made inside the runner
+  measurement. Red test `LeakCheckIgnoresMemoryFreedBetweenPhases` (setup and test allocations freed in the gaps,
+  1500 bytes reported before the fix; a real 32-byte leak must still be reported as exactly 32). The FastMM5 parts are
+  not testable in the self-test exe (default monitor); verified with a scratch FastMM5 console runner, Win32 and Win64:
+  a 1 MB buffer freed between test and teardown, `Status` logging and `Assert.Pass` pass, a 1000-byte `GetMem` is
+  still reported. Suite 355 found, 346 passed, 9 ignored, 0 failed (Win64); 353/344/9/0 (Win32). Fork divergence, not
+  in issue #398.
 - **The New DUnitX Project wizard created Win64-only projects** (2026-10-12) —
   `Expert/DUnitX.Expert.CodeGen.NewProject.pas`. Found by driving the rebuilt expert in the IDE: `GetPlatforms` declared
   Win32 and Win64, but the IDE still enabled only its default platform. `TNewProjectEx.SetInitialOptions` now marks both

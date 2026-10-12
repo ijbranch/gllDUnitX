@@ -81,8 +81,15 @@ type
     //the leak check then discounts. nil when not measuring.
     FRunnerAllocationMonitor : IMemoryLeakMonitor;
     FRunnerAllocated : Int64;
+    //Measures the whole span from the start of setup (or the test) to the end of teardown (or the test),
+    //so memory freed between the phases is not a leak. nil when the monitor is a singleton; the leak check
+    //then sums the phases.
+    FLeakSpanMonitor : IMemoryLeakMonitor;
+    FLeakSpanStarted : boolean;
     procedure BeginRunnerAllocation;
     procedure EndRunnerAllocation;
+    procedure BeginLeakSpan;
+    procedure ExtendLeakSpan;
   protected
     procedure CountAndFilterTests(const fixtureList : ITestFixtureList; var count, active : Cardinal);
     //Logger calls - sequence ordered
@@ -466,8 +473,13 @@ begin
   LTearDownMemoryAllocated := memoryAllocationProvider.TearDownMemoryAllocated;
 
   //Net growth, less what the runner itself kept meanwhile. Only growth is a leak: a test that frees
-  //memory allocated before it started has a negative delta.
-  LLeaked := LSetUpMemoryAllocated + LTestMemoryAllocated + LTearDownMemoryAllocated - FRunnerAllocated;
+  //memory allocated before it started has a negative delta. The whole span is measured where it can be,
+  //because memory can be freed between the phases (the runner releasing references, another thread
+  //finishing), which the sum of the phases would count as leaked.
+  if FLeakSpanStarted then
+    LLeaked := FLeakSpanMonitor.TestMemoryAllocated - FRunnerAllocated
+  else
+    LLeaked := LSetUpMemoryAllocated + LTestMemoryAllocated + LTearDownMemoryAllocated - FRunnerAllocated;
   if (LLeaked <= 0) then
     Exit(True);
 
@@ -970,11 +982,15 @@ var
   assertAfterCount : Cardinal;
   passed : boolean;
   passMessage : string;
+  logText : string;
 begin
   if Supports(test, ITestExecute, testExecute) then
   begin
+    BeginLeakSpan;
+    BeginRunnerAllocation;
     FLogMessages.Clear;
     SetLength(FLogMessagesEx, 0);
+    EndRunnerAllocation;
     FCurrentTestName := test.Name;
     try
       Self.Loggers_ExecuteTest(threadId, test as ITestInfo);
@@ -1000,10 +1016,16 @@ begin
         end;
       finally
         memoryAllocationProvider.PostTest;
+        ExtendLeakSpan;
       end;
 
       if passed then
-        Exit(ExecuteSuccessfulResult(context, threadId, test, passMessage, FLogMessagesEx));
+      begin
+        BeginRunnerAllocation;
+        Result := ExecuteSuccessfulResult(context, threadId, test, passMessage, FLogMessagesEx);
+        EndRunnerAllocation;
+        Exit;
+      end;
 
       if FFailsOnNoAsserts then
       begin
@@ -1012,9 +1034,15 @@ begin
           raise ENoAssertionsMade.Create(SNoAssertions);
       end;
 
-      Result := ExecuteSuccessfulResult(context, threadId, test, FLogMessages.Text, FLogMessagesEx);
+      //The result is kept until after teardown, so it is runner memory; the log text is held in a
+      //variable that is released here, not at the end of the method, outside the measurement.
+      BeginRunnerAllocation;
+      logText := FLogMessages.Text;
+      Result := ExecuteSuccessfulResult(context, threadId, test, logText, FLogMessagesEx);
+      logText := '';
       FLogMessages.Clear;
       SetLength(FLogMessagesEx, 0);
+      EndRunnerAllocation;
     finally
       FCurrentTestName := '';
     end;
@@ -1052,6 +1080,10 @@ begin
     if FRunnerAllocationMonitor = memoryAllocationProvider then
       FRunnerAllocationMonitor := nil;
     FRunnerAllocated := 0;
+    FLeakSpanMonitor := TDUnitXServiceLocator.DefaultContainer.Resolve<IMemoryLeakMonitor>();
+    if (FLeakSpanMonitor = memoryAllocationProvider) or (FLeakSpanMonitor = FRunnerAllocationMonitor) then
+      FLeakSpanMonitor := nil;
+    FLeakSpanStarted := False;
 
     //Start a fresh for this test. If we had an exception last execute of the
     //setup or tear down that may have changed this execution. Therefore we try
@@ -1116,6 +1148,8 @@ begin
           testResult := memoryAllocationResult;
     finally
       FRunnerAllocationMonitor := nil;
+      FLeakSpanMonitor := nil;
+      FLeakSpanStarted := False;
       RecordResult(context, threadId, fixtureResult, testResult);
       Self.Loggers_EndTest(threadId, testResult);
     end;
@@ -1134,6 +1168,7 @@ begin
     try
       Self.Loggers_SetupTest(threadId, test as ITestInfo);
 
+      BeginLeakSpan;
       memoryAllocationProvider.PreSetup;
 
       fixture.SetupMethod;
@@ -1166,6 +1201,7 @@ begin
     fixture.TearDownMethod;
 
     memoryAllocationProvider.PostTearDown;
+    ExtendLeakSpan;
 
     Self.Loggers_EndTeardownTest(threadId, test as ITestInfo);
     result := true;
@@ -1303,20 +1339,25 @@ procedure TDUnitXTestRunner.Log(const logType : TLogLevel; const msg : string);
 var
   logger : ITestLogger;
   NewIdx : integer;
+  logMsg : string;
 begin
   if logType >= TDUnitX.Options.LogLevel then
   begin
     //What logging keeps is the runner's memory, not the test's: the leak check discounts it.
     BeginRunnerAllocation;
     try
+      //The lists keep a copy made here; sharing the test's string would leave its memory counted
+      //against the test.
+      logMsg := msg;
+      UniqueString(logMsg);
       //TODO : Need to get this to the current test result.
-      FLogMessages.Add(msg);
+      FLogMessages.Add(logMsg);
       NewIdx := Length(FLogMessagesEx);
       SetLength(FLogMessagesEx, NewIdx + 1);
       FLogMessagesEx[NewIdx].Level := logType;
-      FLogMessagesEx[NewIdx].Msg := msg;
+      FLogMessagesEx[NewIdx].Msg := logMsg;
       for logger in FLoggers do
-        logger.OnLog(logType, msg);
+        logger.OnLog(logType, logMsg);
     finally
       EndRunnerAllocation;
     end;
@@ -1336,6 +1377,21 @@ begin
     FRunnerAllocationMonitor.PostTest;
     Inc(FRunnerAllocated, FRunnerAllocationMonitor.TestMemoryAllocated);
   end;
+end;
+
+procedure TDUnitXTestRunner.BeginLeakSpan;
+begin
+  if (FLeakSpanMonitor <> nil) and (not FLeakSpanStarted) then
+  begin
+    FLeakSpanStarted := True;
+    FLeakSpanMonitor.PreTest;
+  end;
+end;
+
+procedure TDUnitXTestRunner.ExtendLeakSpan;
+begin
+  if FLeakSpanStarted then
+    FLeakSpanMonitor.PostTest;
 end;
 
 function TDUnitXTestRunner.ShouldRunThisTest(const test : ITest) : boolean;

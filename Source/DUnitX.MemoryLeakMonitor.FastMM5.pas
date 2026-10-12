@@ -1,4 +1,4 @@
-{***************************************************************************}
+﻿{***************************************************************************}
 {                                                                           }
 {           DUnitX                                                          }
 {                                                                           }
@@ -64,6 +64,8 @@ type
 
 function TDUnitXFastMM5MemoryLeakMonitor.GetMemoryAllocated : Int64;
 begin
+  //FastMM5 counts a block whose free is still pending as allocated, so release those first.
+  FastMM_ProcessAllPendingFrees;
   Result := FastMM_GetUsageSummary.AllocatedBytes;
 end;
 

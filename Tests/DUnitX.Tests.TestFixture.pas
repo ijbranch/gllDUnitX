@@ -211,6 +211,11 @@ type
     // delta) is not a leak; a real allocation still is.
     [Test]
     procedure LeakCheckCountsOnlyTheTestsOwnGrowth;
+    // Proves the leak check measures the whole span from setup to teardown: memory that setup or the test allocates
+    // and that is freed between phases (here by a logger, standing in for the runner releasing references or another
+    // thread finishing) is not a leak; a real allocation still is, with setup and teardown present.
+    [Test]
+    procedure LeakCheckIgnoresMemoryFreedBetweenPhases;
     // Proves that SuccessRate is a percentage (3 of 4 passing is 75), not 0 or 100.
     [Test]
     procedure SuccessRateIsAPercentage;
@@ -492,6 +497,8 @@ end;
 
 var
   GFakeAllocated : Int64;
+  GSetupGapFree : Int64;
+  GTestGapFree : Int64;
   GSetupFixtureRan : boolean;
   GTearDownRan : boolean;
   GBodyRan : boolean;
@@ -628,6 +635,18 @@ type
     procedure LeaksForReal;
   end;
 
+  TRunnerGapLeakChecks = class
+  public
+    [Setup]
+    procedure Setup;
+    [TearDown]
+    procedure TearDown;
+    [Test]
+    procedure FreedBetweenPhases;
+    [Test]
+    procedure LeaksForReal;
+  end;
+
   TRunnerThreeOfFourPass = class
   public
     [Test]
@@ -694,6 +713,14 @@ type
   TFakeAllocatingLogger = class(TDUnitXNullLogger)
   protected
     procedure OnLog(const logType : TLogLevel; const msg : string); override;
+  end;
+
+  //Frees, between the phases, what TRunnerGapLeakChecks allocated: setup's allocation before the test starts, the
+  //test's after it ends and before teardown starts.
+  TGapFreeingLogger = class(TDUnitXNullLogger)
+  protected
+    procedure OnExecuteTest(const threadId : TThreadID; const Test : ITestInfo); override;
+    procedure OnTeardownTest(const threadId : TThreadID; const Test : ITestInfo); override;
   end;
 
   TRunnerAccess = class(TDUnitXTestRunner);
@@ -862,6 +889,27 @@ begin
   Inc(GFakeAllocated, 32);
 end;
 
+procedure TRunnerGapLeakChecks.Setup;
+begin
+  Inc(GFakeAllocated, 500);
+  GSetupGapFree := 500;
+end;
+
+procedure TRunnerGapLeakChecks.TearDown;
+begin
+end;
+
+procedure TRunnerGapLeakChecks.FreedBetweenPhases;
+begin
+  Inc(GFakeAllocated, 1000);
+  GTestGapFree := 1000;
+end;
+
+procedure TRunnerGapLeakChecks.LeaksForReal;
+begin
+  Inc(GFakeAllocated, 32);
+end;
+
 procedure TRunnerThreeOfFourPass.PassOne;
 begin
 end;
@@ -953,6 +1001,18 @@ end;
 procedure TFakeAllocatingLogger.OnLog(const logType : TLogLevel; const msg : string);
 begin
   Inc(GFakeAllocated, 50);
+end;
+
+procedure TGapFreeingLogger.OnExecuteTest(const threadId : TThreadID; const Test : ITestInfo);
+begin
+  Dec(GFakeAllocated, GSetupGapFree);
+  GSetupGapFree := 0;
+end;
+
+procedure TGapFreeingLogger.OnTeardownTest(const threadId : TThreadID; const Test : ITestInfo);
+begin
+  Dec(GFakeAllocated, GTestGapFree);
+  GTestGapFree := 0;
 end;
 
 //Builds a fixture for AClass the way the fixture provider does.
@@ -1195,6 +1255,29 @@ begin
   Assert.AreEqual('', wrong, False, 'reported as leaks');
   CheckResult(results, 'PassesWithAssertPass', TTestResultType.Pass, 'passed with a message');
   CheckResult(results, 'LeaksForReal', TTestResultType.MemoryLeak, '32');
+end;
+
+procedure TRunnerBehaviourTests.LeakCheckIgnoresMemoryFreedBetweenPhases;
+var
+  results : IRunResults;
+begin
+  GSetupGapFree := 0;
+  GTestGapFree := 0;
+  TDUnitXServiceLocator.DefaultContainer.RegisterType<IMemoryLeakMonitor>(
+    function : IMemoryLeakMonitor
+    begin
+      Result := TFakeLeakMonitor.Create;
+    end);
+  try
+    results := RunFixture(BuildFixture(TRunnerGapLeakChecks), TGapFreeingLogger.Create);
+  finally
+    //The suite runs with the default monitor; put it back.
+    DUnitX.MemoryLeakMonitor.Default.RegisterDefaultProvider;
+  end;
+  CheckResult(results, 'FreedBetweenPhases', TTestResultType.Pass);
+  CheckResult(results, 'LeaksForReal', TTestResultType.MemoryLeak);
+  //The figure starts the message; setup's 500, freed before the test, is not in it.
+  Assert.StartsWith('32 bytes', FindResult(results, 'LeaksForReal').Message, False, 'LeaksForReal message');
 end;
 
 procedure TRunnerBehaviourTests.SuccessRateIsAPercentage;
