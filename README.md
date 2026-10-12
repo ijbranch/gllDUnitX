@@ -7,10 +7,14 @@ DUnitX Overview
 > (Win32 was re-added to every `.dproj` on 2026-09-10, so packages can be built in all four
 > modes; before that date this fork was Win64-only.)
 >
+> **Not affiliated with VSoft Technologies.** This is an independent fork; credit for DUnitX
+> itself belongs to Vincent Parrett and its contributors - see *License* at the foot of this file.
+>
 > The DPM package id is **`GITLAK.DUnitX`**, not `VSoft.DUnitX`, so it cannot shadow upstream
 > in a package feed. Building the **test project** additionally needs a sibling checkout of
 > [glldelphi-mocks](https://github.com/ijbranch/glldelphi-mocks) at the commit pinned in
-> [DEPENDENCIES.md](DEPENDENCIES.md); the runtime library, IDE expert and examples need nothing
+> [DEPENDENCIES.md](DEPENDENCIES.md) - a private repository, so outside GITLAK the test project
+> cannot be built as it stands; the runtime library, IDE expert and examples need nothing
 > beyond RAD Studio.
 >
 > **Fork-local API:** `Assert.Ignore(reason)` skips a test at RUN time and reports it as
@@ -85,6 +89,14 @@ vincent@finalbuilder.com
 http://www.finalbuilder.com
 
 See license.txt for details.
+
+**This fork.** Changes made in gllDUnitX are Copyright (C) 2026 Ian Branch (GITLAK Software) and are
+licensed under the same Apache License 2.0. Every source file this fork changed carries a
+"Modified (C) 2026 Ian Branch (GITLAK Software) - gllDUnitX fork" line beneath its original copyright
+notice, which is kept intact; per-change detail is in [CHANGELOG.md](CHANGELOG.md), and upstream
+commits taken into the fork keep their original authors in the git history. gllDUnitX is an
+independent fork and is not affiliated with or endorsed by VSoft Technologies; "DUnitX" refers to the
+upstream project it derives from.
 
 
 

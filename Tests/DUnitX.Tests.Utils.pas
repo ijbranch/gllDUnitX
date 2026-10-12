@@ -1,4 +1,16 @@
-﻿unit DUnitX.Tests.Utils;
+﻿{***************************************************************************}
+{                                                                           }
+{           DUnitX                                                          }
+{                                                                           }
+{           Originally part of DUnitX, by Vincent Parrett & Contributors    }
+{           Modified (C) 2026 Ian Branch (GITLAK Software) - gllDUnitX fork }
+{                                                                           }
+{           Licensed under the Apache License, Version 2.0                  }
+{           http://www.apache.org/licenses/LICENSE-2.0                      }
+{                                                                           }
+{***************************************************************************}
+
+unit DUnitX.Tests.Utils;
 
 {$I DUnitX.inc}
 

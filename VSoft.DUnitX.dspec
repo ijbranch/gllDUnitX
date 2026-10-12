@@ -3,7 +3,7 @@ min dpm client version: 1.0.0
 metadata:
   id: GITLAK.DUnitX
   version: 0.5.1
-  description: GITLAK fork of DUnitX, baselined on VSoft.DUnitX 0.5.1 and scoped to Delphi 13 (Florence), 64 bit Windows only
+  description: GITLAK fork of DUnitX, baselined on VSoft.DUnitX 0.5.1 and scoped to Delphi 13 (Florence), Windows Win32 and Win64
   authors:
     - Vincent Parrett
     - GITLAK Software

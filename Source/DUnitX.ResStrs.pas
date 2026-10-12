@@ -3,6 +3,7 @@
 {           DUnitX                                                          }
 {                                                                           }
 {           Copyright (C) 2017 Vincent Parrett & Contributors               }
+{           Modified (C) 2026 Ian Branch (GITLAK Software) - gllDUnitX fork }
 {                                                                           }
 {           vincent@finalbuilder.com                                        }
 {           http://www.finalbuilder.com                                     }
