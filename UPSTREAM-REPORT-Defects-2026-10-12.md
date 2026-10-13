@@ -236,6 +236,18 @@ Detail and the exact texts are in [UPSTREAM-ISSUES-Batch3.md](UPSTREAM-ISSUES-Ba
 
 For 3.4 the upstream fix covers infinities only, not the negative-tolerance check this fork also added.
 
+**Batch 4**, posted 2026-10-14 against `8ff5f0b`; same rule as batch 3 (old behaviour plainly wrong).
+Detail and the exact texts are in [UPSTREAM-ISSUES-Batch4.md](UPSTREAM-ISSUES-Batch4.md).
+
+| Item | Issue | PR |
+|---|---|---|
+| 3.2 + 3.5 (part) `WillNotRaiseDescendant` / `WillNotRaiseWithMessage` AV on a nil class; raised class name | [#438](https://github.com/VSoftTechnologies/DUnitX/issues/438) | [#439](https://github.com/VSoftTechnologies/DUnitX/pull/439) |
+| 3.5 (part) `AreEqual(Cardinal)` prints large values as negative | [#440](https://github.com/VSoftTechnologies/DUnitX/issues/440) | [#441](https://github.com/VSoftTechnologies/DUnitX/pull/441) |
+| 3.6 (rest) `AreEqual(TStrings)` fails for the same instance | [#442](https://github.com/VSoftTechnologies/DUnitX/issues/442) | [#443](https://github.com/VSoftTechnologies/DUnitX/pull/443) |
+| 3.10 (part) JUnit timestamp uses the locale time separator | [#444](https://github.com/VSoftTechnologies/DUnitX/issues/444) | [#445](https://github.com/VSoftTechnologies/DUnitX/pull/445) |
+| 2.7 (part) NUnit fixture with errored tests written `result="Success"` | [#446](https://github.com/VSoftTechnologies/DUnitX/issues/446) | [#447](https://github.com/VSoftTechnologies/DUnitX/pull/447) |
+| 2.7 (part) `IFixtureResult.Namespace` returns the name | [#448](https://github.com/VSoftTechnologies/DUnitX/issues/448) | [#449](https://github.com/VSoftTechnologies/DUnitX/pull/449) |
+
 **Outside the batches: [#372](https://github.com/VSoftTechnologies/DUnitX/issues/372) (bitmask exit codes) ->
 [PR #411](https://github.com/VSoftTechnologies/DUnitX/pull/411)**, branch `feature/bitmask-exit-codes`, posted
 2026-10-12 after a reviewer pointed at it from #404. It is someone else's feature request, which upstream had
