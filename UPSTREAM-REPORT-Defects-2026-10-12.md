@@ -195,6 +195,9 @@ texts are in [UPSTREAM-ISSUES-Batch1.md](UPSTREAM-ISSUES-Batch1.md).
 | 1.9 category operator in last position | [#403](https://github.com/VSoftTechnologies/DUnitX/issues/403) | [#409](https://github.com/VSoftTechnologies/DUnitX/pull/409) |
 | 1.10 runner exits 0 on abort | [#404](https://github.com/VSoftTechnologies/DUnitX/issues/404) | [#410](https://github.com/VSoftTechnologies/DUnitX/pull/410) |
 
+**Status 2026-10-13:** upstream merged #405, #409, #410 and #411, and accepted #406, #407 and #408 once their
+conflicts with those merges were fixed; the three branches were merged with `upstream/master` and pushed the same day.
+
 The upstream fixes are deliberately narrower than ours in two places. For 1.3, only float types switch to the
 equality comparer, so class and Variant comparisons are unchanged. For 1.4, a test outcome is re-raised unless the
 caller named a matching class other than `Exception`, which uses only the `fTestFailure` / `fTestPass` hooks that
@@ -204,8 +207,11 @@ caller named a matching class other than `Exception`, which uses only the `fTest
 [PR #411](https://github.com/VSoftTechnologies/DUnitX/pull/411)**, branch `feature/bitmask-exit-codes`, posted
 2026-10-12 after a reviewer pointed at it from #404. It is someone else's feature request, which upstream had
 indicated it would accept, so we sent it as goodwill. **It is deliberately NOT in this fork** (Ian, 2026-10-12): nothing
-here would use it, and carrying it ourselves would add divergence for no benefit. It reaches the fork only if
-upstream merges it. The branch has two commits because the shared `pre-commit` hook stripped upstream's
+here would use it, and carrying it ourselves would add divergence for no benefit. **Upstream merged it on 2026-10-13,
+and this fork still does not take it** (Ian, 2026-10-13): our runners set `EXIT_ERRORS` on any failure, error, leak or
+abort, and every consumer here treats any non-zero exit as a failure. Any later merge from upstream into this fork
+leaves #411 out (`DUnitX.TestFramework.pas`, `DUnitX.OptionsDefinition.pas`, the expert template,
+`Tests\DUnitXTestProject.dpr`, `Tests\DUnitX.Tests.ExitCode.pas`). The branch has two commits because the shared `pre-commit` hook stripped upstream's
 `DUnitXTest_D12.dproj` (the worktree shares this repo's `.git\hooks`); the net diff adds one `DCCReference` there.
 
 ---

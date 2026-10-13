@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Note: this fork does not take upstream #372 / PR #411 (bitmask exit codes)** (2026-10-13) —
+  `UPSTREAM-REPORT-Defects-2026-10-12.md`. Upstream merged #405, #409, #410 and #411 on 2026-10-13 and accepted #406,
+  #407 and #408 once their conflicts were fixed (the three branches were merged with `upstream/master` and pushed). #411
+  stays out of this fork: our runners set `EXIT_ERRORS` on any failure, error, leak or abort, and every consumer here
+  treats any non-zero exit as a failure. **Why:** carrying it adds divergence for no benefit; any later merge from
+  upstream leaves #411's changes to `DUnitX.TestFramework.pas`, `DUnitX.OptionsDefinition.pas`, the expert template and
+  `Tests\DUnitXTestProject.dpr` (and its `Tests\DUnitX.Tests.ExitCode.pas`) out.
 - **`ITestFixtureList.SortByName` and `CheckXmlOutputFileArgument`** (2026-10-13) — `Source/DUnitX.Extensibility.pas`, `Source/DUnitX.OptionsDefinition.pas`. The first sorts a fixture list by full name at every level (see Fixed); the second checks the bare command-line argument (see Fixed).
 - **Attribution: every changed source file says so, and the README credits both sides** (2026-10-13) - 58 source files (53 `.pas` given a notice line under their original copyright; 3 test units and 2 `.dpr` that never had a header given one), `README.md`, `VSoft.DUnitX.dspec`. Each file this fork changed now carries "Modified (C) 2026 Ian Branch (GITLAK Software) - gllDUnitX fork" beneath its upstream copyright notice, which is kept intact; the headerless five credit "DUnitX, by Vincent Parrett & Contributors" without inventing a copyright year. `DUnitX.Timeout.pas` already carried its own line. The README's licence section now states that the fork's changes are (C) 2026 GITLAK Software under the same Apache 2.0, that upstream commits keep their authors in the history, and that the fork is not affiliated with or endorsed by VSoft Technologies; it also says plainly that the test project's `glldelphi-mocks` dependency is a private repository. The DPM spec's description no longer says "64 bit Windows only" (Win32 returned on 2026-09-10). **Why:** Apache 2.0 §4(b) requires a prominent change notice on each modified file before distribution, and only 1 of 57 changed units had one - so readers could not tell this fork's work from upstream's, and the upstream copyright stood alone on code its authors did not write. Done ahead of any decision to make the repository public; harmless while it is private.
 
