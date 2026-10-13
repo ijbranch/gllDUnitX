@@ -5,6 +5,16 @@ changelog entries. Keep them so the same reviews are not re-derived later.
 
 ## Reviewed and deliberately NOT taken from upstream, so they are not re-derived later
 
+- **Upstream `master` @ `6af7aeb` (2026-10-13): #405-#410 already here, #411 NOT taken.** The seven commits since
+  `1bdc297` are our own batch 1 PRs. #405, #406, #409 and #410 are the same fixes as ours; #407 and #408 are
+  deliberately narrower versions of ours (see `UPSTREAM-REPORT-Defects-2026-10-12.md` §9), so nothing is to be
+  merged from them. **#411 (#372, bitmask exit codes, `--exitmode:Bitmask` / `--failonignored`) is NOT taken (Ian,
+  2026-10-13):** our runners set `EXIT_ERRORS` on any failure, error, leak or abort, and everything here treats a
+  non-zero exit as a failure, so it would be divergence for no benefit. A later merge from upstream leaves out its
+  changes to `DUnitX.TestFramework.pas`, `DUnitX.OptionsDefinition.pas`, `Expert\DUnitX.Expert.CodeGen.Templates.pas`,
+  `Tests\DUnitXTestProject.dpr` and `Tests\DUnitX.Tests.ExitCode.pas`. Vincent was told on #411.
+  **Condition to reopen:** a consumer here needs to tell failures, errors and leaks apart by exit code.
+
 - **GitHub-wide survey 2026-10-12: no DUnitX anywhere is newer or more complete than this fork.**
   `upstream/master` is fully in (its tip `1bdc297`, #397, is our `cf2248c`). Of upstream's 217 forks, 29 are ahead
   of master; already here in equivalent form: bero (help-screen leak), luebbe (`IsSameDate` / `IsSameTime` /

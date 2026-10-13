@@ -5,8 +5,8 @@ requests.
 
 * **A fix to DUnitX itself belongs upstream**, in [VSoftTechnologies/DUnitX](https://github.com/VSoftTechnologies/DUnitX).
   Upstream takes one issue per problem, then a pull request with a test that fails on its `master`. This fork
-  sends its own upstream-relevant fixes that way; their status is in `UPSTREAM-REPORT-Defects-2026-10-12.md` and
-  `UPSTREAM-ISSUES-Batch1.md`.
+  sends its own upstream-relevant fixes that way; their status is in `UPSTREAM-REPORT-Defects-2026-10-12.md`,
+  `UPSTREAM-ISSUES-Batch1.md` and `UPSTREAM-ISSUES-Batch2.md`.
 * **Something specific to this fork** (its scope, `Assert.Ignore`, the VCL GUI runner as fixed here) can be raised
   as an issue on this repository, as a report; there is no commitment to act on it.
 

@@ -5,6 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Second batch of upstream issues and pull requests** (2026-10-13) — `UPSTREAM-ISSUES-Batch2.md`,
+  `UPSTREAM-REPORT-Defects-2026-10-12.md`. Six items (D, 3.3, 1.8, E, 1.7 and the XML file loggers' bare-file-name
+  crash) filed as issues #412/#414/#416/#418/#420/#422 with PRs #413/#415/#417/#419/#421/#423, built on
+  `upstream/master` @ `6af7aeb`. Each PR has a test that failed on master on its own assertion, and the six together
+  build and run clean (330 tests, 0 failures). **Why the changed method:** in batch 1 every merge put the next PR
+  into conflict, because all six added their tests at the same place; this batch places each PR's tests beside the
+  related existing ones, edits no `.dproj` (the shared `pre-commit` hook strips upstream's) and no shared `uses`
+  clause, and every pair of branches was checked to merge cleanly before posting. The lessons are listed in the
+  batch file.
 - **Note: this fork does not take upstream #372 / PR #411 (bitmask exit codes)** (2026-10-13) —
   `UPSTREAM-REPORT-Defects-2026-10-12.md`. Upstream merged all seven PRs, #405-#411, on 2026-10-13 (`upstream/master`
   @ `6af7aeb`); #406, #407 and #408 first needed their conflicts with the earlier merges fixed. #411

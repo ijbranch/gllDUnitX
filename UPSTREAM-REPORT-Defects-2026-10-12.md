@@ -199,6 +199,19 @@ texts are in [UPSTREAM-ISSUES-Batch1.md](UPSTREAM-ISSUES-Batch1.md).
 merge put the next PR into conflict, because they all add tests at the same place in `Tests\DUnitX.Tests.Assert.pas`;
 the branches were merged with `upstream/master` and pushed (Vincent resolved #406's himself).
 
+**Batch 2**, posted 2026-10-13 against `6af7aeb`, with the lessons of batch 1 applied first (every pair of branches
+checked to merge cleanly, no `.dproj` or shared `uses` edits). Detail and the exact texts are in
+[UPSTREAM-ISSUES-Batch2.md](UPSTREAM-ISSUES-Batch2.md).
+
+| Item | Issue | PR |
+|---|---|---|
+| D `WillNotRaise*` swallow a failing assert | [#412](https://github.com/VSoftTechnologies/DUnitX/issues/412) | [#413](https://github.com/VSoftTechnologies/DUnitX/pull/413) |
+| 3.3 `AreSame(TObject)` uses `Equals` | [#414](https://github.com/VSoftTechnologies/DUnitX/issues/414) | [#415](https://github.com/VSoftTechnologies/DUnitX/pull/415) |
+| 1.8 `CheckInherits` reversed | [#416](https://github.com/VSoftTechnologies/DUnitX/issues/416) | [#417](https://github.com/VSoftTechnologies/DUnitX/pull/417) |
+| E `CheckEqualsBin` ignores bits above `digits` | [#418](https://github.com/VSoftTechnologies/DUnitX/issues/418) | [#419](https://github.com/VSoftTechnologies/DUnitX/pull/419) |
+| 1.7 DUnit string checks ignore case | [#420](https://github.com/VSoftTechnologies/DUnitX/issues/420) | [#421](https://github.com/VSoftTechnologies/DUnitX/pull/421) |
+| Section 6: XML file loggers fail on a bare file name | [#422](https://github.com/VSoftTechnologies/DUnitX/issues/422) | [#423](https://github.com/VSoftTechnologies/DUnitX/pull/423) |
+
 The upstream fixes are deliberately narrower than ours in two places. For 1.3, only float types switch to the
 equality comparer, so class and Variant comparisons are unchanged. For 1.4, a test outcome is re-raised unless the
 caller named a matching class other than `Exception`, which uses only the `fTestFailure` / `fTestPass` hooks that

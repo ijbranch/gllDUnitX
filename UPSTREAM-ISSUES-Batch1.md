@@ -7,6 +7,10 @@ Branches are in the worktree `D:\gllDUnitX-upstream` (remote `dunitx-fork`) and 
 standalone repo such as `ijbranch/gllDUnitX`). Each branch has a commit with the failing test, then the fix (branch 6
 has no unit test; see its notes). "Allow edits by maintainers" is on for every PR.
 
+**Outcome (2026-10-13):** upstream merged all six, plus #411, on 2026-10-13 (`upstream/master` @ `6af7aeb`). Each
+merge put the next PR into conflict; what that taught us is applied in
+[UPSTREAM-ISSUES-Batch2.md](UPSTREAM-ISSUES-Batch2.md).
+
 | # | Issue | PR | Branch |
 |---|---|---|---|
 | 1 | [#399](https://github.com/VSoftTechnologies/DUnitX/issues/399) | [#405](https://github.com/VSoftTechnologies/DUnitX/pull/405) | `fix/isempty-variant` |
