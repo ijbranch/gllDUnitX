@@ -195,8 +195,9 @@ texts are in [UPSTREAM-ISSUES-Batch1.md](UPSTREAM-ISSUES-Batch1.md).
 | 1.9 category operator in last position | [#403](https://github.com/VSoftTechnologies/DUnitX/issues/403) | [#409](https://github.com/VSoftTechnologies/DUnitX/pull/409) |
 | 1.10 runner exits 0 on abort | [#404](https://github.com/VSoftTechnologies/DUnitX/issues/404) | [#410](https://github.com/VSoftTechnologies/DUnitX/pull/410) |
 
-**Status 2026-10-13:** upstream merged #405, #409, #410 and #411, and accepted #406, #407 and #408 once their
-conflicts with those merges were fixed; the three branches were merged with `upstream/master` and pushed the same day.
+**Status 2026-10-13:** upstream merged all seven PRs, #405-#411, the same day (`upstream/master` @ `6af7aeb`). Each
+merge put the next PR into conflict, because they all add tests at the same place in `Tests\DUnitX.Tests.Assert.pas`;
+the branches were merged with `upstream/master` and pushed (Vincent resolved #406's himself).
 
 The upstream fixes are deliberately narrower than ours in two places. For 1.3, only float types switch to the
 equality comparer, so class and Variant comparisons are unchanged. For 1.4, a test outcome is re-raised unless the

@@ -6,8 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - **Note: this fork does not take upstream #372 / PR #411 (bitmask exit codes)** (2026-10-13) —
-  `UPSTREAM-REPORT-Defects-2026-10-12.md`. Upstream merged #405, #409, #410 and #411 on 2026-10-13 and accepted #406,
-  #407 and #408 once their conflicts were fixed (the three branches were merged with `upstream/master` and pushed). #411
+  `UPSTREAM-REPORT-Defects-2026-10-12.md`. Upstream merged all seven PRs, #405-#411, on 2026-10-13 (`upstream/master`
+  @ `6af7aeb`); #406, #407 and #408 first needed their conflicts with the earlier merges fixed. #411
   stays out of this fork: our runners set `EXIT_ERRORS` on any failure, error, leak or abort, and every consumer here
   treats any non-zero exit as a failure. **Why:** carrying it adds divergence for no benefit; any later merge from
   upstream leaves #411's changes to `DUnitX.TestFramework.pas`, `DUnitX.OptionsDefinition.pas`, the expert template and
