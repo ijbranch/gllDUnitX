@@ -15,6 +15,17 @@ fix. "Allow edits by maintainers" is on for every PR.
 | 5 | 1.7 | [#420](https://github.com/VSoftTechnologies/DUnitX/issues/420) | [#421](https://github.com/VSoftTechnologies/DUnitX/pull/421) | `fix/dunit-string-checks-case` |
 | 6 | section 6 (side note on #410) | [#422](https://github.com/VSoftTechnologies/DUnitX/issues/422) | [#423](https://github.com/VSoftTechnologies/DUnitX/pull/423) | `fix/xml-file-logger-bare-file-name` |
 
+## Outcome (2026-10-13)
+
+- **Merged:** #413, #419, #417, #421, #423 (5 of 6). Upstream `master` @ `fa41545` after the last of them.
+- **Not taken:** #415 (`AreSame` identity) and its issue #414, closed unmerged without comment after Vincent raised a
+  behaviour-change reservation and we replied. gllDUnitX keeps the fix.
+- **Follow-up regression, fixed:** [#424](https://github.com/VSoftTechnologies/DUnitX/issues/424) (luebbe): batch 1's
+  #407 `ValuesEqual<T>` raised an AV for a type without RTTI (`TypeInfo` nil, e.g. an enum with explicit ordinals).
+  Fixed by [#425](https://github.com/VSoftTechnologies/DUnitX/pull/425) (nil guard plus test), merged; upstream
+  `master` @ `a710952`. gllDUnitX was never affected: its `AreEqual<T>` uses `TEqualityComparer` directly.
+- `ijbranch/DUnitX` `master` fast-forwarded to `a710952`; the merged branches were deleted from it on 2026-10-14.
+
 ## What batch 1 taught us, and what changed for this batch
 
 - **Every merge put the next PR into conflict.** All six batch 1 PRs added their tests at the end of

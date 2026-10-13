@@ -217,6 +217,25 @@ equality comparer, so class and Variant comparisons are unchanged. For 1.4, a te
 caller named a matching class other than `Exception`, which uses only the `fTestFailure` / `fTestPass` hooks that
 `DUnitX.Assert.pas` already has.
 
+**Status 2026-10-13:** five of batch 2 merged; #415 (3.3) was closed unmerged, so that fix stays in this fork only.
+[#425](https://github.com/VSoftTechnologies/DUnitX/pull/425), our fix for the
+[#424](https://github.com/VSoftTechnologies/DUnitX/issues/424) regression in 1.3's upstream fix, also merged
+(`upstream/master` @ `a710952`).
+
+**Batch 3**, posted 2026-10-14 against `a710952`; only items whose old behaviour is plainly wrong, after #415's fate.
+Detail and the exact texts are in [UPSTREAM-ISSUES-Batch3.md](UPSTREAM-ISSUES-Batch3.md).
+
+| Item | Issue | PR |
+|---|---|---|
+| 3.1 `WillNotRaiseAny` message used as a format string | [#426](https://github.com/VSoftTechnologies/DUnitX/issues/426) | [#427](https://github.com/VSoftTechnologies/DUnitX/pull/427) |
+| 3.4 float `AreEqual` / `AreNotEqual` on infinities | [#428](https://github.com/VSoftTechnologies/DUnitX/issues/428) | [#429](https://github.com/VSoftTechnologies/DUnitX/pull/429) |
+| 3.5 (part) `AreEqual(Currency)`, `DoesNotContain(string)` messages | [#430](https://github.com/VSoftTechnologies/DUnitX/issues/430) | [#431](https://github.com/VSoftTechnologies/DUnitX/pull/431) |
+| 3.6 (part) repeated `ignoreLines` entry raises `EListError` | [#432](https://github.com/VSoftTechnologies/DUnitX/issues/432) | [#433](https://github.com/VSoftTechnologies/DUnitX/pull/433) |
+| 3.9 (part) `IsValidXMLChar` accepts form feed | [#434](https://github.com/VSoftTechnologies/DUnitX/issues/434) | [#435](https://github.com/VSoftTechnologies/DUnitX/pull/435) |
+| F (part) `TDUnitXList<T>.ToArray` returns nil | [#436](https://github.com/VSoftTechnologies/DUnitX/issues/436) | [#437](https://github.com/VSoftTechnologies/DUnitX/pull/437) |
+
+For 3.4 the upstream fix covers infinities only, not the negative-tolerance check this fork also added.
+
 **Outside the batches: [#372](https://github.com/VSoftTechnologies/DUnitX/issues/372) (bitmask exit codes) ->
 [PR #411](https://github.com/VSoftTechnologies/DUnitX/pull/411)**, branch `feature/bitmask-exit-codes`, posted
 2026-10-12 after a reviewer pointed at it from #404. It is someone else's feature request, which upstream had

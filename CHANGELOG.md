@@ -5,6 +5,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Third batch of upstream issues and pull requests** (2026-10-14) — `UPSTREAM-ISSUES-Batch3.md`,
+  `UPSTREAM-REPORT-Defects-2026-10-12.md`. Items 3.1, 3.4, 3.5 (part), 3.6 (part), 3.9 (part) and F (part) filed as
+  issues #426/#428/#430/#432/#434/#436 with PRs #427/#429/#431/#433/#435/#437, built on `upstream/master` @
+  `a710952`. Each test failed on master on its own assertion; all 15 branch pairs merge cleanly, and the six together
+  build and run with only upstream's known `TestMaxTime` error (337 tests). **Why these six:** upstream closed #415 over
+  a behaviour change, so this batch takes only defects whose old behaviour is plainly wrong. 3.11 was swapped out
+  because testing it would mean moving `RegisterOptions` into a unit interface. Before the batch, the three merged
+  batch 2 / #425 branches were deleted from `ijbranch/DUnitX`. `Help.md` and `CONTRIBUTING.md` now point at the batch 3
+  file, and `Help.md` notes that upstream `.pas` files must be edited byte-exact (the local hook would add a BOM).
+- **Upstream outcome of batch 2 and of #425 recorded** (2026-10-14) — `UPSTREAM-ISSUES-Batch2.md`. Five of six merged
+  (#413, #417, #419, #421, #423); #415 (`AreSame` identity) closed unmerged, so that fix stays here only. #425, our fix
+  for the #424 regression (#407's `ValuesEqual<T>` AV on a type without RTTI), merged; `upstream/master` @ `a710952`.
+  Nothing to bring into this fork: its `AreEqual<T>` uses `TEqualityComparer` directly and never had the defect.
 - **Second batch of upstream issues and pull requests** (2026-10-13) — `UPSTREAM-ISSUES-Batch2.md`,
   `UPSTREAM-REPORT-Defects-2026-10-12.md`. Six items (D, 3.3, 1.8, E, 1.7 and the XML file loggers' bare-file-name
   crash) filed as issues #412/#414/#416/#418/#420/#422 with PRs #413/#415/#417/#419/#421/#423, built on
