@@ -34,6 +34,9 @@ test(s), then the fix. "Allow edits by maintainers" is on for every PR.
   fixes, 332 pass and only `TestMaxTime` errors (upstream's known `[MaxTime]` crash on Win64).
 - **Building upstream's tests with `DCC_BuildAllUnits` needs `/p:DelphiMocks=D:\glldelphi-mocks\Source`**;
   without it the build only worked off a stray `Delphi.Mocks.dcu` in the Public `dcu\Win64\Debug` folder.
+- **G asked, not sent:** [#450](https://github.com/VSoftTechnologies/DUnitX/issues/450) (2026-10-14, Ian asked)
+  asks Vincent to choose for `ToVarRec` / `ToVarRecs`: caller-held storage (our fork's API change), deprecate or
+  remove (DUnitX never calls them), or fix in place only (Int64, WideChar, raise on unsupported kinds). PR once he answers.
 - **XE2:** upstream still supports it, so nothing here uses later RTL (the Cardinal fix casts to `Int64`).
 
 ---

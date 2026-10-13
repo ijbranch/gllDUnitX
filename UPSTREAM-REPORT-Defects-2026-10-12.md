@@ -236,6 +236,9 @@ Detail and the exact texts are in [UPSTREAM-ISSUES-Batch3.md](UPSTREAM-ISSUES-Ba
 
 For 3.4 the upstream fix covers infinities only, not the negative-tolerance check this fork also added.
 
+**Status 2026-10-14:** five of batch 3 merged (`upstream/master` @ `8ff5f0b`); #429 (3.4) is open after an XE2
+question, reworked to compare with `Infinity`.
+
 **Batch 4**, posted 2026-10-14 against `8ff5f0b`; same rule as batch 3 (old behaviour plainly wrong).
 Detail and the exact texts are in [UPSTREAM-ISSUES-Batch4.md](UPSTREAM-ISSUES-Batch4.md).
 
@@ -247,6 +250,10 @@ Detail and the exact texts are in [UPSTREAM-ISSUES-Batch4.md](UPSTREAM-ISSUES-Ba
 | 3.10 (part) JUnit timestamp uses the locale time separator | [#444](https://github.com/VSoftTechnologies/DUnitX/issues/444) | [#445](https://github.com/VSoftTechnologies/DUnitX/pull/445) |
 | 2.7 (part) NUnit fixture with errored tests written `result="Success"` | [#446](https://github.com/VSoftTechnologies/DUnitX/issues/446) | [#447](https://github.com/VSoftTechnologies/DUnitX/pull/447) |
 | 2.7 (part) `IFixtureResult.Namespace` returns the name | [#448](https://github.com/VSoftTechnologies/DUnitX/issues/448) | [#449](https://github.com/VSoftTechnologies/DUnitX/pull/449) |
+
+**G is not sent as a PR:** a full fix changes the API, so [#450](https://github.com/VSoftTechnologies/DUnitX/issues/450) asks Vincent to choose between
+caller-held storage (this fork's fix), deprecating the two methods (DUnitX never calls them), or an in-place fix of
+the Int64 / WideChar / unsupported-kind cases only.
 
 **Outside the batches: [#372](https://github.com/VSoftTechnologies/DUnitX/issues/372) (bitmask exit codes) ->
 [PR #411](https://github.com/VSoftTechnologies/DUnitX/pull/411)**, branch `feature/bitmask-exit-codes`, posted

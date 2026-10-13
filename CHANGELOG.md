@@ -5,6 +5,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Fourth batch of upstream issues and pull requests, and a question on G** (2026-10-14) —
+  `UPSTREAM-ISSUES-Batch4.md`, `UPSTREAM-REPORT-Defects-2026-10-12.md`, `Help.md`, `CONTRIBUTING.md`. Items 3.2 with
+  3.5 (part), 3.5 (part), 3.6 (rest), 3.10 (part) and 2.7 (two parts) filed as issues #438/#440/#442/#444/#446/#448
+  with PRs #439/#441/#443/#445/#447/#449 on `upstream/master` @ `8ff5f0b`. The nine new or corrected tests fail on
+  master on their own assertions; with the fixes 332 pass and only `TestMaxTime` errors; all 15 branch pairs merge
+  cleanly and each branch builds alone. #439 also corrects two upstream tests that passed only on the access
+  violation. Issue #450 asks Vincent to choose how G (`ToVarRec` / `ToVarRecs` dangling pointers) is fixed upstream,
+  since a full fix is an API change. **Why the build note:** upstream's tests built with `DCC_BuildAllUnits` need
+  `/p:DelphiMocks=D:\glldelphi-mocks\Source`; earlier builds had only worked off a stray `Delphi.Mocks.dcu`.
+- **Upstream outcome of batch 3 recorded** (2026-10-14) — `UPSTREAM-ISSUES-Batch3.md`. #427, #431, #433, #435 and
+  #437 merged (`upstream/master` @ `8ff5f0b`) and their branches were deleted from `ijbranch/DUnitX`. #429 stays open:
+  Vincent said `IsInfinite` was not in XE2, the PR was reworked to compare with `Infinity`, and he then found that
+  XE2 has it after all; the reworked version stands. Nothing to bring into this fork: the merged commits are our
+  own fixes, already here in equal or broader form.
 - **Third batch of upstream issues and pull requests** (2026-10-14) — `UPSTREAM-ISSUES-Batch3.md`,
   `UPSTREAM-REPORT-Defects-2026-10-12.md`. Items 3.1, 3.4, 3.5 (part), 3.6 (part), 3.9 (part) and F (part) filed as
   issues #426/#428/#430/#432/#434/#436 with PRs #427/#429/#431/#433/#435/#437, built on `upstream/master` @

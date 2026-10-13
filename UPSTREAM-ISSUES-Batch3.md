@@ -21,7 +21,8 @@ failing test(s), then the fix. "Allow edits by maintainers" is on for every PR.
   Upstream `master` @ `8ff5f0b`; the fork's `master` fast-forwarded to it.
 - **#429 (infinities): open, reworked.** Vincent: "This will not compile on XE2 - IsInfinite was introduced in
   XE3." Commit `b92e63c` replaces the four `IsInfinite` guards with `Abs(x) <> Infinity` (the `Infinity`
-  constant predates XE2) and we replied on the PR. Delphi 13 Win64 Debug: 321 pass, 9 ignored, only
+  constant predates XE2) and we replied on the PR. Vincent then wrote "My bad, it turns out IsInfinite is in XE2";
+  the reworked version stands. Delphi 13 Win64 Debug: 321 pass, 9 ignored, only
   `TestMaxTime` errors; with the guards removed both infinity tests fail. Upstream still supports XE2, so later
   batches must avoid post-XE2 RTL.
 - **The five merged branches were deleted** from `ijbranch/DUnitX` and locally (2026-10-14); only
