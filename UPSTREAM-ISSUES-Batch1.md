@@ -9,7 +9,9 @@ has no unit test; see its notes). "Allow edits by maintainers" is on for every P
 
 **Outcome (2026-10-13):** upstream merged all six, plus #411, on 2026-10-13 (`upstream/master` @ `6af7aeb`). Each
 merge put the next PR into conflict; what that taught us is applied in
-[UPSTREAM-ISSUES-Batch2.md](UPSTREAM-ISSUES-Batch2.md).
+[UPSTREAM-ISSUES-Batch2.md](UPSTREAM-ISSUES-Batch2.md). The seven merged branches (these six and
+`feature/bitmask-exit-codes`) were deleted from `ijbranch/DUnitX` and the worktree the same day; the PRs keep their
+commits, and `ijbranch/DUnitX` `master` was fast-forwarded to `6af7aeb`.
 
 | # | Issue | PR | Branch |
 |---|---|---|---|
