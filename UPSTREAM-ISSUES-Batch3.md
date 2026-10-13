@@ -15,6 +15,18 @@ failing test(s), then the fix. "Allow edits by maintainers" is on for every PR.
 | 5 | 3.9 | [#434](https://github.com/VSoftTechnologies/DUnitX/issues/434) | [#435](https://github.com/VSoftTechnologies/DUnitX/pull/435) | `fix/xml-form-feed` |
 | 6 | F | [#436](https://github.com/VSoftTechnologies/DUnitX/issues/436) | [#437](https://github.com/VSoftTechnologies/DUnitX/pull/437) | `fix/dunitxlist-toarray` |
 
+## Progress (2026-10-14)
+
+- **Merged 2026-10-13 (21:18-21:25 UTC):** #427, #431, #433, #435, #437 (5 of 6); their issues are closed.
+  Upstream `master` @ `8ff5f0b`; the fork's `master` fast-forwarded to it.
+- **#429 (infinities): open, reworked.** Vincent: "This will not compile on XE2 - IsInfinite was introduced in
+  XE3." Commit `b92e63c` replaces the four `IsInfinite` guards with `Abs(x) <> Infinity` (the `Infinity`
+  constant predates XE2) and we replied on the PR. Delphi 13 Win64 Debug: 321 pass, 9 ignored, only
+  `TestMaxTime` errors; with the guards removed both infinity tests fail. Upstream still supports XE2, so later
+  batches must avoid post-XE2 RTL.
+- **The five merged branches were deleted** from `ijbranch/DUnitX` and locally (2026-10-14); only
+  `fix/areequal-float-infinity` (#429) remains.
+
 ## How this batch was chosen and built
 
 - **No intended behaviour changes.** Upstream closed #415 (batch 2) after a behaviour-change reservation, so this
