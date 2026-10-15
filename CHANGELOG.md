@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Remaining upstream items summarised for Vincent** (2026-10-15) — `UPSTREAM-REPORT-Defects-2026-10-12.md`. A comment on #398 lists every item still unsent after batch 8 in five groups and asks which he wants and which to leave for now. Ian: "Write up a summary of what is remaining and send to Vincent".
 - **Eighth batch of upstream issues and pull requests** (2026-10-15) — `UPSTREAM-ISSUES-Batch8.md`,
   `UPSTREAM-REPORT-Defects-2026-10-12.md`, `Help.md`, `CONTRIBUTING.md`. Ian: "Prioritise the remaining then generate
   and send the next 6 PRs." Every item not yet sent (report sections 1-3, 5, 6 and 8, and this fork's own review

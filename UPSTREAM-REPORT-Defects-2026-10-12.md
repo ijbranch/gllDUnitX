@@ -323,6 +323,8 @@ upstream. The full ranked list and the exact texts are in [UPSTREAM-ISSUES-Batch
 | `@<file>` reported as an unknown option (fork fix) | [#496](https://github.com/VSoftTechnologies/DUnitX/issues/496) | [#497](https://github.com/VSoftTechnologies/DUnitX/pull/497) |
 | `WillRaise*` failure for the wrong class drops the caller's message (fork fix) | [#498](https://github.com/VSoftTechnologies/DUnitX/issues/498) | [#499](https://github.com/VSoftTechnologies/DUnitX/pull/499) |
 
+**Remaining items sent to Vincent for a decision** (2026-10-15, [comment on #398](https://github.com/VSoftTechnologies/DUnitX/issues/398#issuecomment-6184286957)): everything unsent after batch 8, grouped as plain defects ready for a later batch, behaviour changes needing his decision (each offered as an opt-in), the Win64 `[MaxTime]` design question, items needing a larger or project change (including IDE expert 5.1 to 5.4, offered untested), and minor or unreachable items we would leave; asked which he wants and which to leave for now. Ian: "Write up a summary of what is remaining and send to Vincent, asking he wants them or leave them for now". The grouping follows the ranked list in [UPSTREAM-ISSUES-Batch8.md](UPSTREAM-ISSUES-Batch8.md).
+
 **Outside the batches: [#372](https://github.com/VSoftTechnologies/DUnitX/issues/372) (bitmask exit codes) ->
 [PR #411](https://github.com/VSoftTechnologies/DUnitX/pull/411)**, branch `feature/bitmask-exit-codes`, posted
 2026-10-12 after a reviewer pointed at it from #404. It is someone else's feature request, which upstream had
