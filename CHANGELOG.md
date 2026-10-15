@@ -20,7 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `UPSTREAM-REPORT-Defects-2026-10-12.md`. All six PRs merged on 2026-10-15: #465 (`e4f55e9`), #467 (`59a9ab5`),
   #469 (`09510e2`), #471 (`70aedc8`), #473 (`abbd0cf`) and #475 (`fd6621b`); `upstream/master` is now @ `59a9ab5`
   and the fork's `master` was fast-forwarded to it. Each of the six branches on `ijbranch/DUnitX` matches its squash
-  commit by patch ID; they are left for Ian to delete.
+  commit by patch ID, and Ian deleted them from `ijbranch/DUnitX` the same day.
 - **Sixth batch of upstream issues and pull requests** (2026-10-15) — `UPSTREAM-ISSUES-Batch6.md`,
   `UPSTREAM-REPORT-Defects-2026-10-12.md`, `Help.md`, `CONTRIBUTING.md`. Items F (rest) and 2.4, and four fixes this
   fork already carries (`CheckIs` on nil, CDATA escaping, `TArrayHelper.Delete`, `TValueHelper.ToString` on nil),
