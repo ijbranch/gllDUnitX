@@ -1,4 +1,4 @@
-# DUnitX upstream: batch 5 (issues and PRs posted)
+# DUnitX upstream: batch 5 (all six merged 2026-10-15)
 
 Six issues and their PRs, built and posted 2026-10-15 against `master` @ `687af04` (after upstream merged #429 and
 all of batch 4). Issue bodies end "Split out of #398."; PR bodies are "Fixes #N." plus a short note plus the one-line
@@ -6,14 +6,14 @@ caveat at the end of this file. Branches are in the worktree `D:\gllDUnitX-upstr
 pushed to [`ijbranch/DUnitX`](https://github.com/ijbranch/DUnitX). Each branch has a commit with the failing
 test(s), then the fix. "Allow edits by maintainers" is on for every PR.
 
-| # | Report item | Issue | PR | Branch |
-|---|---|---|---|---|
-| 1 | 3.10 (rest) | [#452](https://github.com/VSoftTechnologies/DUnitX/issues/452) | [#453](https://github.com/VSoftTechnologies/DUnitX/pull/453) | `fix/nunit-assembly-time` |
-| 2 | 2.7 (rest) | [#454](https://github.com/VSoftTechnologies/DUnitX/issues/454) | [#455](https://github.com/VSoftTechnologies/DUnitX/pull/455) | `fix/xml-header-leak-counts` |
-| 3 | fork fix, not in the report | [#456](https://github.com/VSoftTechnologies/DUnitX/issues/456) | [#457](https://github.com/VSoftTechnologies/DUnitX/pull/457) | `fix/junit-testsuite-counts` |
-| 4 | 3.9 (rest) | [#458](https://github.com/VSoftTechnologies/DUnitX/issues/458) | [#459](https://github.com/VSoftTechnologies/DUnitX/pull/459) | `fix/nunit-category-escape` |
-| 5 | 3.11 | [#460](https://github.com/VSoftTechnologies/DUnitX/issues/460) | [#461](https://github.com/VSoftTechnologies/DUnitX/pull/461) | `fix/dontshowignored-value` |
-| 6 | 2.2 | [#462](https://github.com/VSoftTechnologies/DUnitX/issues/462) | [#463](https://github.com/VSoftTechnologies/DUnitX/pull/463) | `fix/raising-destructor-teardown` |
+| # | Report item | Issue | PR | Branch | Merged |
+|---|---|---|---|---|---|
+| 1 | 3.10 (rest) | [#452](https://github.com/VSoftTechnologies/DUnitX/issues/452) | [#453](https://github.com/VSoftTechnologies/DUnitX/pull/453) | `fix/nunit-assembly-time` | 2026-10-15 `8d91bcf` |
+| 2 | 2.7 (rest) | [#454](https://github.com/VSoftTechnologies/DUnitX/issues/454) | [#455](https://github.com/VSoftTechnologies/DUnitX/pull/455) | `fix/xml-header-leak-counts` | 2026-10-15 `4273e0f` |
+| 3 | fork fix, not in the report | [#456](https://github.com/VSoftTechnologies/DUnitX/issues/456) | [#457](https://github.com/VSoftTechnologies/DUnitX/pull/457) | `fix/junit-testsuite-counts` | 2026-10-15 `61f1d3e` |
+| 4 | 3.9 (rest) | [#458](https://github.com/VSoftTechnologies/DUnitX/issues/458) | [#459](https://github.com/VSoftTechnologies/DUnitX/pull/459) | `fix/nunit-category-escape` | 2026-10-15 `1460934` |
+| 5 | 3.11 | [#460](https://github.com/VSoftTechnologies/DUnitX/issues/460) | [#461](https://github.com/VSoftTechnologies/DUnitX/pull/461) | `fix/dontshowignored-value` | 2026-10-15 `1e95e6b` |
+| 6 | 2.2 | [#462](https://github.com/VSoftTechnologies/DUnitX/issues/462) | [#463](https://github.com/VSoftTechnologies/DUnitX/pull/463) | `fix/raising-destructor-teardown` | 2026-10-15 `3efb0eb` |
 
 Sent the same day, outside the batch: [PR #451](https://github.com/VSoftTechnologies/DUnitX/pull/451) removes
 `ToVarRec` / `ToVarRecs` (G), as Vincent chose on #450. It merged on 2026-10-15 (`615be86`).

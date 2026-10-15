@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Upstream outcome of batch 5 recorded** (2026-10-15) — `UPSTREAM-ISSUES-Batch5.md`,
+  `UPSTREAM-REPORT-Defects-2026-10-12.md`. All six PRs merged on 2026-10-15: #453 (`8d91bcf`), #455 (`4273e0f`),
+  #457 (`61f1d3e`), #459 (`1460934`), #461 (`1e95e6b`) and #463 (`3efb0eb`); `upstream/master` is now @ `4273e0f`.
+  Nothing to bring into this fork: the merged commits are our own fixes, already here.
 - **Upstream merge of #451 recorded** (2026-10-15) — `UPSTREAM-ISSUES-Batch4.md`, `UPSTREAM-ISSUES-Batch5.md`,
   `UPSTREAM-REPORT-Defects-2026-10-12.md`. The `ToVarRec` / `ToVarRecs` removal merged (`upstream/master` @
   `615be86`) and #450 closed; the fork's `master` was fast-forwarded and `remove/tovarrec` deleted. Nothing to bring

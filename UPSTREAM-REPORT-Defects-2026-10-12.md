@@ -260,7 +260,8 @@ On #450 Vincent chose removal, and [PR #451](https://github.com/VSoftTechnologie
 `ToVarRec` / `ToVarRecs` upstream; it merged on 2026-10-15 (`upstream/master` @ `615be86`). This fork keeps its
 caller-held-storage version.
 
-**Batch 5**, posted 2026-10-15 against `687af04`; same rule as batches 3 and 4. Detail and the exact texts are in
+**Batch 5**, posted 2026-10-15 against `687af04`; same rule as batches 3 and 4. **All six merged the same day**
+(`upstream/master` @ `4273e0f`). Detail and the exact texts are in
 [UPSTREAM-ISSUES-Batch5.md](UPSTREAM-ISSUES-Batch5.md).
 
 | Item | Issue | PR |
