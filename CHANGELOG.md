@@ -13,8 +13,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   pairs of the branches merge cleanly, and each branch builds alone. **Why not the rest of the shortlist:** 2.6,
   2.5 (a), A and B need a runner inside the test (and A, B and 2.5 (a) this fork's runner-allocation accounting), C
   needs FastMM5, and 2.8 is a behaviour change. **Found while choosing:** this fork's service-locator fix frees a
-  `TInterfacedObject` a second time when `Supports` fails, because the RTL's `Supports` has already freed it; not
-  changed here.
+  `TInterfacedObject` a second time when `Supports` fails, because the RTL's `Supports` has already freed it;
+  fixed separately, see `### Fixed`.
 - **Upstream outcome of batch 5 recorded** (2026-10-15) — `UPSTREAM-ISSUES-Batch5.md`,
   `UPSTREAM-REPORT-Defects-2026-10-12.md`. All six PRs merged on 2026-10-15: #453 (`8d91bcf`), #455 (`4273e0f`),
   #457 (`61f1d3e`), #459 (`1460934`), #461 (`1e95e6b`) and #463 (`3efb0eb`); `upstream/master` is now @ `4273e0f`; the fork's `master` was fast-forwarded to it and the six branches were deleted from `ijbranch/DUnitX` (each matched its squash commit by patch ID first).
@@ -259,6 +259,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The legacy `Build/Run-Dependend-Delphi-*.bat` launcher scripts (2026-08-24)
 
 ### Fixed
+- **The service locator freed an unsupported implementation twice** (2026-10-15) — `Source/DUnitX.ServiceLocator.pas`,
+  `Tests/DUnitX.Tests.IoC.pas`. When a registered class did not support the interface, the 2026-08-24 leak fix
+  called `obj.Free` after a failed `Supports(obj, guid, Result)`; but that `TObject` overload takes and releases a
+  temporary `IUnknown`, which already frees a reference-counted object (count 0 -> 1 -> 0), so the `Free` was a
+  second free ("Invalid pointer operation"). The activator now asks `obj.GetInterface(guid, Result)`, which takes no
+  temporary reference, so the single `Free` is right for every class. New
+  `Test_Unsupported_Implementation_Is_Destroyed_Once` (a reference-counted and a plain class, each destroyed exactly
+  once); putting `Supports` back makes it error with "Invalid pointer operation". Every suite compiles DUnitX from
+  source, so all were rebuilt. **Why:** found while building upstream batch 6; Ian: "Fix the double free and
+  rebuild the suites".
 
 - **Weak tests made real, and a test for every fix of this review** (2026-10-13) — `Tests/DUnitX.Tests.Assert.pas`, `Tests/DUnitX.Tests.CommandLineParser.pas`, `Tests/DUnitX.Tests.Inheritance.pas`, `Tests/DUnitX.Tests.CategoryParser.pas`, `Tests/DUnitX.Tests.DUnitCompatibility.pas`, `Tests/DUnitX.Tests.TestFixture.pas`, `Tests/DUnitX.Tests.Loggers.XML.JUnit.pas`, `Tests/DUnitX.Tests.Loggers.XML.NUnit.pas`, `Tests/DUnitX.Tests.UtilsHelpers.pas`, `Tests/DUnitXTestProject.dpr`, `Tests/DUnitXTest_D13.dproj`. Tests that could not fail: `AreEqualMemory_Throws_ETestFailure_When_Pointers_Are_NotEqual` was only `Assert.Pass`; `AreEqual_GUID_Throws_No_Exception_When_Values_Are_Equal` called `AreNotEqual`; the `Fail` / `Pass` / `Ignore` `..._With_Message` tests and `WillNotRaise_With_ExactClass_Negative` never compared the message; `Will_Raise_On_Registering_Duplicate_Options` never reached its short-name case (now three cases, each from an empty registry); `TestInBase` passed through `Assert.Pass` without checking the override; the category-parser string asserts ignored case and had expected and actual reversed. The never-run `OnTestWarning_Adds_Warnings_To_Be_Written_Out_On_Next_Success` tests (JUnit, NUnit) are removed: with `[Test]` added they failed, because they test a warning callback that `ITestLogger` does not have. New tests for the second round of fixes, each proved by reverting its fix: `Nested_Relative_Options_File_Resolves_Against_Its_Parent_Folder`, `UnclosedParenthesisRaises`, `CheckIs_Nil_Object_Fails`, `WillRaise_Family_Wrong_Class_Failure_Includes_Caller_Message`, `RunResultsListTheRunFixtures`, `FixtureTestInfoListFollowsAddedTests`, `NameFilterListDropsEmptyAndDuplicateNames`, `TestErrorSeparatesMessagesAndAcceptsStrCompareDescendants`, and twelve `DUnitX.Tests.UtilsHelpers` tests for the `DUnitX.Utils` fixes; the seven `WillNotRaise*` tests that asserted the old swallowing now assert that the other exception propagates.
 - **`Assert.WillNotRaise( proc, SomeClass )` passed when the method raised a different exception** (2026-10-13) — `Source/DUnitX.Assert.pas`, `Tests/DUnitX.Tests.Assert.pas`, `Help.md`. With a class given, `WillNotRaise`, `WillNotRaiseDescendant` and `WillNotRaiseWithMessage` caught any other exception (a descendant included, for `WillNotRaise`) and did nothing, so the test passed while the fault happened. That exception now propagates, so the test is reported as an error; the asserted class still fails the assertion. The seven tests that asserted the swallowing were updated. **Why:** a test passed that should not have. The estate's own guidance already steered to `WillNotRaiseAny`, and no suite in it passes a class.

@@ -389,9 +389,13 @@ begin
             obj : TObject;
           begin
             obj := ctor(AClass);
-            if not Supports(obj, guid, Result) then
+            // GetInterface, NOT Supports( TObject, ... ): Supports first takes a temporary IUnknown reference, and
+            // when the query then fails, releasing that reference FREES a reference-counted object (count 0 -> 1
+            // -> 0), so the Free below was a double free. GetInterface takes no temporary reference, so on failure
+            // obj is untouched and nothing owns it (2026-10-15).
+            if not obj.GetInterface(guid, Result) then
             begin
-              // Supports failed, so nothing took ownership of obj - free it rather than leak.
+              // Nothing took ownership of obj - free it rather than leak.
               obj.Free;
               if raiseOnError then
                 raise EServiceLocatorResolutionException.CreateFmt(SRegisteredImplementationError, [AClass.ClassName, typeInfo.Name]);

@@ -119,6 +119,14 @@ type
     /// </summary>
     [Test]
     procedure Test_Nil_Activator_Raises_Resolution_Exception;
+
+    /// <summary>
+    ///   Proves that a registered implementation class which does not support the interface is destroyed exactly
+    ///   once, whether or not it is reference-counted. Until 2026-10-15 the activator called Supports( TObject ),
+    ///   whose temporary IUnknown reference already freed a TInterfacedObject on failure, and then freed it again.
+    /// </summary>
+    [Test]
+    procedure Test_Unsupported_Implementation_Is_Destroyed_Once;
   end;
 
 implementation
@@ -128,6 +136,36 @@ type
   protected
     procedure Bar;
   end;
+
+  /// <summary>Reference-counted, but does not implement IFoo; counts its destructions.</summary>
+  TCountedNotAFoo = class(TInterfacedObject)
+  public
+    /// <summary>Destructions since the test reset it.</summary>
+    class var DestroyCount : Integer;
+    /// <summary>Counts the destruction.</summary>
+    destructor Destroy; override;
+  end;
+
+  /// <summary>Not reference-counted and does not implement IFoo; counts its destructions.</summary>
+  TPlainNotAFoo = class(TObject)
+  public
+    /// <summary>Destructions since the test reset it.</summary>
+    class var DestroyCount : Integer;
+    /// <summary>Counts the destruction.</summary>
+    destructor Destroy; override;
+  end;
+
+destructor TCountedNotAFoo.Destroy;
+begin
+  Inc(DestroyCount);
+  inherited;
+end;
+
+destructor TPlainNotAFoo.Destroy;
+begin
+  Inc(DestroyCount);
+  inherited;
+end;
 
 procedure TDUnitX_IoCTests.Setup;
 begin
@@ -225,6 +263,40 @@ begin
       begin
         container.Resolve<IFoo>('nil_activator');
       end, EServiceLocatorResolutionException);
+  finally
+    container.Free;
+  end;
+end;
+
+procedure TDUnitX_IoCTests.Test_Unsupported_Implementation_Is_Destroyed_Once;
+var
+  container : TDUnitXServiceLocator;
+  foo : IFoo;
+begin
+  TCountedNotAFoo.DestroyCount := 0;
+  TPlainNotAFoo.DestroyCount := 0;
+  container := TDUnitXServiceLocator.Create;
+  try
+    container.RegisterType<IFoo, TCountedNotAFoo>('counted_not_a_foo');
+    container.RegisterType<IFoo, TPlainNotAFoo>('plain_not_a_foo');
+
+    try
+      foo := container.Resolve<IFoo>('counted_not_a_foo');
+    except
+      on EServiceLocatorResolutionException do
+        foo := nil;
+    end;
+    Assert.IsNull(foo, 'a class without IFoo must not resolve');
+    Assert.AreEqual(1, TCountedNotAFoo.DestroyCount, 'reference-counted instance destroyed exactly once');
+
+    try
+      foo := container.Resolve<IFoo>('plain_not_a_foo');
+    except
+      on EServiceLocatorResolutionException do
+        foo := nil;
+    end;
+    Assert.IsNull(foo, 'a class without IFoo must not resolve');
+    Assert.AreEqual(1, TPlainNotAFoo.DestroyCount, 'plain instance destroyed exactly once, not leaked');
   finally
     container.Free;
   end;

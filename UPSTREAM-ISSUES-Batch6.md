@@ -39,7 +39,8 @@ test, then the fix. "Allow edits by maintainers" is on for every PR.
 - **The service-locator leak (report §6) is not sent, and this fork's own fix is wrong:** `Supports(obj, guid,
   Result)` on a `TInterfacedObject` with a reference count of 0 frees the object itself when it fails (the RTL takes
   and releases an `IUnknown`), so the fork's `obj.Free` after a failed `Supports` frees it a second time. Only a
-  class without `IUnknown` leaks. Not changed here (this batch does not touch the fork's `Source`).
+  class without `IUnknown` leaks. **Fixed in the fork the same day** (Ian: "Fix the double free"): the activator now
+  calls `GetInterface`, which takes no temporary reference; see the CHANGELOG `### Fixed` entry.
 - **#1 adds `TypInfo` to the implementation `uses` of `DUnitX.Generics`** for the class check in the non-generic
   `Current`; `GetTypeKind` would need XE7.
 - **#2's test drives the real path:** `ITestFixture.AddTest` with an expected exception creates the
