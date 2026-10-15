@@ -5,6 +5,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Eighth batch of upstream issues and pull requests** (2026-10-15) — `UPSTREAM-ISSUES-Batch8.md`,
+  `UPSTREAM-REPORT-Defects-2026-10-12.md`, `Help.md`, `CONTRIBUTING.md`. Ian: "Prioritise the remaining then generate
+  and send the next 6 PRs." Every item not yet sent (report sections 1-3, 5, 6 and 8, and this fork's own review
+  fixes) was ranked by severity, then by whether it can go as a small PR whose test fails on master; the six taken: an
+  override of an attributed virtual method running the ancestor's code, 3.7 (`Contains` / `DoesNotContain` with an
+  empty substring), a result carrying the previous test's log, a fixture's duration leaving out its own tests,
+  `@<file>` never read, and `WillRaise*` dropping the caller's message, filed as issues #488/#490/#492/#494/#496/#498
+  with PRs #489/#491/#493/#495/#497/#499 on `upstream/master` @ `7c891c6`. Each was reproduced on that tip by a
+  standalone program, searched for among upstream's issues and PRs, and fails on master on its own assertion; with the
+  fixes everything passes and only `TestMaxTime` errors, alone and all six merged; all 15 pairs merge cleanly. This
+  fork already has all six fixes, so no source changed here. **Found while ranking:** three of this fork's fixes are
+  not reachable upstream (`IRunResults` has no `Fixtures`, the command line never uses `TNameFilter`'s list overloads,
+  `ActiveTestCount` is an unread `TODO`), and upstream's `--run` name-parser tests assert the trailing comma that the
+  NUnit tests they were ported from trim.
 - **Upstream outcome of batch 7 recorded** (2026-10-15) — `UPSTREAM-ISSUES-Batch7.md`,
   `UPSTREAM-REPORT-Defects-2026-10-12.md`. All six PRs merged on 2026-10-15: #477 (`5c193a3`), #479 (`70cee9c`),
   #481 (`23d56c5`), #483 (`05cc7d8`), #485 (`7c891c6`) and #487 (`87f3307`); `upstream/master` is now @ `7c891c6`

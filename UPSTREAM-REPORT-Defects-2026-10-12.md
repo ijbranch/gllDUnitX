@@ -306,6 +306,23 @@ matching. **All six merged the same day** (`upstream/master` @
 | 2.5 (c) memory freed by a test reported as a negative leak | [#484](https://github.com/VSoftTechnologies/DUnitX/issues/484) | [#485](https://github.com/VSoftTechnologies/DUnitX/pull/485) |
 | 2.6 TearDown error replaces the Setup or test failure | [#486](https://github.com/VSoftTechnologies/DUnitX/issues/486) | [#487](https://github.com/VSoftTechnologies/DUnitX/pull/487) |
 
+**Batch 8**, posted 2026-10-15 against `7c891c6`. Every item not yet sent (report sections 1-3, 5, 6 and 8, and this
+fork's own review fixes) was ranked by the batch 7 rule, each first checked in upstream's source and tests, and the
+six taken were re-validated the same way. Passed over, highest first: the `--run` trailing comma (upstream's tests
+assert it, although the NUnit tests they were ported from do not), 2.9 and 1.6, `Assert.IsType<T>`, `[MaxTime]` with
+`Assert.Pass`, `--run` prefix matching, 2.3, A, B, 2.5 (a) / (b), C, the Win64 `[MaxTime]` crash (a design question
+for upstream), and 5.1-5.4 (no test is possible in the test project); three apparent defects are not reachable
+upstream. The full ranked list and the exact texts are in [UPSTREAM-ISSUES-Batch8.md](UPSTREAM-ISSUES-Batch8.md).
+
+| Item | Issue | PR |
+|---|---|---|
+| Override of an attributed virtual method runs the ancestor's code (fork fix) | [#488](https://github.com/VSoftTechnologies/DUnitX/issues/488) | [#489](https://github.com/VSoftTechnologies/DUnitX/pull/489) |
+| 3.7 `Contains` / `DoesNotContain` accept an empty substring | [#490](https://github.com/VSoftTechnologies/DUnitX/issues/490) | [#491](https://github.com/VSoftTechnologies/DUnitX/pull/491) |
+| A result carries the previous test's log and loses its Setup's (fork fix) | [#492](https://github.com/VSoftTechnologies/DUnitX/issues/492) | [#493](https://github.com/VSoftTechnologies/DUnitX/pull/493) |
+| A fixture with child fixtures reports only their time (fork fix) | [#494](https://github.com/VSoftTechnologies/DUnitX/issues/494) | [#495](https://github.com/VSoftTechnologies/DUnitX/pull/495) |
+| `@<file>` reported as an unknown option (fork fix) | [#496](https://github.com/VSoftTechnologies/DUnitX/issues/496) | [#497](https://github.com/VSoftTechnologies/DUnitX/pull/497) |
+| `WillRaise*` failure for the wrong class drops the caller's message (fork fix) | [#498](https://github.com/VSoftTechnologies/DUnitX/issues/498) | [#499](https://github.com/VSoftTechnologies/DUnitX/pull/499) |
+
 **Outside the batches: [#372](https://github.com/VSoftTechnologies/DUnitX/issues/372) (bitmask exit codes) ->
 [PR #411](https://github.com/VSoftTechnologies/DUnitX/pull/411)**, branch `feature/bitmask-exit-codes`, posted
 2026-10-12 after a reviewer pointed at it from #404. It is someone else's feature request, which upstream had
