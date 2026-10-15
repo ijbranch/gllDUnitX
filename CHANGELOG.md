@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Upstream merge of #451 recorded** (2026-10-15) — `UPSTREAM-ISSUES-Batch4.md`, `UPSTREAM-ISSUES-Batch5.md`,
+  `UPSTREAM-REPORT-Defects-2026-10-12.md`. The `ToVarRec` / `ToVarRecs` removal merged (`upstream/master` @
+  `615be86`) and #450 closed; the fork's `master` was fast-forwarded and `remove/tovarrec` deleted. Nothing to bring
+  into this fork: it keeps its own caller-held-storage version of G.
 - **Fifth batch of upstream issues and pull requests** (2026-10-15) — `UPSTREAM-ISSUES-Batch5.md`,
   `UPSTREAM-REPORT-Defects-2026-10-12.md`, `Help.md`, `CONTRIBUTING.md`. Items 3.10 (rest), 2.7 (rest), 3.9 (rest),
   3.11, 2.2 and a JUnit `<testsuite>` count fix this fork already carries, filed as issues #452/#454/#456/#458/#460/#462

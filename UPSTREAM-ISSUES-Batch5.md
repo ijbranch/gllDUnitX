@@ -16,7 +16,7 @@ test(s), then the fix. "Allow edits by maintainers" is on for every PR.
 | 6 | 2.2 | [#462](https://github.com/VSoftTechnologies/DUnitX/issues/462) | [#463](https://github.com/VSoftTechnologies/DUnitX/pull/463) | `fix/raising-destructor-teardown` |
 
 Sent the same day, outside the batch: [PR #451](https://github.com/VSoftTechnologies/DUnitX/pull/451) removes
-`ToVarRec` / `ToVarRecs` (G), as Vincent chose on #450.
+`ToVarRec` / `ToVarRecs` (G), as Vincent chose on #450. It merged on 2026-10-15 (`615be86`).
 
 ## How this batch was chosen and built
 

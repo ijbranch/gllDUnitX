@@ -25,6 +25,8 @@ test(s), then the fix. "Allow edits by maintainers" is on for every PR.
   [PR #451](https://github.com/VSoftTechnologies/DUnitX/pull/451) (branch `remove/tovarrec`, 2026-10-15) deletes
   `TValueHelper.ToVarRec` and `ToVarRecs` from `DUnitX.Utils.pas`; nothing else in the repository referred to them,
   and the upstream suite still builds and runs with only `TestMaxTime` erroring. No test: it is a removal.
+  **Merged 2026-10-15 (00:22 UTC)**, #450 closed; upstream `master` @ `615be86`, the fork's `master` fast-forwarded,
+  and `remove/tovarrec` deleted from the fork and locally.
 
 ## How this batch was chosen and built
 

@@ -257,7 +257,8 @@ the Int64 / WideChar / unsupported-kind cases only.
 
 **Status 2026-10-15:** #429 (batch 3) and all six of batch 4 merged on 2026-10-14 (`upstream/master` @ `687af04`).
 On #450 Vincent chose removal, and [PR #451](https://github.com/VSoftTechnologies/DUnitX/pull/451) deletes
-`ToVarRec` / `ToVarRecs` upstream. This fork keeps its caller-held-storage version.
+`ToVarRec` / `ToVarRecs` upstream; it merged on 2026-10-15 (`upstream/master` @ `615be86`). This fork keeps its
+caller-held-storage version.
 
 **Batch 5**, posted 2026-10-15 against `687af04`; same rule as batches 3 and 4. Detail and the exact texts are in
 [UPSTREAM-ISSUES-Batch5.md](UPSTREAM-ISSUES-Batch5.md).
