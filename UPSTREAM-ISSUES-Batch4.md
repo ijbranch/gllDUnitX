@@ -15,6 +15,17 @@ test(s), then the fix. "Allow edits by maintainers" is on for every PR.
 | 5 | 2.7 (part) | [#446](https://github.com/VSoftTechnologies/DUnitX/issues/446) | [#447](https://github.com/VSoftTechnologies/DUnitX/pull/447) | `fix/nunit-errored-fixture-result` |
 | 6 | 2.7 (part) | [#448](https://github.com/VSoftTechnologies/DUnitX/issues/448) | [#449](https://github.com/VSoftTechnologies/DUnitX/pull/449) | `fix/fixtureresult-namespace` |
 
+## Outcome (2026-10-15)
+
+- **All six merged 2026-10-14 (22:31-22:35 UTC)**, with no review comments; issues #438-#448 closed as completed.
+  Upstream `master` @ `687af04`; the fork's `master` fast-forwarded to it, and the six branches were deleted from
+  `ijbranch/DUnitX` and locally.
+- **G answered:** on [#450](https://github.com/VSoftTechnologies/DUnitX/issues/450) Vincent chose removal: "lets
+  just remove them since they are not used by DUnitX, and were never intended to be part of the user api surface."
+  [PR #451](https://github.com/VSoftTechnologies/DUnitX/pull/451) (branch `remove/tovarrec`, 2026-10-15) deletes
+  `TValueHelper.ToVarRec` and `ToVarRecs` from `DUnitX.Utils.pas`; nothing else in the repository referred to them,
+  and the upstream suite still builds and runs with only `TestMaxTime` erroring. No test: it is a removal.
+
 ## How this batch was chosen and built
 
 - **Same rule as batch 3:** only defects where the old behaviour is plainly wrong (a crash, a wrong message,

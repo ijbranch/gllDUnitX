@@ -5,6 +5,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Fifth batch of upstream issues and pull requests** (2026-10-15) — `UPSTREAM-ISSUES-Batch5.md`,
+  `UPSTREAM-REPORT-Defects-2026-10-12.md`, `Help.md`, `CONTRIBUTING.md`. Items 3.10 (rest), 2.7 (rest), 3.9 (rest),
+  3.11, 2.2 and a JUnit `<testsuite>` count fix this fork already carries, filed as issues #452/#454/#456/#458/#460/#462
+  with PRs #453/#455/#457/#459/#461/#463 on `upstream/master` @ `687af04`. The seven new tests fail on master on their
+  own assertions; with the fixes everything passes and only `TestMaxTime` errors; all 21 pairs of the six branches and
+  #451 merge cleanly, and each branch builds alone. 3.11 needed `RegisterOptions` in a unit interface after all, and
+  it is now in the PR. **Why the JUnit swap:** the 2.7 note about `RollUpResults` and leak counts cannot be seen
+  upstream (`IFixtureResult` has no leak count), so it is not sent.
+- **Upstream outcome of batch 4, #429 and #450 recorded** (2026-10-15) — `UPSTREAM-ISSUES-Batch3.md`,
+  `UPSTREAM-ISSUES-Batch4.md`, `UPSTREAM-REPORT-Defects-2026-10-12.md`. #429 and all six of batch 4 merged on
+  2026-10-14 (`upstream/master` @ `687af04`); their branches were deleted from `ijbranch/DUnitX`. On #450 Vincent chose
+  to remove `ToVarRec` / `ToVarRecs`, and PR #451 does that. This fork keeps its own caller-held-storage version.
+  Nothing to bring into this fork: the merged commits are our own fixes, already here in equal or broader form.
 - **Fourth batch of upstream issues and pull requests, and a question on G** (2026-10-14) —
   `UPSTREAM-ISSUES-Batch4.md`, `UPSTREAM-REPORT-Defects-2026-10-12.md`, `Help.md`, `CONTRIBUTING.md`. Items 3.2 with
   3.5 (part), 3.5 (part), 3.6 (rest), 3.10 (part) and 2.7 (two parts) filed as issues #438/#440/#442/#444/#446/#448

@@ -27,6 +27,8 @@ failing test(s), then the fix. "Allow edits by maintainers" is on for every PR.
   batches must avoid post-XE2 RTL.
 - **The five merged branches were deleted** from `ijbranch/DUnitX` and locally (2026-10-14); only
   `fix/areequal-float-infinity` (#429) remains.
+- **#429 merged 2026-10-14 (22:30 UTC)** with the `Infinity` rework, so all six of batch 3 are in upstream
+  (`master` @ `fcb48f1`). Its branch was deleted from the fork and locally on 2026-10-15.
 
 ## How this batch was chosen and built
 

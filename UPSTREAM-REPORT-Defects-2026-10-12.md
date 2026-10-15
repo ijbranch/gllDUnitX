@@ -255,6 +255,22 @@ Detail and the exact texts are in [UPSTREAM-ISSUES-Batch4.md](UPSTREAM-ISSUES-Ba
 caller-held storage (this fork's fix), deprecating the two methods (DUnitX never calls them), or an in-place fix of
 the Int64 / WideChar / unsupported-kind cases only.
 
+**Status 2026-10-15:** #429 (batch 3) and all six of batch 4 merged on 2026-10-14 (`upstream/master` @ `687af04`).
+On #450 Vincent chose removal, and [PR #451](https://github.com/VSoftTechnologies/DUnitX/pull/451) deletes
+`ToVarRec` / `ToVarRecs` upstream. This fork keeps its caller-held-storage version.
+
+**Batch 5**, posted 2026-10-15 against `687af04`; same rule as batches 3 and 4. Detail and the exact texts are in
+[UPSTREAM-ISSUES-Batch5.md](UPSTREAM-ISSUES-Batch5.md).
+
+| Item | Issue | PR |
+|---|---|---|
+| 3.10 (rest) NUnit assembly `time` holds the start time | [#452](https://github.com/VSoftTechnologies/DUnitX/issues/452) | [#453](https://github.com/VSoftTechnologies/DUnitX/pull/453) |
+| 2.7 (rest) NUnit / JUnit header counts leave out leaks | [#454](https://github.com/VSoftTechnologies/DUnitX/issues/454) | [#455](https://github.com/VSoftTechnologies/DUnitX/pull/455) |
+| JUnit `<testsuite>` counts do not match its test cases | [#456](https://github.com/VSoftTechnologies/DUnitX/issues/456) | [#457](https://github.com/VSoftTechnologies/DUnitX/pull/457) |
+| 3.9 (rest) NUnit category names unescaped | [#458](https://github.com/VSoftTechnologies/DUnitX/issues/458) | [#459](https://github.com/VSoftTechnologies/DUnitX/pull/459) |
+| 3.11 `--dontshowignored` ignores its value | [#460](https://github.com/VSoftTechnologies/DUnitX/issues/460) | [#461](https://github.com/VSoftTechnologies/DUnitX/pull/461) |
+| 2.2 raising destructor teardown run again | [#462](https://github.com/VSoftTechnologies/DUnitX/issues/462) | [#463](https://github.com/VSoftTechnologies/DUnitX/pull/463) |
+
 **Outside the batches: [#372](https://github.com/VSoftTechnologies/DUnitX/issues/372) (bitmask exit codes) ->
 [PR #411](https://github.com/VSoftTechnologies/DUnitX/pull/411)**, branch `feature/bitmask-exit-codes`, posted
 2026-10-12 after a reviewer pointed at it from #404. It is someone else's feature request, which upstream had
