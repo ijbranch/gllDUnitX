@@ -294,7 +294,8 @@ may use a runner of its own on its own thread, and a behaviour change goes as an
 Passed over: 2.9 and 1.6 (behaviour changes), `WillNotRaise` with a class swallowing other exceptions (upstream's
 tests assert it), `CheckSame( TObject )` (the #415 question), `Assert.IsType<T>`, overridden attributed methods, 2.3
 and the Win64 `[MaxTime]` crash (need this fork's larger changes), A, B and 2.5 (a) / (b), and `--run` prefix
-matching. Detail and the exact texts are in [UPSTREAM-ISSUES-Batch7.md](UPSTREAM-ISSUES-Batch7.md).
+matching. **All six merged the same day** (`upstream/master` @
+`7c891c6`). Detail and the exact texts are in [UPSTREAM-ISSUES-Batch7.md](UPSTREAM-ISSUES-Batch7.md).
 
 | Item | Issue | PR |
 |---|---|---|

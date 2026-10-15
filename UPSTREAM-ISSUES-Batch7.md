@@ -1,4 +1,4 @@
-# DUnitX upstream: batch 7 (posted 2026-10-15)
+# DUnitX upstream: batch 7 (all six merged 2026-10-15)
 
 Six issues and their PRs, built and posted 2026-10-15 against `master` @ `59a9ab5` (after upstream merged all of
 batch 6). Issue bodies end "Split out of #398."; PR bodies are "Fixes #N." plus a short note plus the one-line
@@ -6,14 +6,14 @@ caveat at the end of this file. Branches are in the worktree `D:\gllDUnitX-upstr
 pushed to [`ijbranch/DUnitX`](https://github.com/ijbranch/DUnitX). Each branch has a commit with the failing
 test, then the fix. "Allow edits by maintainers" is on for every PR.
 
-| # | Report item | Severity | Issue | PR | Branch |
-|---|---|---|---|---|---|
-| 1 | 1.5 | 1: a test passes that should fail | [#476](https://github.com/VSoftTechnologies/DUnitX/issues/476) | [#477](https://github.com/VSoftTechnologies/DUnitX/pull/477) | `fix/testcase-willraise` |
-| 2 | 1.12 | 1: repetitions run without Setup / TearDown | [#478](https://github.com/VSoftTechnologies/DUnitX/issues/478) | [#479](https://github.com/VSoftTechnologies/DUnitX/pull/479) | `fix/repeattest-setup` |
-| 3 | 1.11 (opt-in) | 1: a run goes green with nothing tested | [#480](https://github.com/VSoftTechnologies/DUnitX/issues/480) | [#481](https://github.com/VSoftTechnologies/DUnitX/pull/481) | `fix/fail-on-no-tests` |
-| 4 | 2.1 | 2: wrong counts | [#482](https://github.com/VSoftTechnologies/DUnitX/issues/482) | [#483](https://github.com/VSoftTechnologies/DUnitX/pull/483) | `fix/teardownfixture-reported-once` |
-| 5 | 2.5 (c) | 2: false leak report | [#484](https://github.com/VSoftTechnologies/DUnitX/issues/484) | [#485](https://github.com/VSoftTechnologies/DUnitX/pull/485) | `fix/leak-check-net-growth` |
-| 6 | 2.6 | 3: lost diagnostics | [#486](https://github.com/VSoftTechnologies/DUnitX/issues/486) | [#487](https://github.com/VSoftTechnologies/DUnitX/pull/487) | `fix/teardown-keeps-failure` |
+| # | Report item | Severity | Issue | PR | Branch | Merged |
+|---|---|---|---|---|---|---|
+| 1 | 1.5 | 1: a test passes that should fail | [#476](https://github.com/VSoftTechnologies/DUnitX/issues/476) | [#477](https://github.com/VSoftTechnologies/DUnitX/pull/477) | `fix/testcase-willraise` | 2026-10-15 `5c193a3` |
+| 2 | 1.12 | 1: repetitions run without Setup / TearDown | [#478](https://github.com/VSoftTechnologies/DUnitX/issues/478) | [#479](https://github.com/VSoftTechnologies/DUnitX/pull/479) | `fix/repeattest-setup` | 2026-10-15 `70cee9c` |
+| 3 | 1.11 (opt-in) | 1: a run goes green with nothing tested | [#480](https://github.com/VSoftTechnologies/DUnitX/issues/480) | [#481](https://github.com/VSoftTechnologies/DUnitX/pull/481) | `fix/fail-on-no-tests` | 2026-10-15 `23d56c5` |
+| 4 | 2.1 | 2: wrong counts | [#482](https://github.com/VSoftTechnologies/DUnitX/issues/482) | [#483](https://github.com/VSoftTechnologies/DUnitX/pull/483) | `fix/teardownfixture-reported-once` | 2026-10-15 `05cc7d8` |
+| 5 | 2.5 (c) | 2: false leak report | [#484](https://github.com/VSoftTechnologies/DUnitX/issues/484) | [#485](https://github.com/VSoftTechnologies/DUnitX/pull/485) | `fix/leak-check-net-growth` | 2026-10-15 `7c891c6` |
+| 6 | 2.6 | 3: lost diagnostics | [#486](https://github.com/VSoftTechnologies/DUnitX/issues/486) | [#487](https://github.com/VSoftTechnologies/DUnitX/pull/487) | `fix/teardown-keeps-failure` | 2026-10-15 `87f3307` |
 
 ## How this batch was chosen and built
 

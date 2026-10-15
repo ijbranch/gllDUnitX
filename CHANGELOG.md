@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Upstream outcome of batch 7 recorded** (2026-10-15) — `UPSTREAM-ISSUES-Batch7.md`,
+  `UPSTREAM-REPORT-Defects-2026-10-12.md`. All six PRs merged on 2026-10-15: #477 (`5c193a3`), #479 (`70cee9c`),
+  #481 (`23d56c5`), #483 (`05cc7d8`), #485 (`7c891c6`) and #487 (`87f3307`); `upstream/master` is now @ `7c891c6`
+  and the fork's `master` was fast-forwarded to it. Each of the six branches on `ijbranch/DUnitX` matches its squash
+  commit by patch ID.
 - **Seventh batch of upstream issues and pull requests** (2026-10-15) — `UPSTREAM-ISSUES-Batch7.md`,
   `UPSTREAM-REPORT-Defects-2026-10-12.md`, `Help.md`, `CONTRIBUTING.md`. Ian: "Prepare and send the next 6 DUnitX
   upstream issues PRs in priority/severity order", then "Re-validate the DUnitX issues before raising the PRs".
