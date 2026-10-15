@@ -1,4 +1,4 @@
-# DUnitX upstream: batch 6 (posted 2026-10-15)
+# DUnitX upstream: batch 6 (all six merged 2026-10-15)
 
 Six issues and their PRs, built and posted 2026-10-15 against `master` @ `4273e0f` (after upstream merged all of
 batch 5). Issue bodies end "Split out of #398."; PR bodies are "Fixes #N." plus a short note plus the one-line
@@ -6,14 +6,17 @@ caveat at the end of this file. Branches are in the worktree `D:\gllDUnitX-upstr
 pushed to [`ijbranch/DUnitX`](https://github.com/ijbranch/DUnitX). Each branch has a commit with the failing
 test, then the fix. "Allow edits by maintainers" is on for every PR.
 
-| # | Report item | Issue | PR | Branch |
-|---|---|---|---|---|
-| 1 | F (rest) | [#464](https://github.com/VSoftTechnologies/DUnitX/issues/464) | [#465](https://github.com/VSoftTechnologies/DUnitX/pull/465) | `fix/list-nongeneric-enumerator` |
-| 2 | 2.4 | [#466](https://github.com/VSoftTechnologies/DUnitX/issues/466) | [#467](https://github.com/VSoftTechnologies/DUnitX/pull/467) | `fix/willraise-context-cycle` |
-| 3 | fork fix, not in the report | [#468](https://github.com/VSoftTechnologies/DUnitX/issues/468) | [#469](https://github.com/VSoftTechnologies/DUnitX/pull/469) | `fix/checkis-nil` |
-| 4 | fork fix, not in the report | [#470](https://github.com/VSoftTechnologies/DUnitX/issues/470) | [#471](https://github.com/VSoftTechnologies/DUnitX/pull/471) | `fix/cdata-escape` |
-| 5 | fork fix, not in the report | [#472](https://github.com/VSoftTechnologies/DUnitX/issues/472) | [#473](https://github.com/VSoftTechnologies/DUnitX/pull/473) | `fix/arrayhelper-delete` |
-| 6 | fork fix, not in the report | [#474](https://github.com/VSoftTechnologies/DUnitX/issues/474) | [#475](https://github.com/VSoftTechnologies/DUnitX/pull/475) | `fix/valuehelper-tostring-nil` |
+| # | Report item | Issue | PR | Branch | Merged |
+|---|---|---|---|---|---|
+| 1 | F (rest) | [#464](https://github.com/VSoftTechnologies/DUnitX/issues/464) | [#465](https://github.com/VSoftTechnologies/DUnitX/pull/465) | `fix/list-nongeneric-enumerator` | 2026-10-15 `e4f55e9` |
+| 2 | 2.4 | [#466](https://github.com/VSoftTechnologies/DUnitX/issues/466) | [#467](https://github.com/VSoftTechnologies/DUnitX/pull/467) | `fix/willraise-context-cycle` | 2026-10-15 `59a9ab5` |
+| 3 | fork fix, not in the report | [#468](https://github.com/VSoftTechnologies/DUnitX/issues/468) | [#469](https://github.com/VSoftTechnologies/DUnitX/pull/469) | `fix/checkis-nil` | 2026-10-15 `09510e2` |
+| 4 | fork fix, not in the report | [#470](https://github.com/VSoftTechnologies/DUnitX/issues/470) | [#471](https://github.com/VSoftTechnologies/DUnitX/pull/471) | `fix/cdata-escape` | 2026-10-15 `70aedc8` |
+| 5 | fork fix, not in the report | [#472](https://github.com/VSoftTechnologies/DUnitX/issues/472) | [#473](https://github.com/VSoftTechnologies/DUnitX/pull/473) | `fix/arrayhelper-delete` | 2026-10-15 `abbd0cf` |
+| 6 | fork fix, not in the report | [#474](https://github.com/VSoftTechnologies/DUnitX/issues/474) | [#475](https://github.com/VSoftTechnologies/DUnitX/pull/475) | `fix/valuehelper-tostring-nil` | 2026-10-15 `fd6621b` |
+
+Each branch has the same patch ID as its squash merge commit (checked 2026-10-15); the branches are left on
+`ijbranch/DUnitX` for Ian to delete. The fork's `master` was fast-forwarded to `59a9ab5`.
 
 ## How this batch was chosen and built
 

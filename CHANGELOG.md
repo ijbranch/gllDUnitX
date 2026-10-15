@@ -5,6 +5,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Seventh batch of upstream issues and pull requests** (2026-10-15) — `UPSTREAM-ISSUES-Batch7.md`,
+  `UPSTREAM-REPORT-Defects-2026-10-12.md`, `Help.md`, `CONTRIBUTING.md`. Ian: "Prepare and send the next 6 DUnitX
+  upstream issues PRs in priority/severity order", then "Re-validate the DUnitX issues before raising the PRs".
+  Items 1.5, 1.12, 1.11 (as the opt-in `--failonnotests`, default off), 2.1, 2.5 (c) and 2.6, filed as issues
+  #476/#478/#480/#482/#484/#486 with PRs #477/#479/#481/#483/#485/#487 on `upstream/master` @ `59a9ab5`. Each was
+  reproduced on that tip by a standalone program, searched for among upstream's issues and PRs, and fails on master
+  on its own assertion; with the fixes everything passes and only `TestMaxTime` errors, alone and all six merged;
+  all 15 pairs merge cleanly. Three tests run a fixture through a runner of their own on a thread of their own. The
+  ranking and every item passed over, with the reason, are in the batch file. **Found while validating:** the first
+  2.1 fix recorded a result whose test only the result held, weakly, so `Test` was nil after the call; the runner
+  now keeps those tests.
+- **Upstream outcome of batch 6 recorded** (2026-10-15) — `UPSTREAM-ISSUES-Batch6.md`,
+  `UPSTREAM-REPORT-Defects-2026-10-12.md`. All six PRs merged on 2026-10-15: #465 (`e4f55e9`), #467 (`59a9ab5`),
+  #469 (`09510e2`), #471 (`70aedc8`), #473 (`abbd0cf`) and #475 (`fd6621b`); `upstream/master` is now @ `59a9ab5`
+  and the fork's `master` was fast-forwarded to it. Each of the six branches on `ijbranch/DUnitX` matches its squash
+  commit by patch ID; they are left for Ian to delete.
 - **Sixth batch of upstream issues and pull requests** (2026-10-15) — `UPSTREAM-ISSUES-Batch6.md`,
   `UPSTREAM-REPORT-Defects-2026-10-12.md`, `Help.md`, `CONTRIBUTING.md`. Items F (rest) and 2.4, and four fixes this
   fork already carries (`CheckIs` on nil, CDATA escaping, `TArrayHelper.Delete`, `TValueHelper.ToString` on nil),

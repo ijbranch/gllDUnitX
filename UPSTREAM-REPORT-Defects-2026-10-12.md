@@ -275,8 +275,8 @@ caller-held-storage version.
 
 **Batch 6**, posted 2026-10-15 against `4273e0f`; same rule as batches 3 to 5. The shortlist lost 2.6, 2.5 (a), A
 and B (each needs a runner inside the test), C (needs FastMM5) and 2.8 (a behaviour change); 2.4 and four fixes this
-fork carries from its 2026-10-13 review took their places. Detail and the exact texts are in
-[UPSTREAM-ISSUES-Batch6.md](UPSTREAM-ISSUES-Batch6.md).
+fork carries from its 2026-10-13 review took their places. **All six merged the same day** (`upstream/master` @
+`59a9ab5`). Detail and the exact texts are in [UPSTREAM-ISSUES-Batch6.md](UPSTREAM-ISSUES-Batch6.md).
 
 | Item | Issue | PR |
 |---|---|---|
@@ -286,6 +286,24 @@ fork carries from its 2026-10-13 review took their places. Detail and the exact 
 | CDATA escaping changes the text, ends the section early (fork fix) | [#470](https://github.com/VSoftTechnologies/DUnitX/issues/470) | [#471](https://github.com/VSoftTechnologies/DUnitX/pull/471) |
 | `TArrayHelper.Delete` ignores index 0, reads past the end (fork fix) | [#472](https://github.com/VSoftTechnologies/DUnitX/issues/472) | [#473](https://github.com/VSoftTechnologies/DUnitX/pull/473) |
 | `TValueHelper.ToString` access violation on nil (fork fix) | [#474](https://github.com/VSoftTechnologies/DUnitX/issues/474) | [#475](https://github.com/VSoftTechnologies/DUnitX/pull/475) |
+
+**Batch 7**, posted 2026-10-15 against `59a9ab5`, chosen by severity (a test or run that passes when it should fail
+first, then wrong counts, then lost diagnostics) and re-validated before posting: each defect reproduced on the tip
+by a standalone program, searched for upstream, red on master on its own assertion. Two allowances were new: a test
+may use a runner of its own on its own thread, and a behaviour change goes as an opt-in (1.11, default off).
+Passed over: 2.9 and 1.6 (behaviour changes), `WillNotRaise` with a class swallowing other exceptions (upstream's
+tests assert it), `CheckSame( TObject )` (the #415 question), `Assert.IsType<T>`, overridden attributed methods, 2.3
+and the Win64 `[MaxTime]` crash (need this fork's larger changes), A, B and 2.5 (a) / (b), and `--run` prefix
+matching. Detail and the exact texts are in [UPSTREAM-ISSUES-Batch7.md](UPSTREAM-ISSUES-Batch7.md).
+
+| Item | Issue | PR |
+|---|---|---|
+| 1.5 `[WillRaise]` dropped on `[TestCase]` / `[TestCaseProvider]` methods | [#476](https://github.com/VSoftTechnologies/DUnitX/issues/476) | [#477](https://github.com/VSoftTechnologies/DUnitX/pull/477) |
+| 1.12 `[RepeatTest]` repetitions miss a base-class or later Setup / TearDown | [#478](https://github.com/VSoftTechnologies/DUnitX/issues/478) | [#479](https://github.com/VSoftTechnologies/DUnitX/pull/479) |
+| 1.11 (opt-in) `--failonnotests`: a run with no tests exits 0 | [#480](https://github.com/VSoftTechnologies/DUnitX/issues/480) | [#481](https://github.com/VSoftTechnologies/DUnitX/pull/481) |
+| 2.1 `[TearDownFixture]` failure re-reports every test | [#482](https://github.com/VSoftTechnologies/DUnitX/issues/482) | [#483](https://github.com/VSoftTechnologies/DUnitX/pull/483) |
+| 2.5 (c) memory freed by a test reported as a negative leak | [#484](https://github.com/VSoftTechnologies/DUnitX/issues/484) | [#485](https://github.com/VSoftTechnologies/DUnitX/pull/485) |
+| 2.6 TearDown error replaces the Setup or test failure | [#486](https://github.com/VSoftTechnologies/DUnitX/issues/486) | [#487](https://github.com/VSoftTechnologies/DUnitX/pull/487) |
 
 **Outside the batches: [#372](https://github.com/VSoftTechnologies/DUnitX/issues/372) (bitmask exit codes) ->
 [PR #411](https://github.com/VSoftTechnologies/DUnitX/pull/411)**, branch `feature/bitmask-exit-codes`, posted
