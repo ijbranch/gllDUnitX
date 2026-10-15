@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Upstream outcome of batch 8 recorded** (2026-10-15) — `UPSTREAM-ISSUES-Batch8.md`,
+  `UPSTREAM-REPORT-Defects-2026-10-12.md`. All six PRs merged on 2026-10-15: #489 (`c3e871a`), #491 (`4ffbed9`),
+  #493 (`d94207f`), #495 (`f20ec32`), #497 (`f441414`) and #499 (`fbad5c9`); `upstream/master` is now @ `fbad5c9`
+  and the fork's `master` was fast-forwarded to it. Each of the six branches on `ijbranch/DUnitX` matches its squash
+  commit by patch ID. No reply yet on #398 to the summary of remaining items.
 - **Remaining upstream items summarised for Vincent** (2026-10-15) — `UPSTREAM-REPORT-Defects-2026-10-12.md`. A comment on #398 lists every item still unsent after batch 8 in five groups and asks which he wants and which to leave for now. Ian: "Write up a summary of what is remaining and send to Vincent".
 - **Eighth batch of upstream issues and pull requests** (2026-10-15) — `UPSTREAM-ISSUES-Batch8.md`,
   `UPSTREAM-REPORT-Defects-2026-10-12.md`, `Help.md`, `CONTRIBUTING.md`. Ian: "Prioritise the remaining then generate

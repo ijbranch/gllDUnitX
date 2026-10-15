@@ -312,7 +312,7 @@ six taken were re-validated the same way. Passed over, highest first: the `--run
 assert it, although the NUnit tests they were ported from do not), 2.9 and 1.6, `Assert.IsType<T>`, `[MaxTime]` with
 `Assert.Pass`, `--run` prefix matching, 2.3, A, B, 2.5 (a) / (b), C, the Win64 `[MaxTime]` crash (a design question
 for upstream), and 5.1-5.4 (no test is possible in the test project); three apparent defects are not reachable
-upstream. The full ranked list and the exact texts are in [UPSTREAM-ISSUES-Batch8.md](UPSTREAM-ISSUES-Batch8.md).
+upstream. **All six merged the same day** (`upstream/master` @ `fbad5c9`). The full ranked list and the exact texts are in [UPSTREAM-ISSUES-Batch8.md](UPSTREAM-ISSUES-Batch8.md).
 
 | Item | Issue | PR |
 |---|---|---|

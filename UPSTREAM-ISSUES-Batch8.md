@@ -1,4 +1,4 @@
-# DUnitX upstream: batch 8
+# DUnitX upstream: batch 8 (all six merged 2026-10-15)
 
 Six issues and their PRs, built and posted 2026-10-15 against `master` @ `7c891c6` (after upstream merged all of
 batch 7). Ian: "Prioritise the remaining then generate and send the next 6 PRs." Issue bodies end "Split out of
@@ -6,14 +6,14 @@ batch 7). Ian: "Prioritise the remaining then generate and send the next 6 PRs."
 the worktree `D:\gllDUnitX-upstream` (remote `dunitx-fork`), pushed to [`ijbranch/DUnitX`](https://github.com/ijbranch/DUnitX).
 Each branch has a commit with the failing test, then the fix. "Allow edits by maintainers" is on for every PR.
 
-| # | Report item | Severity | Issue | PR | Branch |
-|---|---|---|---|---|---|
-| 1 | Fork fix (2026-10-13): override of an attributed virtual method | 1: a test passes that should fail | [#488](https://github.com/VSoftTechnologies/DUnitX/issues/488) | [#489](https://github.com/VSoftTechnologies/DUnitX/pull/489) | `fix/virtual-override-binding` |
-| 2 | 3.7 | 1: a test passes that should fail | [#490](https://github.com/VSoftTechnologies/DUnitX/issues/490) | [#491](https://github.com/VSoftTechnologies/DUnitX/pull/491) | `fix/contains-empty-substring` |
-| 3 | Fork fix (2026-10-13): results carry another test's log | 2: wrong results | [#492](https://github.com/VSoftTechnologies/DUnitX/issues/492) | [#493](https://github.com/VSoftTechnologies/DUnitX/pull/493) | `fix/log-per-test` |
-| 4 | Fork fix (2026-10-13): fixture with children reports only their time | 2: wrong results | [#494](https://github.com/VSoftTechnologies/DUnitX/issues/494) | [#495](https://github.com/VSoftTechnologies/DUnitX/pull/495) | `fix/fixture-duration-children` |
-| 5 | Fork fix (2026-10-13): `@<file>` always failed | 2: a broken run | [#496](https://github.com/VSoftTechnologies/DUnitX/issues/496) | [#497](https://github.com/VSoftTechnologies/DUnitX/pull/497) | `fix/at-options-file` |
-| 6 | Fork fix (2026-10-13): `WillRaise*` drops the caller's message | 4: lost diagnostics | [#498](https://github.com/VSoftTechnologies/DUnitX/issues/498) | [#499](https://github.com/VSoftTechnologies/DUnitX/pull/499) | `fix/willraise-keeps-message` |
+| # | Report item | Severity | Issue | PR | Branch | Merged |
+|---|---|---|---|---|---|---|
+| 1 | Fork fix (2026-10-13): override of an attributed virtual method | 1: a test passes that should fail | [#488](https://github.com/VSoftTechnologies/DUnitX/issues/488) | [#489](https://github.com/VSoftTechnologies/DUnitX/pull/489) | `fix/virtual-override-binding` | 2026-10-15 `c3e871a` |
+| 2 | 3.7 | 1: a test passes that should fail | [#490](https://github.com/VSoftTechnologies/DUnitX/issues/490) | [#491](https://github.com/VSoftTechnologies/DUnitX/pull/491) | `fix/contains-empty-substring` | 2026-10-15 `4ffbed9` |
+| 3 | Fork fix (2026-10-13): results carry another test's log | 2: wrong results | [#492](https://github.com/VSoftTechnologies/DUnitX/issues/492) | [#493](https://github.com/VSoftTechnologies/DUnitX/pull/493) | `fix/log-per-test` | 2026-10-15 `d94207f` |
+| 4 | Fork fix (2026-10-13): fixture with children reports only their time | 2: wrong results | [#494](https://github.com/VSoftTechnologies/DUnitX/issues/494) | [#495](https://github.com/VSoftTechnologies/DUnitX/pull/495) | `fix/fixture-duration-children` | 2026-10-15 `f20ec32` |
+| 5 | Fork fix (2026-10-13): `@<file>` always failed | 2: a broken run | [#496](https://github.com/VSoftTechnologies/DUnitX/issues/496) | [#497](https://github.com/VSoftTechnologies/DUnitX/pull/497) | `fix/at-options-file` | 2026-10-15 `f441414` |
+| 6 | Fork fix (2026-10-13): `WillRaise*` drops the caller's message | 4: lost diagnostics | [#498](https://github.com/VSoftTechnologies/DUnitX/issues/498) | [#499](https://github.com/VSoftTechnologies/DUnitX/pull/499) | `fix/willraise-keeps-message` | 2026-10-15 `fbad5c9` |
 
 ## How this batch was chosen and built
 
