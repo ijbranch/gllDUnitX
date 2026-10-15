@@ -5,6 +5,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Sixth batch of upstream issues and pull requests** (2026-10-15) — `UPSTREAM-ISSUES-Batch6.md`,
+  `UPSTREAM-REPORT-Defects-2026-10-12.md`, `Help.md`, `CONTRIBUTING.md`. Items F (rest) and 2.4, and four fixes this
+  fork already carries (`CheckIs` on nil, CDATA escaping, `TArrayHelper.Delete`, `TValueHelper.ToString` on nil),
+  filed as issues #464/#466/#468/#470/#472/#474 with PRs #465/#467/#469/#471/#473/#475 on `upstream/master` @ `4273e0f`. The six new
+  tests fail on master on their own assertions; with the fixes everything passes and only `TestMaxTime` errors; all 15
+  pairs of the branches merge cleanly, and each branch builds alone. **Why not the rest of the shortlist:** 2.6,
+  2.5 (a), A and B need a runner inside the test (and A, B and 2.5 (a) this fork's runner-allocation accounting), C
+  needs FastMM5, and 2.8 is a behaviour change. **Found while choosing:** this fork's service-locator fix frees a
+  `TInterfacedObject` a second time when `Supports` fails, because the RTL's `Supports` has already freed it; not
+  changed here.
 - **Upstream outcome of batch 5 recorded** (2026-10-15) — `UPSTREAM-ISSUES-Batch5.md`,
   `UPSTREAM-REPORT-Defects-2026-10-12.md`. All six PRs merged on 2026-10-15: #453 (`8d91bcf`), #455 (`4273e0f`),
   #457 (`61f1d3e`), #459 (`1460934`), #461 (`1e95e6b`) and #463 (`3efb0eb`); `upstream/master` is now @ `4273e0f`; the fork's `master` was fast-forwarded to it and the six branches were deleted from `ijbranch/DUnitX` (each matched its squash commit by patch ID first).

@@ -273,6 +273,20 @@ caller-held-storage version.
 | 3.11 `--dontshowignored` ignores its value | [#460](https://github.com/VSoftTechnologies/DUnitX/issues/460) | [#461](https://github.com/VSoftTechnologies/DUnitX/pull/461) |
 | 2.2 raising destructor teardown run again | [#462](https://github.com/VSoftTechnologies/DUnitX/issues/462) | [#463](https://github.com/VSoftTechnologies/DUnitX/pull/463) |
 
+**Batch 6**, posted 2026-10-15 against `4273e0f`; same rule as batches 3 to 5. The shortlist lost 2.6, 2.5 (a), A
+and B (each needs a runner inside the test), C (needs FastMM5) and 2.8 (a behaviour change); 2.4 and four fixes this
+fork carries from its 2026-10-13 review took their places. Detail and the exact texts are in
+[UPSTREAM-ISSUES-Batch6.md](UPSTREAM-ISSUES-Batch6.md).
+
+| Item | Issue | PR |
+|---|---|---|
+| F (rest) `TDUnitXList` non-generic enumerator is nil | [#464](https://github.com/VSoftTechnologies/DUnitX/issues/464) | [#465](https://github.com/VSoftTechnologies/DUnitX/pull/465) |
+| 2.4 `[WillRaise]` test keeps its context (reference cycle) | [#466](https://github.com/VSoftTechnologies/DUnitX/issues/466) | [#467](https://github.com/VSoftTechnologies/DUnitX/pull/467) |
+| `CheckIs(nil)` access violation (fork fix) | [#468](https://github.com/VSoftTechnologies/DUnitX/issues/468) | [#469](https://github.com/VSoftTechnologies/DUnitX/pull/469) |
+| CDATA escaping changes the text, ends the section early (fork fix) | [#470](https://github.com/VSoftTechnologies/DUnitX/issues/470) | [#471](https://github.com/VSoftTechnologies/DUnitX/pull/471) |
+| `TArrayHelper.Delete` ignores index 0, reads past the end (fork fix) | [#472](https://github.com/VSoftTechnologies/DUnitX/issues/472) | [#473](https://github.com/VSoftTechnologies/DUnitX/pull/473) |
+| `TValueHelper.ToString` access violation on nil (fork fix) | [#474](https://github.com/VSoftTechnologies/DUnitX/issues/474) | [#475](https://github.com/VSoftTechnologies/DUnitX/pull/475) |
+
 **Outside the batches: [#372](https://github.com/VSoftTechnologies/DUnitX/issues/372) (bitmask exit codes) ->
 [PR #411](https://github.com/VSoftTechnologies/DUnitX/pull/411)**, branch `feature/bitmask-exit-codes`, posted
 2026-10-12 after a reviewer pointed at it from #404. It is someone else's feature request, which upstream had
