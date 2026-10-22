@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 > Changes below are live as soon as the project is Release-built and installed - there is no separate release step, so there is no `[Unreleased]` backlog (Ian, 2026-10-19: "As soon as these are Release built they are Released").
 
 ### Added
+- **`Source/Gll`: the GITLAK suite runner, with per-test memory-leak checking** (2026-10-22) - `Source/Gll/GllDUnitX.SuiteRunner.pas`, `Source/Gll/GllDUnitX.LeakMonitor.pas`, `Source/Gll/GllDUnitX.LeakConfirm.pas` (all new), `Help.md`, `README.md`.  `RunGllSuite` runs a warm-up pass, the measured pass under the FastMM5 leak monitor ( with a settle step for the message queue and thread pools ), then re-runs each flagged test, and only a leak that repeats fails.  Moved here from GITLAKLibTests, where it was built and measured, so every GITLAK suite shares one implementation.  New files only and in no package: no upstream file changes, so merges are unaffected.  **Why:** GITLAKLib's first measured run flagged 149 tests and found real defects in the library, ReportBuilder, the Delphi RTL and FastMM5.
 - **Upstream outcome of batch 8 recorded** (2026-10-15) — `UPSTREAM-ISSUES-Batch8.md`,
   `UPSTREAM-REPORT-Defects-2026-10-12.md`. All six PRs merged on 2026-10-15: #489 (`c3e871a`), #491 (`4ffbed9`),
   #493 (`d94207f`), #495 (`f20ec32`), #497 (`f441414`) and #499 (`fbad5c9`); `upstream/master` is now @ `fbad5c9`

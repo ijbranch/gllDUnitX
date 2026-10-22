@@ -25,6 +25,9 @@ What the fork adds or changes
 * **The VCL GUI runner** (`DUnitX.Loggers.GUI.VCL`) has been fixed and updated. It is not maintained upstream,
   which recommends the **TestInsight** IDE plug-in instead; whether to use TestInsight or this runner is your
   choice.
+* **Per-test memory-leak checking for GITLAK suites** (`Source\Gll`, 2026-10-22): a suite runner with a
+  warm-up pass, the FastMM5 leak monitor and a confirm re-run of flagged tests.  It is not part of any package;
+  see [Help.md](Help.md) §4.
 * **The DPM package id is `GITLAK.DUnitX`**, not `VSoft.DUnitX`, so it cannot shadow upstream in a package feed.
 
 Features

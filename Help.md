@@ -221,6 +221,18 @@ The runtime package is `packages\RAD Studio 13.0\VSoft.DUnitXWinR.dpk` (`require
 
 `DUnitX.Filters` gained `TFullNameFilter` on 2026-10-12: it selects tests by exact, case-sensitive full name. `TNameFilter` (what `--run` uses) matches a name as a whole leading part of a fixture's or test's full name, at a `.` boundary (since 2026-10-13; before, a bare prefix), so it suits command lines but not an exact selection.
 
+### The GITLAK suite runner: `Source\Gll` (fork addition, 2026-10-22)
+
+Three units that are not upstream and not in any package: a test project adds `gllDUnitX\Source\Gll` to its unit search path, names `FastMM5` as the FIRST unit of its `.dpr`, and calls one routine.  They are how every GITLAK suite gets per-test leak checking.
+
+| Unit | What you take from it |
+|---|---|
+| `GllDUnitX.SuiteRunner` | `RunGllSuite( TGllSuiteOptions ): Integer`, the whole run: FastMM5 message boxes off, `CheckCommandLine` ( a bad option exits 251 ), a warm-up pass ( first-use caches are not leaks; its failures are listed and counted ), the measured pass with the FastMM5 leak monitor and the console and NUnit XML loggers, the confirm step, and the canonical exit code ( 0; n = failures + errors + warm-up failures + confirmed leaks, clamped to 249; 250 no tests ).  `TGllSuiteOptions.Defaults` gives `FailsOnNoAsserts` True, the XML file `<exe>-results.xml` beside the exe ( or the `--xml` path when it includes a folder ) and no extra loggers; `ConfigureRunner` adds a suite's own |
+| `GllDUnitX.LeakMonitor` | The FastMM5 monitor with a settle step before each reading ( `CheckSynchronize`, the message queue, the RTL thread pool idle, plus any `RegisterSettleCheck( function: Boolean )` a suite adds, e.g. for OmniThreadLibrary's pool ), bounded at 2 s with `SettleLimitHits` counting the misses.  `StartSharedThreadPools` pins the RTL pool at `POOL_WORKERS` ( 32 ) so no worker is created or retired inside a measured test |
+| `GllDUnitX.LeakConfirm` | `ConfirmLeaks`: re-runs each flagged test up to twice, and one passing re-run clears it ( Ian, 2026-10-22: an intermittent report means the memory belongs to another thread ).  Cleared tests are rewritten in the XML as passes with a `<reason>`, line by line so GITLAKMCP's `test_run` parser still reads it |
+
+Two things the check finds that are not engine or library leaks: a fixture FIELD left set in `TearDown` ( DUnitX keeps one fixture instance, so it reads as a leak of the fixture's first test ), and per-fixture state built lazily by the first test ( build it in `[Setup]` instead, so its release is measured too ).  Where pool state forces `[IgnoreMemoryLeaks]`, add a repetition test that fails on growth of a byte or more per iteration.
+
 ---
 
 ## 5. The `Assert` class
