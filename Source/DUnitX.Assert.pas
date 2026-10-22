@@ -492,7 +492,6 @@ type
     ///   The values differ.
     /// </exception>
     class procedure AreEqual(const expected, actual : Int64; const message : string = ''); overload;
-{$IFDEF CPU64BITS}
     /// <summary>
     ///   Asserts that an Integer and an Int64 are equal.
     /// </summary>
@@ -509,8 +508,10 @@ type
     ///   The values differ.
     /// </exception>
     /// <remarks>
-    ///   Count and Length are NativeInt (Int64 on 64-bit): with an Integer on the other side, overload resolution would
-    ///   pick AreEqual&lt;T&gt; and type inference would fail with E2532.
+    ///   An Integer against an Int64 matches no overload exactly, so without this one overload resolution would pick
+    ///   AreEqual&lt;T&gt; and type inference would fail with E2532.  On 64-bit, Count and Length are NativeInt (Int64);
+    ///   on both platforms, Round and Trunc return Int64.  Declared on Win32 as well as Win64 (upstream has it on 64-bit
+    ///   only), so a suite resolves the same overload on both.  The comparison is in 64 bits: nothing is truncated.
     /// </remarks>
     class procedure AreEqual(const expected : Integer; const actual : Int64; const message : string = ''); overload;
     /// <summary>
@@ -532,7 +533,6 @@ type
     ///   The mirror of the Integer/Int64 overload; it exists for the same E2532 reason.
     /// </remarks>
     class procedure AreEqual(const expected : Int64; const actual : Integer; const message : string = ''); overload;
-{$ENDIF}
     /// <summary>
     ///   Asserts that two Cardinal values are equal.
     /// </summary>
@@ -2231,7 +2231,6 @@ begin
     FailFmt(SUnexpectedErrorInt, [expected, actual, message], ReturnAddress);
 end;
 
-{$IFDEF CPU64BITS}
 class procedure Assert.AreEqual(const expected : Integer; const actual : Int64; const message : string);
 begin
   DoAssert;
@@ -2245,7 +2244,6 @@ begin
   if expected <> actual then
     FailFmt(SUnexpectedErrorInt, [expected, actual, message], ReturnAddress);
 end;
-{$ENDIF}
 
 class procedure Assert.AreEqual(const expected, actual : boolean; const message : string);
 begin

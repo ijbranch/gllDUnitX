@@ -159,7 +159,7 @@ An `override` does not inherit the attribute, and the provider used to bind the 
 
 ### Collection counts: `Assert.AreEqual( 3, List.Count )` compiles since 2026-10-10
 
-Delphi 13 made `TList<T>.Count` a `NativeInt`, so on Win64 an `Integer` on one side and an `Int64` on the other matched no overload, fell through to `AreEqual<T>`, and generic inference failed with `E2532`. Since 2026-10-10 (upstream `1bdc297`, #397) `Assert.AreEqual( Integer, Int64 )` and `( Int64, Integer )` exist under `{$IFDEF CPU64BITS}`, so the plain form compiles on both platforms. An overload taking `NativeInt` itself still cannot be added (on Win64 it is the same type as `Int64`); the mixed pair is the fix. The older workaround, `Assert.AreEqual<NativeInt>( 3, List.Count )`, still compiles and need not be changed.
+Delphi 13 made `TList<T>.Count` a `NativeInt`, so on Win64 an `Integer` on one side and an `Int64` on the other matched no overload, fell through to `AreEqual<T>`, and generic inference failed with `E2532`. Since 2026-10-10 (upstream `1bdc297`, #397) `Assert.AreEqual( Integer, Int64 )` and `( Int64, Integer )` exist, so the plain form compiles on both platforms.  Since 2026-10-23 they are declared on Win32 as well (upstream has them on 64-bit only), so `Assert.AreEqual( Round( x ), SomeInteger )` - `Round` and `Trunc` return `Int64` on both platforms - compiles on Win32 too and binds the same overload as on Win64. An overload taking `NativeInt` itself still cannot be added (on Win64 it is the same type as `Int64`); the mixed pair is the fix. The older workaround, `Assert.AreEqual<NativeInt>( 3, List.Count )`, still compiles and need not be changed.
 
 ### NaN never equals anything — no `IsNan` guard needed
 

@@ -141,6 +141,46 @@ type
 {$ENDIF}
 
     /// <summary>
+    ///   Proves on BOTH platforms that AreEqual( Int64, Integer ) resolves to a non-generic overload and passes for equal
+    ///   values: Round returns Int64, and before the Integer/Int64 overloads were declared on Win32 this call failed
+    ///   there with E2532, so a suite that compiled on Win64 did not compile on Win32.
+    /// </summary>
+    [Test]
+    procedure AreEqual_Int64_Integer_Throws_No_Exception_When_Values_Are_Equal;
+
+    /// <summary>
+    ///   Proves on both platforms that AreEqual( Integer, Int64 ), the mirror order, resolves and passes for equal values.
+    /// </summary>
+    [Test]
+    procedure AreEqual_Integer_Int64_Throws_No_Exception_When_Values_Are_Equal;
+
+    /// <summary>
+    ///   Proves on both platforms that AreEqual( Int64, Integer ) raises ETestFailure when the values differ.
+    /// </summary>
+    [Test]
+    procedure AreEqual_Int64_Integer_Throws_ETestFailure_When_Values_Are_NotEqual;
+
+    /// <summary>
+    ///   Proves on both platforms that AreEqual( Integer, Int64 ) raises ETestFailure when the values differ.
+    /// </summary>
+    [Test]
+    procedure AreEqual_Integer_Int64_Throws_ETestFailure_When_Values_Are_NotEqual;
+
+    /// <summary>
+    ///   Proves AreEqual( Int64, Integer ) compares all 64 bits: an Int64 whose low 32 bits equal the Integer still
+    ///   fails, so the overload never truncates the Int64 to an Integer.
+    /// </summary>
+    [Test]
+    procedure AreEqual_Int64_Integer_Compares_All_64_Bits;
+
+    /// <summary>
+    ///   Proves AreEqual( Integer, Int64 ) compares all 64 bits: an Int64 whose low 32 bits equal the Integer still
+    ///   fails, so the overload never truncates the Int64 to an Integer.
+    /// </summary>
+    [Test]
+    procedure AreEqual_Integer_Int64_Compares_All_64_Bits;
+
+    /// <summary>
     ///   Proves AreEqual( Extended ) passes when the values differ by less than the tolerance.
     /// </summary>
     [Test]
@@ -1812,6 +1852,90 @@ begin
     end, ETestFailure, Format('[%d] is Not Equal to [%d] %s', [2, 1, '']));
 end;
 {$ENDIF}
+
+procedure TTestsAssert.AreEqual_Int64_Integer_Throws_No_Exception_When_Values_Are_Equal;
+begin
+  Assert.WillNotRaiseAny(
+    procedure
+    var
+      value : Double;
+      expected : Integer;
+    begin
+      value := 2.6;
+      expected := 3;
+      Assert.AreEqual(Round(value), expected);
+    end);
+end;
+
+procedure TTestsAssert.AreEqual_Integer_Int64_Throws_No_Exception_When_Values_Are_Equal;
+begin
+  Assert.WillNotRaiseAny(
+    procedure
+    var
+      value : Double;
+      expected : Integer;
+    begin
+      value := 2.6;
+      expected := 3;
+      Assert.AreEqual(expected, Round(value));
+    end);
+end;
+
+procedure TTestsAssert.AreEqual_Int64_Integer_Throws_ETestFailure_When_Values_Are_NotEqual;
+begin
+  Assert.WillRaise(
+    procedure
+    var
+      value : Double;
+      other : Integer;
+    begin
+      value := 2.6;
+      other := 2;
+      Assert.AreEqual(Round(value), other);
+    end, ETestFailure);
+end;
+
+procedure TTestsAssert.AreEqual_Integer_Int64_Throws_ETestFailure_When_Values_Are_NotEqual;
+begin
+  Assert.WillRaise(
+    procedure
+    var
+      value : Double;
+      other : Integer;
+    begin
+      value := 2.6;
+      other := 2;
+      Assert.AreEqual(other, Round(value));
+    end, ETestFailure);
+end;
+
+procedure TTestsAssert.AreEqual_Int64_Integer_Compares_All_64_Bits;
+begin
+  Assert.WillRaise(
+    procedure
+    var
+      wide : Int64;
+      narrow : Integer;
+    begin
+      wide := $100000001;
+      narrow := 1;
+      Assert.AreEqual(wide, narrow);
+    end, ETestFailure);
+end;
+
+procedure TTestsAssert.AreEqual_Integer_Int64_Compares_All_64_Bits;
+begin
+  Assert.WillRaise(
+    procedure
+    var
+      wide : Int64;
+      narrow : Integer;
+    begin
+      wide := $100000001;
+      narrow := 1;
+      Assert.AreEqual(narrow, wide);
+    end, ETestFailure);
+end;
 
 procedure TTestsAssert.AreEqual_Integer_Throws_No_Exception_When_Values_Are_Equal;
 begin
