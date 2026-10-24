@@ -28,6 +28,9 @@ What the fork adds or changes
 * **Per-test memory-leak checking for GITLAK suites** (`Source\Gll`, 2026-10-22): a suite runner with a
   warm-up pass, the FastMM5 leak monitor and a confirm re-run of flagged tests.  It is not part of any package;
   see [Help.md](Help.md) §4.
+* **A window-station guard for UI tests** (`Source\Gll\GllDUnitX.Station.pas`, 2026-10-25):
+  `RequireInteractiveStation` ignores a test that needs visible, painted windows when the suite runs on a
+  non-interactive station ( GITLAKMCP's `test_run` ), instead of letting it pass without having looked.
 * **The DPM package id is `GITLAK.DUnitX`**, not `VSoft.DUnitX`, so it cannot shadow upstream in a package feed.
 
 Features

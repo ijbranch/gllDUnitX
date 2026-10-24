@@ -233,6 +233,18 @@ Three units that are not upstream and not in any package: a test project adds `g
 
 Two things the check finds that are not engine or library leaks: a fixture FIELD left set in `TearDown` ( DUnitX keeps one fixture instance, so it reads as a leak of the fixture's first test ), and per-fixture state built lazily by the first test ( build it in `[Setup]` instead, so its release is measured too ).  Where pool state forces `[IgnoreMemoryLeaks]`, add a repetition test that fails on growth of a byte or more per iteration.
 
+### The window-station guard: `GllDUnitX.Station` (fork addition, 2026-10-25)
+
+GITLAKMCP's `test_run` starts suites from its Windows service, so a suite inherits the service's NON-interactive window station ( `Service-0x0-...$` ).  Its desktop window has no `WS_VISIBLE`, and `IsWindowVisible` walks the parent chain up to it, so every window reports invisible: `DisableTaskWindows` disables nothing, no window receives `WM_PAINT`, `PrintWindow` renders blank, visual styles are off and there is one monitor.  Focus, activation, `PaintTo` and timer-driven modal loops still work.  The cause is the STATION, not the session: a hidden desktop on `WinSta0` behaves normally.
+
+| Routine | Use |
+|---|---|
+| `RequireInteractiveStation( ANeeds )` | First line of a test that needs any of the above: `Assert.Ignore` with the reason and the station's name, so the test is reported Ignored instead of passing without having looked |
+| `IsInteractiveStation` | The station's `WSF_VISIBLE` flag; True when it cannot be read, so a test that needs a desktop fails loudly rather than being skipped without cause |
+| `StationDescription` | `WinSta0 ( interactive )` / `Service-0x0-...$ ( non-interactive )`, for messages |
+
+Add `gllDUnitX\Source\Gll` to the unit search path, as for the suite runner.  It replaced three private `ProcessIdToSessionId` checks ( gllSpell, gllAutomationServer, StyledComponents ).  A test that must PROVE painting rather than skip runs on a hidden `WinSta0` desktop ( `CreateDesktop` + `CreateProcess` with `lpDesktop`; nothing appears on screen ), which is how StyledComponents' paint and monitor tests were proved on 2026-10-25.
+
 ---
 
 ## 5. The `Assert` class
