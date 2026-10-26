@@ -95,7 +95,7 @@ implementation
 
 uses
 {$IFDEF USE_NS}
-  WinAPI.Windows,                       // Delphi XE2 (CompilerVersion 23) added scopes in front of unit names
+  Winapi.Windows,                       // Delphi XE2 (CompilerVersion 23) added scopes in front of unit names
 {$ELSE}
   Windows,
 {$ENDIF}

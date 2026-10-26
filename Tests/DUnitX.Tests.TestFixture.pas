@@ -476,10 +476,10 @@ uses
   System.Rtti,
   System.Generics.Collections,
 {$ELSE}
-  Math,
-  SysUtils,
-  Rtti,
-  Generics.Collections,
+  System.Math,
+  System.SysUtils,
+  System.Rtti,
+  System.Generics.Collections,
 {$ENDIF}
   DUnitX.Types,
   DUnitX.Extensibility,
@@ -488,7 +488,7 @@ uses
 {$IFDEF USE_NS}
   System.Classes,
 {$ELSE}
-  Classes,
+  System.Classes,
 {$ENDIF}
   DUnitX.Exceptions,
   DUnitX.FixtureProvider,

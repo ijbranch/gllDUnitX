@@ -286,7 +286,7 @@ uses
   System.DateUtils,
   System.Rtti,
   System.TypInfo,
-  WinApi.Windows,
+  Winapi.Windows,
 {$ELSE}
   DateUtils,
   Rtti,

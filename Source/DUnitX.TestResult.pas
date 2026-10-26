@@ -33,7 +33,7 @@ interface
 uses
 {$IFDEF USE_NS}
   System.SysUtils,
-  System.Timespan,
+  System.TimeSpan,
 {$ELSE}
   SysUtils,
   Timespan,

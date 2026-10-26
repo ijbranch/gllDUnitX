@@ -66,7 +66,7 @@ uses
   Vcl.Controls,
   Vcl.Dialogs,
   Vcl.Forms,
-  WinApi.Windows,
+  Winapi.Windows,
   System.SysUtils,
   System.Variants,
   DccStrs,

@@ -68,7 +68,7 @@ uses
 {$IFDEF USE_NS}
   System.SysUtils,
 {$ELSE}
-  SysUtils,
+  System.SysUtils,
 {$ENDIF}
   DUnitX.TestNameParser;
 

@@ -32,16 +32,16 @@ interface
 {$I DUnitX.inc}
 
 uses
-  WinAPI.Windows,
-  WinAPI.Messages,
+  Winapi.Windows,
+  Winapi.Messages,
   System.SysUtils,
   System.Variants,
   System.Classes,
-  VCL.Graphics,
-  VCL.Controls,
-  VCL.Forms,
-  VCL.Dialogs,
-  VCL.StdCtrls,
+  Vcl.Graphics,
+  Vcl.Controls,
+  Vcl.Forms,
+  Vcl.Dialogs,
+  Vcl.StdCtrls,
   Vcl.ExtCtrls,
   DUnitX.Expert.CodeGen.NewTestProject;
 

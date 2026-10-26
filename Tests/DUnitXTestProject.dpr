@@ -16,7 +16,7 @@ program DUnitXTest_D13;
 {$STRONGLINKTYPES ON}
 
 uses
-  SysUtils,
+  System.SysUtils,
   DUnitX.TestFramework,
   DUnitX.Loggers.Console,
   DUnitX.Loggers.Xml.NUnit,

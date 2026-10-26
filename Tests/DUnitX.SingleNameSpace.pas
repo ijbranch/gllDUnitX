@@ -30,7 +30,7 @@ uses
   //D2010 doesn't have TThread.Sleep
   Windows,
 {$ENDIF}
-  classes;
+  System.Classes;
 
 { TSingleNamespaceTest }
 

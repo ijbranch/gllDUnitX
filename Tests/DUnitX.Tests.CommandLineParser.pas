@@ -215,7 +215,7 @@ type
 implementation
 
 uses
-  Classes,
+  System.Classes,
   System.IOUtils,
   System.SysUtils,
   DUnitX.CommandLine.OptionDef,

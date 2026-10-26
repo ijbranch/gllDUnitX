@@ -225,7 +225,7 @@ uses
 {$IFDEF USE_NS}
   System.TypInfo,
   System.Classes,
-  System.Sysutils,
+  System.SysUtils,
   System.SyncObjs;
 {$ELSE}
   TypInfo,

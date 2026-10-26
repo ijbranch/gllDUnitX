@@ -33,7 +33,7 @@ interface
 
 uses
 {$IFDEF USE_NS}   // since Delphi XE2
-  WinAPI.Windows,
+  Winapi.Windows,
   System.SysUtils,
   System.Classes,
   System.TimeSpan,
