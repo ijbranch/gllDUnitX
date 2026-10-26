@@ -114,8 +114,8 @@
     <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
-        <VerInfo_Build>24</VerInfo_Build>
-        <VerInfo_Keys>CompanyName=;FileDescription=VSoft.DUnitXWinR;FileVersion=0.5.1.24;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=VSoft.DUnitXWinR;ProductVersion=0.5.1.24;Comments=</VerInfo_Keys>
+        <VerInfo_Build>25</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=;FileDescription=VSoft.DUnitXWinR;FileVersion=0.5.1.25;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=VSoft.DUnitXWinR;ProductVersion=0.5.1.25;Comments=</VerInfo_Keys>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_BplOutput>$(BDSCOMMONDIR)\Bpl\$(Platform)</DCC_BplOutput>
@@ -131,8 +131,8 @@
     <PropertyGroup Condition="'$(Cfg_2_Win64)'!=''">
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
-        <VerInfo_Build>24</VerInfo_Build>
-        <VerInfo_Keys>CompanyName=;FileDescription=VSoft.DUnitXWinR;FileVersion=0.5.1.24;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=VSoft.DUnitXWinR;ProductVersion=0.5.1.24;Comments=</VerInfo_Keys>
+        <VerInfo_Build>25</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=;FileDescription=VSoft.DUnitXWinR;FileVersion=0.5.1.25;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=VSoft.DUnitXWinR;ProductVersion=0.5.1.25;Comments=</VerInfo_Keys>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">

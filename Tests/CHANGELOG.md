@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- (2026-10-26) **`README.md`: the suite's 9 ignored tests are listed, each with why** — `README.md`, `DUnitX.Tests.TestFixture.pas`.  All nine prove DUnitX honours `[Ignore]` or `[RepeatTest(0)]`; none pins a defect.  `TestTimeout`, the one with a blank reason in run reports, now carries its reason in the `[Ignore]` attribute.  **Why:** `verify_change` warns on every ignored test ("check each is listed in the suite README"); Ian asked for that check, 2026-10-26.
 - (2026-10-25) **This change log** — `CHANGELOG.md`.  The suite's own record, per the estate rule that every test
   suite has one; test-only history moved in from `..\CHANGELOG.md` ( 9 entries ).
 - (2026-10-12) **NaN tests for `Assert.AreEqual` / `AreNotEqual` on `Double` and `Extended`** —

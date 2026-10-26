@@ -191,7 +191,7 @@ type
     ///   test itself; TRunnerBehaviourTests.MaxTimeOverrunIsCaughtWhateverTheTiming proves this through a private
     ///   runner instead.
     /// </summary>
-    [Test, Ignore]
+    [Test, Ignore('A timeout fails the test itself; MaxTimeOverrunIsCaughtWhateverTheTiming proves it via a private runner')]
     [MaxTime(100)]
     procedure TestTimeout;
 
