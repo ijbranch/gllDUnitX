@@ -18,7 +18,7 @@ commit with the failing test, then the fix.  "Allow edits by maintainers" is on 
 | 6 | Test error runs result and exception messages together | [#512](https://github.com/VSoftTechnologies/DUnitX/issues/512) | [#513](https://github.com/VSoftTechnologies/DUnitX/pull/513) | `fix/error-message-separator` | `188ec6b` | 2026-10-31 `c3d4347` |
 | 7 | `ETestFailureStrCompare` descendant not comparable | [#514](https://github.com/VSoftTechnologies/DUnitX/issues/514) | [#515](https://github.com/VSoftTechnologies/DUnitX/pull/515) | `fix/strcompare-descendant` | `7db9be8` | 2026-10-31 `4b252f0` |
 
-**Outcome (2026-10-31):** Vincent merged all seven the same day, 20:22 to 20:29 UTC, each squashed onto `master`, which is now @ `a88a849`; the seven issues are closed as completed.  PhilBarwood's enum-only 1.6 PR, [#517](https://github.com/VSoftTechnologies/DUnitX/pull/517) (issue #516), was merged just before them as `942958e`, so the rest of 1.6, held back for it, can now be built on it.
+**Outcome (2026-10-31):** Vincent merged all seven the same day, 20:22 to 20:29 UTC, each squashed onto `master`, which is now @ `a88a849`; the seven issues are closed as completed.  PhilBarwood's enum-only 1.6 PR, [#517](https://github.com/VSoftTechnologies/DUnitX/pull/517) (issue #516), was merged just before them as `942958e`, so the rest of 1.6, held back for it, can now be built on it.  On 2026-10-31 (Ian: "Yes", to deleting the merged branches) all seven branches were deleted from the fork and locally, after checking each PR's `merged_at` and that each branch tip still equalled its PR's head.  The fork has since been renamed `ijbranch/gllDUnitX` and holds this repository (see `Help.md`); GitHub redirects the `ijbranch/DUnitX` links above.
 
 ## How this batch was built
 

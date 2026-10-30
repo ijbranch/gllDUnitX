@@ -1,29 +1,19 @@
 ﻿(* GITLAK Software
   ***************************************************************************
 
-    © 2026 Ian Branch (GITLAK Software). All rights reserved.
+    Copyright (C) 2026 Ian Branch (GITLAK Software).
 
-    This Delphi Code Library, including all code, proprietary algorithms, and
-    associated intellectual property and confidential information, is the
-    exclusive property of Ian Branch (GITLAK Software).
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
 
-    A licence is granted to the purchaser for the exclusive purpose of ongoing
-    maintenance and internal development only.
+        http://www.apache.org/licenses/LICENSE-2.0
 
-    Compiled applications developed using elements of this code library may be
-    freely distributed.
-
-    Any reproduction, distribution, or use, in whole or in part, by any other
-    party is strictly prohibited without the express written permission of the
-    Author.
-
-    Complete development history is retained & maintained in my Private GitHub
-    Repository.
-
-    THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED.
-    IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DAMAGES ARISING IN CONNECTION
-    WITH THE USE OF THIS SOFTWARE.
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
 
   ***************************************************************************
 
@@ -35,7 +25,7 @@
   Ian Branch - GITLAK Software.
 
   ***************************************************************************
-  File last update : 2026-10-22 11:15:00 (UTC+11:00 DST)
+  File last update : 2026-10-31 09:30:00 (UTC+11:00 DST)
   ***************************************************************************
 *)
 
