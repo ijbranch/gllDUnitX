@@ -325,6 +325,20 @@ upstream. **All six merged the same day** (`upstream/master` @ `fbad5c9`). The f
 
 **Remaining items sent to Vincent for a decision** (2026-10-15, [comment on #398](https://github.com/VSoftTechnologies/DUnitX/issues/398#issuecomment-6184286957)): everything unsent after batch 8, grouped as plain defects ready for a later batch, behaviour changes needing his decision (each offered as an opt-in), the Win64 `[MaxTime]` design question, items needing a larger or project change (including IDE expert 5.1 to 5.4, offered untested), and minor or unreachable items we would leave; asked which he wants and which to leave for now. Ian: "Write up a summary of what is remaining and send to Vincent, asking he wants them or leave them for now". The grouping follows the ranked list in [UPSTREAM-ISSUES-Batch8.md](UPSTREAM-ISSUES-Batch8.md).
 
+**Vincent's answer** (2026-10-30, on #398, after PhilBarwood offered an enum-only 1.6 PR): "Yes I would accept a PR for the enum case.  As for holding back fixes because DUnitX's tests rely on a bug, that would suggest the tests need fixing/replacing."  The enum case of 1.6 is Phil's to send.
+
+**Batch 9**, posted 2026-10-31 against `c2f8aae` (Ian: "Prepare and send the unsent ones"): the five plain defects of the 2026-10-15 summary, plus the `--run` trailing comma, which his answer unblocked and which changes upstream's `SingleName` / `TwoNames` expectations.  All seven merged together build and run at the baseline plus seven passes.  **The rest of 1.6 is held** until Phil's PR is in, since both need `TDUnitXTestCase.Create` to raise on a failed conversion; the other behaviour changes, the `[MaxTime]` question and sections 4 and 5 of the summary still wait on his choice.  The exact texts and checks are in [UPSTREAM-ISSUES-Batch9.md](UPSTREAM-ISSUES-Batch9.md).
+
+| Item | Issue | PR |
+|---|---|---|
+| `--run` keeps a trailing comma, so `--run:Unit.TFoo,` selects nothing | [#502](https://github.com/VSoftTechnologies/DUnitX/issues/502) | [#503](https://github.com/VSoftTechnologies/DUnitX/pull/503) |
+| `--run` drops a one-character last name | [#504](https://github.com/VSoftTechnologies/DUnitX/issues/504) | [#505](https://github.com/VSoftTechnologies/DUnitX/pull/505) |
+| A nested options file is looked for in the current directory | [#506](https://github.com/VSoftTechnologies/DUnitX/issues/506) | [#507](https://github.com/VSoftTechnologies/DUnitX/pull/507) |
+| An unclosed `(` in `--include` / `--exclude` is accepted | [#508](https://github.com/VSoftTechnologies/DUnitX/issues/508) | [#509](https://github.com/VSoftTechnologies/DUnitX/pull/509) |
+| The text logger's issue list loses names with `=` and empty messages | [#510](https://github.com/VSoftTechnologies/DUnitX/issues/510) | [#511](https://github.com/VSoftTechnologies/DUnitX/pull/511) |
+| A test error runs the result and exception messages together | [#512](https://github.com/VSoftTechnologies/DUnitX/issues/512) | [#513](https://github.com/VSoftTechnologies/DUnitX/pull/513) |
+| A descendant of `ETestFailureStrCompare` is not comparable | [#514](https://github.com/VSoftTechnologies/DUnitX/issues/514) | [#515](https://github.com/VSoftTechnologies/DUnitX/pull/515) |
+
 **Outside the batches: [#372](https://github.com/VSoftTechnologies/DUnitX/issues/372) (bitmask exit codes) ->
 [PR #411](https://github.com/VSoftTechnologies/DUnitX/pull/411)**, branch `feature/bitmask-exit-codes`, posted
 2026-10-12 after a reviewer pointed at it from #404. It is someone else's feature request, which upstream had
