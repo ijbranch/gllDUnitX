@@ -1,4 +1,4 @@
-# DUnitX upstream: batch 9 (posted 2026-10-31)
+# DUnitX upstream: batch 9 (all seven merged 2026-10-31)
 
 Seven issues and their PRs, built and posted 2026-10-31 against `master` @ `c2f8aae` (batch 8 plus #501 and
 upstream's own "ignore incomming doc stuff").  Ian: "Prepare and send the unsent ones."  Prompted by Vincent on #398
@@ -10,13 +10,15 @@ commit with the failing test, then the fix.  "Allow edits by maintainers" is on 
 
 | # | Report item | Issue | PR | Branch | Head | Merged |
 |---|---|---|---|---|---|---|
-| 1 | `--run` trailing comma kept (changes `SingleName` / `TwoNames` expectations) | [#502](https://github.com/VSoftTechnologies/DUnitX/issues/502) | [#503](https://github.com/VSoftTechnologies/DUnitX/pull/503) | `fix/run-trailing-comma` | `841ca79` | |
-| 2 | `--run` drops a one-character last name | [#504](https://github.com/VSoftTechnologies/DUnitX/issues/504) | [#505](https://github.com/VSoftTechnologies/DUnitX/pull/505) | `fix/run-last-char-name` | `c7f359a` | |
-| 3 | Nested options file resolved against the current directory | [#506](https://github.com/VSoftTechnologies/DUnitX/issues/506) | [#507](https://github.com/VSoftTechnologies/DUnitX/pull/507) | `fix/nested-options-file-path` | `f8cb12d` | |
-| 4 | Unclosed `(` in `--include` / `--exclude` accepted | [#508](https://github.com/VSoftTechnologies/DUnitX/issues/508) | [#509](https://github.com/VSoftTechnologies/DUnitX/pull/509) | `fix/filter-unclosed-paren` | `f924ddc` | |
-| 5 | Text logger issue list loses names with `=` and empty messages | [#510](https://github.com/VSoftTechnologies/DUnitX/issues/510) | [#511](https://github.com/VSoftTechnologies/DUnitX/pull/511) | `fix/textlogger-issue-list` | `9e96c74` | |
-| 6 | Test error runs result and exception messages together | [#512](https://github.com/VSoftTechnologies/DUnitX/issues/512) | [#513](https://github.com/VSoftTechnologies/DUnitX/pull/513) | `fix/error-message-separator` | `188ec6b` | |
-| 7 | `ETestFailureStrCompare` descendant not comparable | [#514](https://github.com/VSoftTechnologies/DUnitX/issues/514) | [#515](https://github.com/VSoftTechnologies/DUnitX/pull/515) | `fix/strcompare-descendant` | `7db9be8` | |
+| 1 | `--run` trailing comma kept (changes `SingleName` / `TwoNames` expectations) | [#502](https://github.com/VSoftTechnologies/DUnitX/issues/502) | [#503](https://github.com/VSoftTechnologies/DUnitX/pull/503) | `fix/run-trailing-comma` | `841ca79` | 2026-10-31 `4c08da8` |
+| 2 | `--run` drops a one-character last name | [#504](https://github.com/VSoftTechnologies/DUnitX/issues/504) | [#505](https://github.com/VSoftTechnologies/DUnitX/pull/505) | `fix/run-last-char-name` | `c7f359a` | 2026-10-31 `0f1dcb2` |
+| 3 | Nested options file resolved against the current directory | [#506](https://github.com/VSoftTechnologies/DUnitX/issues/506) | [#507](https://github.com/VSoftTechnologies/DUnitX/pull/507) | `fix/nested-options-file-path` | `f8cb12d` | 2026-10-31 `a88a849` |
+| 4 | Unclosed `(` in `--include` / `--exclude` accepted | [#508](https://github.com/VSoftTechnologies/DUnitX/issues/508) | [#509](https://github.com/VSoftTechnologies/DUnitX/pull/509) | `fix/filter-unclosed-paren` | `f924ddc` | 2026-10-31 `4e91891` |
+| 5 | Text logger issue list loses names with `=` and empty messages | [#510](https://github.com/VSoftTechnologies/DUnitX/issues/510) | [#511](https://github.com/VSoftTechnologies/DUnitX/pull/511) | `fix/textlogger-issue-list` | `9e96c74` | 2026-10-31 `759e77a` |
+| 6 | Test error runs result and exception messages together | [#512](https://github.com/VSoftTechnologies/DUnitX/issues/512) | [#513](https://github.com/VSoftTechnologies/DUnitX/pull/513) | `fix/error-message-separator` | `188ec6b` | 2026-10-31 `c3d4347` |
+| 7 | `ETestFailureStrCompare` descendant not comparable | [#514](https://github.com/VSoftTechnologies/DUnitX/issues/514) | [#515](https://github.com/VSoftTechnologies/DUnitX/pull/515) | `fix/strcompare-descendant` | `7db9be8` | 2026-10-31 `4b252f0` |
+
+**Outcome (2026-10-31):** Vincent merged all seven the same day, 20:22 to 20:29 UTC, each squashed onto `master`, which is now @ `a88a849`; the seven issues are closed as completed.  PhilBarwood's enum-only 1.6 PR, [#517](https://github.com/VSoftTechnologies/DUnitX/pull/517) (issue #516), was merged just before them as `942958e`, so the rest of 1.6, held back for it, can now be built on it.
 
 ## How this batch was built
 
