@@ -8,7 +8,7 @@ requests.
   sends its own upstream-relevant fixes that way; their status is in `UPSTREAM-REPORT-Defects-2026-10-12.md`,
   `UPSTREAM-ISSUES-Batch1.md`, `UPSTREAM-ISSUES-Batch2.md`, `UPSTREAM-ISSUES-Batch3.md`,
   `UPSTREAM-ISSUES-Batch4.md`, `UPSTREAM-ISSUES-Batch5.md`, `UPSTREAM-ISSUES-Batch6.md`, `UPSTREAM-ISSUES-Batch7.md`,
-  `UPSTREAM-ISSUES-Batch8.md` and `UPSTREAM-ISSUES-Batch9.md`.
+  `UPSTREAM-ISSUES-Batch8.md`, `UPSTREAM-ISSUES-Batch9.md` and `UPSTREAM-ISSUES-Batch10.md`.
 * **Something specific to this fork** (its scope, `Assert.Ignore`, the VCL GUI runner as fixed here) can be raised
   as an issue on this repository, as a report; there is no commitment to act on it.
 
