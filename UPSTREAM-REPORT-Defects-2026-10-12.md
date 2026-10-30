@@ -339,6 +339,17 @@ upstream. **All six merged the same day** (`upstream/master` @ `fbad5c9`). The f
 | A test error runs the result and exception messages together | [#512](https://github.com/VSoftTechnologies/DUnitX/issues/512) | [#513](https://github.com/VSoftTechnologies/DUnitX/pull/513) |
 | A descendant of `ETestFailureStrCompare` is not comparable | [#514](https://github.com/VSoftTechnologies/DUnitX/issues/514) | [#515](https://github.com/VSoftTechnologies/DUnitX/pull/515) |
 
+**Batch 10**, posted 2026-10-31 against `a88a849` (Ian: "Yes"): the rest of 1.6 on top of PhilBarwood's #517, plus the `WillNotRaise` swallowing, which Vincent's 2026-10-30 answer unblocked (DUnitX's own tests asserted it; the PR changes seven of them).  Too few values went as a question only (a trailing default parameter is a legitimate pattern RTTI cannot see); the thousands-separator fix was dropped (it would refuse correct decimal-comma data); **the date PR is held back** after the final review found a Korean date-time misread by its ISO 8601 step.  Detail: [UPSTREAM-ISSUES-Batch10.md](UPSTREAM-ISSUES-Batch10.md).
+
+| Item | Issue | PR |
+|---|---|---|
+| 1.6 too few values: run with default values (question) | [#518](https://github.com/VSoftTechnologies/DUnitX/issues/518) | - |
+| 1.6 separator inside a value: extra values dropped | [#519](https://github.com/VSoftTechnologies/DUnitX/issues/519) | [#520](https://github.com/VSoftTechnologies/DUnitX/pull/520) |
+| 1.6 unparseable or out-of-range integer | [#521](https://github.com/VSoftTechnologies/DUnitX/issues/521) | [#522](https://github.com/VSoftTechnologies/DUnitX/pull/522) |
+| 1.6 unparseable float | [#523](https://github.com/VSoftTechnologies/DUnitX/issues/523) | [#524](https://github.com/VSoftTechnologies/DUnitX/pull/524) |
+| `WillNotRaise` swallows an exception of another class (question, PR ready) | [#525](https://github.com/VSoftTechnologies/DUnitX/issues/525) | [#526](https://github.com/VSoftTechnologies/DUnitX/pull/526) |
+| 1.6 dates | held | held |
+
 **Outside the batches: [#372](https://github.com/VSoftTechnologies/DUnitX/issues/372) (bitmask exit codes) ->
 [PR #411](https://github.com/VSoftTechnologies/DUnitX/pull/411)**, branch `feature/bitmask-exit-codes`, posted
 2026-10-12 after a reviewer pointed at it from #404. It is someone else's feature request, which upstream had
