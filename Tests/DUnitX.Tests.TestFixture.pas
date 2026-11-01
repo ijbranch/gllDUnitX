@@ -464,6 +464,40 @@ type
     /// </summary>
     [Test]
     procedure TestErrorSeparatesMessagesAndAcceptsStrCompareDescendants;
+    /// <summary>
+    ///   Proves that Assert.Ignore in [Setup] reports the test ignored, with its reason, and that neither the body nor
+    ///   TearDown runs.  It used to be reported as an error.  (Upstream #531; there TearDown does run, but this fork
+    ///   never runs TearDown after a Setup that did not finish.)
+    /// </summary>
+    [Test]
+    procedure IgnoreInSetupIgnoresTheTest;
+    /// <summary>
+    ///   Proves that Assert.Ignore in [SetupFixture] reports every test of the fixture ignored with its reason
+    ///   (repetitions included, an [Ignore]d test keeping its own reason), runs none of them, reports and logs no error, and
+    ///   does not run [TearDownFixture].  Each test the setup ignored carries what the setup logged; the [Ignore]d one
+    ///   does not.  Every test used to be reported as an error.  (Upstream #531.)
+    /// </summary>
+    [Test]
+    procedure IgnoreInSetupFixtureIgnoresEveryTest;
+    /// <summary>
+    ///   Proves that Assert.Ignore in a fixture's parameterless constructor (which takes the place of [SetupFixture])
+    ///   reports its tests ignored and logs no "Error creating fixture".  The tests were already reported ignored,
+    ///   but the error was still logged.
+    /// </summary>
+    [Test]
+    procedure IgnoreInFixtureConstructorIgnoresItsTests;
+    /// <summary>
+    ///   Proves that a test ignored at run time keeps on its result what it logged before the ignore; the ignored
+    ///   result used to be created without the test's log.  (Upstream #531.)
+    /// </summary>
+    [Test]
+    procedure RuntimeIgnoreKeepsTheTestsLog;
+    /// <summary>
+    ///   Proves that a TearDown error after a run-time ignore is reported as the test's error, not hidden behind the
+    ///   ignore: an ignore leaves nothing to diagnose.  Already true here; pinned because upstream #531 changed it.
+    /// </summary>
+    [Test]
+    procedure TearDownErrorAfterARuntimeIgnoreIsReported;
   end;
 {$M-}
 
@@ -753,10 +787,14 @@ var
   GSetupInstance : TObject;
   /// <summary>Warning messages collected by TWarningLogger, one per line.</summary>
   GWarnings : string;
+  /// <summary>Error messages collected by TWarningLogger, one per line.</summary>
+  GErrors : string;
   /// <summary>Number of times TRunnerFixtureSetupCount's [SetupFixture] ran.</summary>
   GSetupFixtureCalls : Integer;
   /// <summary>Number of times TRunnerLogAttribution's Setup ran; the second call raises.</summary>
   GLogSetupCalls : Integer;
+  /// <summary>Set if TRunnerSetupFixtureIgnores's [TearDownFixture] ran after its [SetupFixture] ignored the fixture.</summary>
+  GTearDownFixtureRan : boolean;
 
 type
 {$M+}
@@ -945,6 +983,26 @@ type
     /// </summary>
     /// <exception cref="Exception">
     ///   Always ('constructor boom').
+    /// </exception>
+    constructor Create;
+    /// <summary>
+    ///   Must not run; sets GBodyRan if it does.
+    /// </summary>
+    [Test]
+    procedure NeverRuns;
+  end;
+
+  /// <summary>
+  ///   Runner fixture whose constructor (which takes the place of [SetupFixture]) ignores the fixture with
+  ///   Assert.Ignore: its test must be reported ignored and no error logged.
+  /// </summary>
+  TRunnerConstructorIgnores = class
+  public
+    /// <summary>
+    ///   Ignores the fixture.
+    /// </summary>
+    /// <exception cref="ETestIgnored">
+    ///   Always ('constructor ignores the fixture'), via Assert.Ignore.
     /// </exception>
     constructor Create;
     /// <summary>
@@ -1268,6 +1326,105 @@ type
   end;
 
   /// <summary>
+  ///   Runner fixture whose [Setup] ignores the test with Assert.Ignore: the test must be reported ignored, with the
+  ///   reason, and neither its body nor TearDown may run (as after a failed Setup).
+  /// </summary>
+  TRunnerSetupIgnores = class
+  public
+    /// <summary>
+    ///   Per-test setup that ignores the test.
+    /// </summary>
+    /// <exception cref="ETestIgnored">
+    ///   Always ('setup ignores the test'), via Assert.Ignore.
+    /// </exception>
+    [Setup]
+    procedure Setup;
+    /// <summary>
+    ///   Must not run after Setup ignored the test; sets GTearDownRan if it does.
+    /// </summary>
+    [TearDown]
+    procedure TearDown;
+    /// <summary>
+    ///   Must not run; sets GBodyRan if it does.
+    /// </summary>
+    [Test]
+    procedure NeverRuns;
+  end;
+
+  /// <summary>
+  ///   Runner fixture whose [SetupFixture] ignores the fixture with Assert.Ignore: every test must be reported ignored
+  ///   with that reason (an [Ignore]d one keeps its own), none may run, and [TearDownFixture] must not run (as after a
+  ///   failed [SetupFixture]).
+  /// </summary>
+  TRunnerSetupFixtureIgnores = class
+  public
+    /// <summary>
+    ///   Fixture setup that logs 'logged by the fixture setup', then ignores the fixture.
+    /// </summary>
+    /// <exception cref="ETestIgnored">
+    ///   Always ('fixture setup ignores the fixture'), via Assert.Ignore.
+    /// </exception>
+    [SetupFixture]
+    procedure SetupFixture;
+    /// <summary>
+    ///   Must not run after SetupFixture ignored the fixture; sets GTearDownFixtureRan if it does.
+    /// </summary>
+    [TearDownFixture]
+    procedure TearDownFixture;
+    /// <summary>
+    ///   Must not run; sets GBodyRan if it does.
+    /// </summary>
+    [Test]
+    procedure NotRun;
+    /// <summary>
+    ///   Repeated test that must not run in any repetition; sets GBodyRan if it does.
+    /// </summary>
+    [Test]
+    [RepeatTest(2)]
+    procedure NotRunEither;
+    /// <summary>
+    ///   Ignored test that must keep its own reason; sets GBodyRan if it runs.
+    /// </summary>
+    [Test]
+    [Ignore('stays ignored')]
+    procedure StaysIgnored;
+  end;
+
+  /// <summary>
+  ///   Runner fixture whose tests ignore themselves at run time: one after logging, one before a TearDown that raises.
+  /// </summary>
+  TRunnerRuntimeIgnore = class
+  public
+    /// <summary>
+    ///   Per-test teardown that raises only after IgnoredBeforeTearDownFails.
+    /// </summary>
+    /// <exception cref="EInvalidOpException">
+    ///   After IgnoredBeforeTearDownFails ('teardown after the ignore fails').
+    /// </exception>
+    [TearDown]
+    procedure TearDown;
+    /// <summary>
+    ///   Logs 'logged before the ignore', then ignores itself.
+    /// </summary>
+    /// <exception cref="ETestIgnored">
+    ///   Always ('ignored after logging'), via Assert.Ignore.
+    /// </exception>
+    [Test]
+    procedure IgnoredAfterLogging;
+    /// <summary>
+    ///   Ignores itself, after which TearDown raises.
+    /// </summary>
+    /// <exception cref="ETestIgnored">
+    ///   Always ('ignored before teardown fails'), via Assert.Ignore.
+    /// </exception>
+    [Test]
+    procedure IgnoredBeforeTearDownFails;
+  private
+    /// <summary>Set by IgnoredBeforeTearDownFails, so TearDown raises for that test only.</summary>
+    FTearDownFails : boolean;
+  end;
+
+  /// <summary>
   ///   Runner fixture with empty setup and teardown and a passing test, so every per-test logger callback fires.
   /// </summary>
   TRunnerSetupAndTearDown = class
@@ -1362,12 +1519,12 @@ type
   end;
 
   /// <summary>
-  ///   Logger that collects warnings into GWarnings.
+  ///   Logger that collects warnings into GWarnings and errors into GErrors.
   /// </summary>
   TWarningLogger = class(TDUnitXNullLogger)
   protected
     /// <summary>
-    ///   Appends warning-level messages to GWarnings; ignores the rest.
+    ///   Appends warning-level messages to GWarnings and error-level ones to GErrors; ignores the rest.
     /// </summary>
     /// <param name="logType">
     ///   The message's level.
@@ -1566,6 +1723,17 @@ begin
   raise Exception.Create('constructor boom');
 end;
 
+constructor TRunnerConstructorIgnores.Create;
+begin
+  inherited Create;
+  Assert.Ignore('constructor ignores the fixture');
+end;
+
+procedure TRunnerConstructorIgnores.NeverRuns;
+begin
+  GBodyRan := true;
+end;
+
 procedure TRunnerConstructorRaises.NeverRuns;
 begin
   GBodyRan := true;
@@ -1588,7 +1756,9 @@ end;
 procedure TWarningLogger.OnLog(const logType : TLogLevel; const msg : string);
 begin
   if logType = TLogLevel.Warning then
-    GWarnings := GWarnings + msg + sLineBreak;
+    GWarnings := GWarnings + msg + sLineBreak
+  else if logType = TLogLevel.Error then
+    GErrors := GErrors + msg + sLineBreak;
 end;
 
 procedure TRunnerSetupFails.Setup;
@@ -1761,6 +1931,68 @@ procedure TRunnerLogAttribution.TestTwo;
 begin
   Log('logged by TestTwo');
   Assert.Fail('TestTwo fails');
+end;
+
+procedure TRunnerSetupIgnores.Setup;
+begin
+  Assert.Ignore('setup ignores the test');
+end;
+
+procedure TRunnerSetupIgnores.TearDown;
+begin
+  GTearDownRan := true;
+end;
+
+procedure TRunnerSetupIgnores.NeverRuns;
+begin
+  GBodyRan := true;
+end;
+
+procedure TRunnerSetupFixtureIgnores.SetupFixture;
+begin
+  Log('logged by the fixture setup');
+  Assert.Ignore('fixture setup ignores the fixture');
+end;
+
+procedure TRunnerSetupFixtureIgnores.TearDownFixture;
+begin
+  GTearDownFixtureRan := true;
+end;
+
+procedure TRunnerSetupFixtureIgnores.NotRun;
+begin
+  GBodyRan := true;
+end;
+
+procedure TRunnerSetupFixtureIgnores.NotRunEither;
+begin
+  GBodyRan := true;
+end;
+
+procedure TRunnerSetupFixtureIgnores.StaysIgnored;
+begin
+  GBodyRan := true;
+end;
+
+procedure TRunnerRuntimeIgnore.TearDown;
+begin
+  if FTearDownFails then
+  begin
+    FTearDownFails := false;
+    raise EInvalidOpException.Create('teardown after the ignore fails');
+  end;
+end;
+
+procedure TRunnerRuntimeIgnore.IgnoredAfterLogging;
+begin
+  Log('logged before the ignore');
+  Assert.Ignore('ignored after logging');
+end;
+
+procedure TRunnerRuntimeIgnore.IgnoredBeforeTearDownFails;
+begin
+  FTearDownFails := true;
+  Assert.Ignore('ignored before teardown fails');
 end;
 
 procedure TRunnerSetupAndTearDown.Setup;
@@ -2239,6 +2471,79 @@ begin
   Assert.DoesNotContain(two, 'logged by TestOne', False, 'TestTwo log: ' + two);
   Assert.Contains(one, 'logged in setup', False, 'TestOne log: ' + one);
   Assert.Contains(two, 'logged in setup', False, 'TestTwo log: ' + two);
+end;
+
+procedure TRunnerBehaviourTests.IgnoreInSetupIgnoresTheTest;
+var
+  results : IRunResults;
+begin
+  GTearDownRan := false;
+  GBodyRan := false;
+  results := RunFixture(BuildFixture(TRunnerSetupIgnores));
+  Assert.IsFalse(GBodyRan, 'the test did not run');
+  Assert.IsFalse(GTearDownRan, 'TearDown did not run');
+  Assert.AreEqual(0, results.ErrorCount, 'nothing is an error');
+  CheckResult(results, 'NeverRuns', TTestResultType.Ignored, 'setup ignores the test');
+end;
+
+procedure TRunnerBehaviourTests.IgnoreInSetupFixtureIgnoresEveryTest;
+var
+  results : IRunResults;
+  testResult : ITestResult;
+begin
+  GTearDownFixtureRan := false;
+  GBodyRan := false;
+  GErrors := '';
+  results := RunFixture(BuildFixture(TRunnerSetupFixtureIgnores), TWarningLogger.Create);
+  Assert.AreEqual('', GErrors, 'no fixture setup error is logged');
+  Assert.IsFalse(GBodyRan, 'no test body ran');
+  Assert.IsFalse(GTearDownFixtureRan, 'TearDownFixture did not run');
+  Assert.AreEqual(0, results.ErrorCount, 'nothing is an error');
+  Assert.AreEqual(4, results.IgnoredCount, 'NotRun, both repetitions of NotRunEither and StaysIgnored are ignored');
+  for testResult in results.GetAllTestResults do
+    if testResult.Test.Name = 'StaysIgnored' then
+    begin
+      Assert.Contains(testResult.Message, 'stays ignored', False, 'StaysIgnored keeps its own reason');
+      //Ignored by its attribute, it has nothing to do with what the fixture setup logged.
+      Assert.DoesNotContain(LogText(testResult), 'logged by the fixture setup', False, 'StaysIgnored log');
+    end
+    else
+    begin
+      Assert.Contains(testResult.Message, 'fixture setup ignores the fixture', False, testResult.Test.Name + ' reason');
+      Assert.Contains(LogText(testResult), 'logged by the fixture setup', False, testResult.Test.Name + ' log');
+    end;
+end;
+
+procedure TRunnerBehaviourTests.IgnoreInFixtureConstructorIgnoresItsTests;
+var
+  results : IRunResults;
+begin
+  GBodyRan := false;
+  GErrors := '';
+  results := RunFixture(BuildFixture(TRunnerConstructorIgnores), TWarningLogger.Create);
+  Assert.AreEqual('', GErrors, 'no fixture creation error is logged');
+  Assert.IsFalse(GBodyRan, 'the test did not run');
+  Assert.AreEqual(0, results.ErrorCount, 'nothing is an error');
+  CheckResult(results, 'NeverRuns', TTestResultType.Ignored, 'constructor ignores the fixture');
+end;
+
+procedure TRunnerBehaviourTests.RuntimeIgnoreKeepsTheTestsLog;
+var
+  results : IRunResults;
+  logged : string;
+begin
+  results := RunFixture(BuildFixture(TRunnerRuntimeIgnore));
+  CheckResult(results, 'IgnoredAfterLogging', TTestResultType.Ignored, 'ignored after logging');
+  logged := LogText(FindResult(results, 'IgnoredAfterLogging'));
+  Assert.Contains(logged, 'logged before the ignore', False, 'IgnoredAfterLogging log: ' + logged);
+end;
+
+procedure TRunnerBehaviourTests.TearDownErrorAfterARuntimeIgnoreIsReported;
+var
+  results : IRunResults;
+begin
+  results := RunFixture(BuildFixture(TRunnerRuntimeIgnore));
+  CheckResult(results, 'IgnoredBeforeTearDownFails', TTestResultType.Error, 'teardown after the ignore fails');
 end;
 
 procedure TRunnerBehaviourTests.LoggerStateIsNotATestLeak;

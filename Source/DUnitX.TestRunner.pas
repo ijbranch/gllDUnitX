@@ -1507,8 +1507,12 @@ begin
         begin
           setupOk := false;
           InvalidateTestsInFixture(fixture, context, threadId, e, fixtureResult);
-          Log(TLogLevel.Error, Format(SFixtureCreateError, [fixture.Name, e.Message]));
-          Log(TLogLevel.Error, SSkippingFixture);
+          //A constructor (in place of a fixture setup) that ignores the fixture (Assert.Ignore) is not an error.
+          if not (e is ETestIgnored) then
+          begin
+            Log(TLogLevel.Error, Format(SFixtureCreateError, [fixture.Name, e.Message]));
+            Log(TLogLevel.Error, SSkippingFixture);
+          end;
         end;
       end;
       //A parameterless constructor takes the place of a [SetupFixture] method; say so rather than drop it silently.
@@ -1541,7 +1545,8 @@ end;
 function TDUnitXTestRunner.ExecuteIgnoredResult(const context : ITestExecuteContext; const threadId : TThreadID; const test : ITest; const ignoreReason :
   string) : ITestResult;
 begin
-  result := TDUnitXTestResult.Create(test as ITestInfo, TTestResultType.Ignored, ignoreReason);
+  //The log is kept: what a test logged before it ignored itself at run time explains the ignore.
+  result := TDUnitXTestResult.Create(test as ITestInfo, TTestResultType.Ignored, ignoreReason, FLogMessagesEx);
 end;
 
 function TDUnitXTestRunner.ExecuteSetupFixtureMethod(const context : ITestExecuteContext; const threadId : TThreadID; const fixture : ITestFixture; const
@@ -1556,10 +1561,14 @@ begin
     on e : Exception do
     begin
       result := false;
-      // Log error into each test
+      // Log error (or the ignore) into each test
       InvalidateTestsInFixture(fixture, context, threadId, e, fixtureResult);
-      Log(TLogLevel.Error, Format(SFixtureSetupError, [fixture.Name, e.Message]));
-      Log(TLogLevel.Error, SSkippingFixture);
+      //A fixture setup that ignores the fixture (Assert.Ignore) is not an error: each test is reported ignored.
+      if not (e is ETestIgnored) then
+      begin
+        Log(TLogLevel.Error, Format(SFixtureSetupError, [fixture.Name, e.Message]));
+        Log(TLogLevel.Error, SSkippingFixture);
+      end;
 
     end;
   end;
@@ -1819,6 +1828,9 @@ begin
       end;
       Result := True;
     except
+      //A setup that ignores the test (Assert.Ignore) ignores it, rather than erroring it.
+      on e : ETestIgnored do
+        errorResult := ExecuteIgnoredResult(context, threadId, test, e.Message);
       on e : {$IFDEF USE_NS}System.SysUtils.{$ENDIF}Exception do
       begin
         errorResult := ExecuteErrorResult(context, threadId, test, e, FLogMessagesEx);
@@ -1883,8 +1895,12 @@ begin
 
     Self.Loggers_BeginTest(aThreadId, lTest as ITestInfo);
     //An ignored test would not have run anyway, so it stays ignored rather than becoming an error.
+    //Ignored by its attribute, the test has nothing to do with what the fixture setup logged, so its result carries no log.
     if lTest.Ignored then
-      lTestResult := ExecuteIgnoredResult(aContext, aThreadId, lTest, lTest.IgnoreReason)
+      lTestResult := TDUnitXTestResult.Create(lTest as ITestInfo, TTestResultType.Ignored, lTest.IgnoreReason)
+    //A fixture setup that ignored the fixture (Assert.Ignore) ignores each test, with its reason.
+    else if aException is ETestIgnored then
+      lTestResult := ExecuteIgnoredResult(aContext, aThreadId, lTest, aException.Message)
     else
       lTestResult := ExecuteErrorResult(aContext, aThreadId, lTest, aException, FLogMessagesEx);
     RecordResult(aContext, aThreadId, aFixtureResult, lTestResult);

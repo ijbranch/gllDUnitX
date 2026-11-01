@@ -19,9 +19,9 @@ Upstream is [VSoftTechnologies/DUnitX](https://github.com/VSoftTechnologies/DUni
 | FireMonkey | `DUNitX.Loggers.GUIX.pas` and its `.fmx`, whose only consumers were the deleted FMX GUI projects |
 | C++Builder output | `DCC_CBuilderOutput` is `None` on both package projects (the test and example executables produce none) |
 
-**Added here and nowhere upstream.** `Assert.Ignore( reason )` — a **run-time** test skip, reported as *ignored* rather than passed. Upstream has only the compile-time `[Ignore]` attribute. Almost all the plumbing was already upstream and dormant (`ETestIgnored`, `TTestResultType.Ignored`, `IgnoredCount`, `OnTestIgnored`, and the runner's own `on e : ETestIgnored` handler); what was missing was anything that raised it. A proposal carrying the diff and the mutation evidence went to the maintainers on 2026-09-09.
+**Added here first, upstream since 2026-11-01.** `Assert.Ignore( reason )` — a **run-time** test skip, reported as *ignored* rather than passed, with the reason and what the test logged.  Called from `[Setup]` it ignores the test (neither the body nor `TearDown` runs, as after a failed Setup); from `[SetupFixture]` or the fixture's parameterless constructor, every test of the fixture, with no error logged (`[TearDownFixture]` does not run).  A `TearDown` error after it is reported as the test's error.  Upstream merged it as #531 (`a28803b`), from this fork's PR; the one difference is that upstream runs `TearDown` after a Setup that ignored the test.
 
-This is **fork-local divergence that will conflict** on any future merge touching `DUnitX.Assert.pas`, `DUnitX.Init.pas`, `DUnitX.TestFramework.pas` or `DUnitX.TestRunner.pas`. It is also the sharpest tell for §3 below: code calling `Assert.Ignore` does not compile against any other DUnitX.
+It is still the sharpest tell for §3 below against RAD Studio's **bundled** DUnitX, and against any upstream build older than `a28803b`: code calling `Assert.Ignore` does not compile there.
 
 **Fixed here, against upstream.** Each of these is a behaviour difference a merge must not undo:
 

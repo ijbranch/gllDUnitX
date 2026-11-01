@@ -4,6 +4,7 @@
 **From:** Ian Branch (GITLAK Software), maintainer of a DUnitX fork
 **Date:** 2026-09-09
 **Against:** upstream `master` @ `a69a10b` (2026-08-24)
+**Outcome (2026-11-01):** taken.  Sent again as issue #396's PR #531 on `master` @ `b952719`, widened to an ignore raised from `Setup`, `SetupFixture` or inside a `WillRaise*` / `WillNotRaise*` check, and merged as `a28803b` with a `BREAKINGCHANGES.md` section.  The fork's `main` took the parts it lacked the same day (see `CHANGELOG.md`).
 
 ---
 
