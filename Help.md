@@ -27,7 +27,7 @@ It is still the sharpest tell for §3 below against RAD Studio's **bundled** DUn
 
 | Fix | What it was |
 |---|---|
-| `[MaxTime]` | The watchdog suspended the test thread and rewrote its instruction pointer (`Ctx.Rip := Cardinal(@RaiseTimeOutException)`) — a 32-bit truncation of a 64-bit code address, always unmapped on Delphi 13, so the thread faulted on resume. Elapsed time is now **observed and reported after the test method returns** |
+| `[MaxTime]` | The watchdog suspended the test thread and rewrote its instruction pointer (`Ctx.Rip := Cardinal(@RaiseTimeOutException)`) — a 32-bit truncation of a 64-bit code address, always unmapped on Delphi 13, so the thread faulted on resume. Since 2026-11-01 the watchdog **interrupts a hung test on Win32 and Win64** (Win64: the thread is made to fault at a no-access page, reported as `ETimedOut`), and also ends a blocked synchronous read or alertable wait; a stopwatch read when the test returns still catches an overrun between the watchdog's polls. Upstream: PR #537 |
 | `TWeakReference<T>.Destroy` | Abandoned `RemoveWeakRef` when it could not take the lock but nilled its field anyway, leaving the target writing through a pointer into memory about to be freed |
 | `TTestFixtureList.SortByName` (upstream's `Sort`) | Freed a `TDelegatedComparer` that had been implicitly converted to a ref-counted `IComparer` |
 | `TRttiPropertyExtension` | Freed its patched virtual method tables before the instances dispatching through them |
@@ -165,9 +165,16 @@ Delphi 13 made `TList<T>.Count` a `NativeInt`, so on Win64 an `Integer` on one s
 
 `Assert.AreEqual` on `Double`/`Extended` fails if either value is NaN, whatever the tolerance, and `AreNotEqual` passes. Both go through `System.Math.SameValue`, which returns `False` for NaN on Win32 (x87 `Extended`) and Win64 alike. Proved by six tests in `Tests\DUnitX.Tests.Assert.pas` (2026-10-12); a 2018 fork's extra `IsNan` check was surveyed and is unnecessary. To assert that a result *is* NaN, use `Assert.IsTrue( IsNan( Value ) )` — `AreEqual( NaN, Value )` always fails.
 
-### `[MaxTime]` cannot interrupt a test that never returns
+### `[MaxTime]`: a hung test is interrupted; what it cannot stop
 
-By design here (see §1): it is an assertion about elapsed time, checked once the method returns. Since 2026-10-12 the body is timed by a stopwatch started on the test's own thread immediately before the method, with no watchdog thread, so an overrun of any size is caught (the earlier watchdog polled every 20 ms and could miss one). `[MaxTime]` also applies to `[TestCase]` / `[TestCaseProvider]` cases and to `[WillRaise]` tests, where it used to be dropped.
+Since 2026-11-01 (see §1) `[MaxTime]` works two ways. A watchdog thread interrupts a test still running when the time is up, so it fails with `ETimedOut` and the run continues: a loop, a test polling in short sleeps, a blocked synchronous read or write (`CancelSynchronousIo`) and an alertable wait, which is how a blocking socket call waits (a no-op APC). And a stopwatch read the moment the method returns catches an overrun that ended between the watchdog's 20 ms polls. `[MaxTime]` also applies to `[TestCase]` / `[TestCaseProvider]` cases and to `[WillRaise]` tests, where it used to be dropped.
+
+- **Interrupted again:** until the test stops the timeout, the watchdog interrupts again every second, so a test that caught the interruption and then hung somewhere else (a close that blocks too) is stopped again. An interruption caught and replaced on its way out (`[WillRaise]`, `Assert.WillRaise`, or the test's own `except` raising a failure) is still reported as the timeout, with `ITest.TimedOut` set.
+- **Not interrupted:** a wait that never ends and is not alertable, such as `Sleep(INFINITE)` or `WaitForSingleObject(h, INFINITE)`; and a test that catches every interruption and retries forever.
+- **A lock can stay taken:** the test is interrupted wherever it is, so a lock it holds then (the memory manager's included) is never released, which can hang the run, the interrupted test included (raising `ETimedOut` allocates). Measured: about half the time for a test interrupted while allocating in a loop.
+- **Win64:** the interruption is a deliberate access violation at a no-access page, mapped to `ETimedOut`; the IDE stops on it as a first-chance exception. A thread stopped in assembler that moved the stack without unwind data cannot be unwound, and the process ends.
+
+Between 2026-10-12 and 2026-11-01 only the stopwatch ran, so a test that never returned was not stopped. That was the design first offered upstream (#537); Vincent relies on `[MaxTime]` stopping a test whose server connection hangs, which led to this one.
 
 ### Runner behaviours changed on 2026-10-12 (fork fixes, offered upstream in #398; see §1 for the issues and PRs)
 

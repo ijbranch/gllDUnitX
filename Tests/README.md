@@ -16,7 +16,7 @@ while the list below is exactly what the run reports.
 | `DUnitX.Tests.Example.pas` | `IgnoreMeAnyway` | The same for a published test without `[Test]`. |
 | `DUnitX.Tests.IgnoreFixture.pas` | `Test_A`, `Test_B` | A whole fixture under `[Ignore]`: every method raises, so the suite stays green only if the fixture is skipped. |
 | `DUnitX.Tests.IgnoreFixture.pas` | `IgnoredTest_A`, `IgnoredTest_B` | Individually ignored tests in a fixture whose setup and teardown must then not run. |
-| `DUnitX.Tests.TestFixture.pas` | `TestTimeout` | Would prove `[MaxTime(100)]` times out a 150 ms test, but a timeout fails the test itself; `TRunnerBehaviourTests.MaxTimeOverrunIsCaughtWhateverTheTiming` proves it through a private runner instead. |
+| `DUnitX.Tests.TestFixture.pas` | `TestTimeout` | Would prove `[MaxTime(100)]` times out a 150 ms test, but a timeout fails the test itself; `TRunnerBehaviourTests.MaxTimeOverrunIsCaughtWhateverTheTiming` and `TMaxTimeInterruptTests` (a hung test is interrupted) prove it through a private runner instead. |
 | `DUnitX.Tests.TestFixture.pas` | `IgnoreMeWhenRepeatIsZero`, `IgnoreMeAnyWayWhenRepeatIsZero` | Prove `[RepeatTest(0)]` reports the test as ignored ("Repeat set to 0. Test ignored.") rather than running it. |
 
 Adding, removing or renaming one of these: update this table in the same change, so the count a run reports always

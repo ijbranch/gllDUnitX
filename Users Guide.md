@@ -167,7 +167,7 @@ Categories drive the `-i:` and `-e:` switches, so `MyTests.exe -e:slow` runs eve
 
 When the data does not belong in an attribute, implement a `TTestDataProvider` descendant (`DUnitX.InternalDataProvider`), register it in that unit's `initialization` with `TestDataProviderManager.RegisterProvider( Name, TMyProvider )`, and point a test at it with `[TestCaseProvider( 'Name' )]`. `TestCaseProvider.md` at the repository root walks through the five methods it must supply.
 
-`[RepeatTest( 5 )]` runs the same test five times; `[MaxTime( 250 )]` fails it if it took longer than 250 ms — but note that `[MaxTime]` is checked **after** the method returns and cannot interrupt a test that never does.
+`[RepeatTest( 5 )]` runs the same test five times; `[MaxTime( 250 )]` fails it if it took longer than 250 ms. A test still running at 250 ms is **interrupted**, so the run continues, even if it is blocked in a socket call or a synchronous read; a wait that never ends and is not alertable, such as `Sleep(INFINITE)`, is not. Help.md has the details and the risks.
 
 ---
 

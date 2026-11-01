@@ -204,6 +204,67 @@ type
   end;
 {$M-}
 
+{$M+}
+  /// <summary>
+  ///   Tests that [MaxTime] interrupts a test that does not return, so the test fails with the timeout and the run
+  ///   continues. Each runs a private fixture through a private runner and times it: a test that would take 3 s if left
+  ///   alone must be stopped in under half of that.
+  /// </summary>
+  [TestFixture]
+  TMaxTimeInterruptTests = class
+  public
+    /// <summary>
+    ///   Proves a test looping in its own code, with junk rather than a return address at the top of its stack, is
+    ///   interrupted and fails with the timeout rather than erroring. Win64 needs the interruption to supply the
+    ///   return address its unwinding starts from.
+    /// </summary>
+    [Test]
+    procedure Overrun_In_A_Busy_Loop_Is_Interrupted_And_Fails;
+    /// <summary>
+    ///   Proves a test spending its time in short Sleeps is interrupted inside a system call, as a test polling a
+    ///   connection is; on Win64 a redirect that calls a raise from there crashed in ntdll.
+    /// </summary>
+    [Test]
+    procedure Overrun_In_A_Sleep_Loop_Is_Interrupted_And_Fails;
+    /// <summary>
+    ///   Proves a test blocked in a synchronous ReadFile of an empty pipe is interrupted: without the read being
+    ///   cancelled, the redirect would only take effect when the read ended.
+    /// </summary>
+    [Test]
+    procedure Blocked_In_A_Synchronous_Read_Is_Interrupted_And_Fails;
+    /// <summary>
+    ///   Proves a test blocked in an alertable wait, as a blocking Winsock call waits, is interrupted: without the
+    ///   wake-up APC the redirect would only take effect when the wait ended.
+    /// </summary>
+    [Test]
+    procedure Blocked_In_An_Alertable_Wait_Is_Interrupted_And_Fails;
+    /// <summary>
+    ///   Proves the test after an interrupted one runs and passes, and that the wake-up APC queued for the
+    ///   interrupted test does not cut short an alertable wait in it (SleepEx would return WAIT_IO_COMPLETION).
+    /// </summary>
+    [Test]
+    procedure The_Next_Test_Runs_And_Its_Alertable_Wait_Is_Not_Cut_Short;
+    /// <summary>
+    ///   Proves an interrupted test records that it timed out in ITest.TimedOut, as one caught overrunning when it
+    ///   returns does.
+    /// </summary>
+    [Test]
+    procedure An_Interrupted_Test_Records_That_It_Timed_Out;
+    /// <summary>
+    ///   Proves an interrupted [WillRaise] test fails with the timeout and records it, rather than with "expected
+    ///   EConvertError, got ETimedOut": the expected-exception check catches the interruption and replaces it.
+    /// </summary>
+    [Test]
+    procedure An_Interrupted_WillRaise_Test_Reports_The_Timeout;
+    /// <summary>
+    ///   Proves a test that catches the interruption and then hangs again is interrupted again, about a second
+    ///   later, rather than hanging the run.
+    /// </summary>
+    [Test]
+    procedure A_Caught_Interruption_Is_Repeated;
+  end;
+{$M-}
+
   /// <summary>
   ///   Not a fixture: a holder of methods with awkward signatures that the fixture tests turn into test cases by
   ///   RTTI.
@@ -506,11 +567,13 @@ implementation
 
 uses
 {$IFDEF USE_NS}
+  Winapi.Windows,
   System.Math,
   System.SysUtils,
   System.Rtti,
   System.Generics.Collections,
 {$ELSE}
+  Winapi.Windows,
   System.Math,
   System.SysUtils,
   System.Rtti,
@@ -532,6 +595,7 @@ uses
   DUnitX.Loggers.Null,
   DUnitX.Filters,
   DUnitX.TestResult,
+  DUnitX.ResStrs,
   DUnitX.MemoryLeakMonitor.Default;
 
 var
@@ -2777,11 +2841,297 @@ procedure TTestCaseAttribute.ProcedureWithTwoParameters(const First, Second : In
 begin
 end;
 
+const
+  //The [MaxTime] of the tests that should be interrupted.
+  INTERRUPT_MAX_TIME = 100;
+  //How long those tests would take if they were not interrupted.  A test stopped in under half of it was interrupted;
+  //one that took longer ran on until its wait or loop ended, which is not stopping a hung test.
+  INTERRUPT_UNINTERRUPTED = 3000;
+  //The [MaxTime] of a test that should pass: far more than it takes, however slow the machine.
+  INTERRUPT_GENEROUS = 10000;
+
+var
+  GInterruptRanToTheEnd : Boolean;
+  GInterruptAlertableWaitResult : Cardinal;
+  GInterruptPipeRead : THandle;
+  GInterruptPipeWrite : THandle;
+  GInterruptStopBusyLoop : Boolean;
+
+type
+  //Not a fixture: the tests TMaxTimeInterruptTests runs through a private runner.
+  TMaxTimeInterruptClass = class
+  public
+    procedure BusyLoop;
+    procedure SleepLoop;
+    procedure SynchronousRead;
+    procedure AlertableWait;
+    procedure WaitsAlertably;
+    procedure CatchesTheInterruptionThenHangsAgain;
+  end;
+
+var
+  GInterruptCaught : Integer;
+
+//Loops until the safety net ends it, without calling anything.
+procedure LoopUntilStopped;
+begin
+  while not GInterruptStopBusyLoop do
+    ;
+end;
+
+//Stores its parameter in its home slot, at the top of the caller's stack.
+procedure LeaveJunkAtTheTopOfTheStack(AJunk : NativeInt);
+var
+  junk : NativeInt;
+begin
+  junk := AJunk;
+  if junk = 0 then
+    GInterruptStopBusyLoop := True;
+end;
+
+{ TMaxTimeInterruptClass }
+
+//Loops without calling anything, so it is interrupted in its own code, with junk rather than a return address at the
+//top of its stack.
+procedure TMaxTimeInterruptClass.BusyLoop;
+begin
+  LeaveJunkAtTheTopOfTheStack(NativeInt($DEAD0BAD));
+  while not GInterruptStopBusyLoop do
+    ;
+  GInterruptRanToTheEnd := True;
+end;
+
+//Spends its time inside Sleep, so it is interrupted inside a system call.
+procedure TMaxTimeInterruptClass.SleepLoop;
+var
+  start : Cardinal;
+begin
+  start := GetTickCount;
+  repeat
+    Sleep(10);
+  until GetTickCount - start >= INTERRUPT_UNINTERRUPTED;
+  GInterruptRanToTheEnd := True;
+end;
+
+//Blocked reading a pipe nothing is written to until INTERRUPT_UNINTERRUPTED has passed.
+procedure TMaxTimeInterruptClass.SynchronousRead;
+var
+  buffer : Byte;
+  bytesRead : Cardinal;
+begin
+  ReadFile(GInterruptPipeRead, buffer, 1, bytesRead, nil);
+  GInterruptRanToTheEnd := True;
+end;
+
+//Blocked in an alertable wait, as a blocking Winsock call is.
+procedure TMaxTimeInterruptClass.AlertableWait;
+begin
+  SleepEx(INTERRUPT_UNINTERRUPTED, True);
+  GInterruptRanToTheEnd := True;
+end;
+
+//Runs after an interrupted test, on the same thread: its alertable wait must last its full time.
+procedure TMaxTimeInterruptClass.WaitsAlertably;
+begin
+  GInterruptAlertableWaitResult := SleepEx(200, True);
+end;
+
+//Catches the first interruption, as a test retrying a connection might, then hangs again.
+procedure TMaxTimeInterruptClass.CatchesTheInterruptionThenHangsAgain;
+begin
+  try
+    LoopUntilStopped;
+  except
+    on ETimedOut do
+      Inc(GInterruptCaught);
+  end;
+  LoopUntilStopped;
+  GInterruptRanToTheEnd := True;
+end;
+
+//A fixture of the named methods of TMaxTimeInterruptClass, in order, each with the [MaxTime] at the same index and, if
+//AExpectedException is given, expecting it as [WillRaise] does.
+function CreateInterruptFixture(const ATestNames : array of string; const AMaxTimes : array of cardinal;
+  const AExpectedException : ExceptClass = nil) : ITestFixture;
+var
+  rttiContext : TRttiContext;
+  rttiType : TRttiType;
+  rttiMethod : TRttiMethod;
+  instance : TMaxTimeInterruptClass;
+  method : TMethod;
+  i : Integer;
+begin
+  GInterruptRanToTheEnd := False;
+  rttiContext := TRttiContext.Create;
+  rttiType := rttiContext.GetType(TMaxTimeInterruptClass);
+  Result := TDUnitXTestFixture.Create('AMaxTimeInterruptFixture', '', TMaxTimeInterruptClass, 'AUnit') as ITestFixture;
+  instance := Result.FixtureInstance as TMaxTimeInterruptClass;
+  for i := 0 to High(ATestNames) do
+  begin
+    rttiMethod := rttiType.GetMethod(ATestNames[i]);
+    method.Code := rttiMethod.CodeAddress;
+    method.Data := instance;
+    Result.AddTest(ATestNames[i], TTestMethod(method), ATestNames[i], '', rttiMethod, True, False, '', AMaxTimes[i],
+      AExpectedException);
+  end;
+end;
+
+//Runs the fixture through a private runner and returns how long it took, in milliseconds.  If a test is not
+//interrupted, a safety-net thread ends its loop or its read once INTERRUPT_UNINTERRUPTED has passed, so a failure is
+//reported instead of the run hanging.
+function RunInterruptFixture(const AFixture : ITestFixture; out AResults : IRunResults) : Cardinal;
+var
+  start : Cardinal;
+  stopSafetyNet : THandle;
+  safetyNet : TThread;
+begin
+  GInterruptStopBusyLoop := False;
+  GInterruptCaught := 0;
+  if not CreatePipe(GInterruptPipeRead, GInterruptPipeWrite, nil, 0) then
+    RaiseLastOSError;
+  stopSafetyNet := CreateEvent(nil, True, False, nil);
+  safetyNet := TThread.CreateAnonymousThread(
+    procedure
+    var
+      buffer : Byte;
+      bytesWritten : Cardinal;
+    begin
+      if WaitForSingleObject(stopSafetyNet, INTERRUPT_UNINTERRUPTED) = WAIT_TIMEOUT then
+      begin
+        GInterruptStopBusyLoop := True;
+        buffer := 0;
+        WriteFile(GInterruptPipeWrite, buffer, 1, bytesWritten, nil);
+      end;
+    end);
+  safetyNet.FreeOnTerminate := False;
+  try
+    safetyNet.Start;
+    start := GetTickCount;
+    AResults := RunFixture(AFixture);
+    Result := GetTickCount - start;
+  finally
+    SetEvent(stopSafetyNet);
+    safetyNet.WaitFor;
+    safetyNet.Free;
+    CloseHandle(stopSafetyNet);
+    CloseHandle(GInterruptPipeWrite);
+    CloseHandle(GInterruptPipeRead);
+  end;
+end;
+
+//Checks that the one test in AResults failed with the timeout (not errored, as an access violation would be), and that
+//it was stopped promptly (within ABound ms) rather than running on to its end.
+procedure CheckInterrupted(const AResults : IRunResults; const AElapsed : Cardinal;
+  const ABound : Cardinal = INTERRUPT_UNINTERRUPTED div 2);
+var
+  testResult : ITestResult;
+  resultMessage : string;
+begin
+  resultMessage := '';
+  for testResult in AResults.GetAllTestResults do
+    resultMessage := testResult.Message;
+  Assert.AreEqual(1, AResults.TestCount, 'the number of tests');
+  Assert.AreEqual(0, AResults.ErrorCount, 'the overrun errored: ' + resultMessage);
+  Assert.AreEqual(0, AResults.PassCount, 'the overrun passed');
+  Assert.AreEqual(1, AResults.FailureCount, 'the overrun did not fail');
+  Assert.AreEqual(SOperationTimedOut, resultMessage, False, 'the failure is not the timeout');
+  Assert.IsFalse(GInterruptRanToTheEnd, 'the test ran to its end instead of being interrupted');
+  Assert.IsTrue(AElapsed < ABound, Format('the test was stopped after %d ms, not within %d ms of starting (its [MaxTime] ' +
+    'is %d ms)', [AElapsed, ABound, INTERRUPT_MAX_TIME]));
+end;
+
+{ TMaxTimeInterruptTests }
+
+procedure TMaxTimeInterruptTests.Overrun_In_A_Busy_Loop_Is_Interrupted_And_Fails;
+var
+  results : IRunResults;
+  elapsed : Cardinal;
+begin
+  elapsed := RunInterruptFixture(CreateInterruptFixture(['BusyLoop'], [INTERRUPT_MAX_TIME]), results);
+  CheckInterrupted(results, elapsed);
+end;
+
+procedure TMaxTimeInterruptTests.Overrun_In_A_Sleep_Loop_Is_Interrupted_And_Fails;
+var
+  results : IRunResults;
+  elapsed : Cardinal;
+begin
+  elapsed := RunInterruptFixture(CreateInterruptFixture(['SleepLoop'], [INTERRUPT_MAX_TIME]), results);
+  CheckInterrupted(results, elapsed);
+end;
+
+procedure TMaxTimeInterruptTests.Blocked_In_A_Synchronous_Read_Is_Interrupted_And_Fails;
+var
+  results : IRunResults;
+  elapsed : Cardinal;
+begin
+  elapsed := RunInterruptFixture(CreateInterruptFixture(['SynchronousRead'], [INTERRUPT_MAX_TIME]), results);
+  CheckInterrupted(results, elapsed);
+end;
+
+procedure TMaxTimeInterruptTests.Blocked_In_An_Alertable_Wait_Is_Interrupted_And_Fails;
+var
+  results : IRunResults;
+  elapsed : Cardinal;
+begin
+  elapsed := RunInterruptFixture(CreateInterruptFixture(['AlertableWait'], [INTERRUPT_MAX_TIME]), results);
+  CheckInterrupted(results, elapsed);
+end;
+
+procedure TMaxTimeInterruptTests.The_Next_Test_Runs_And_Its_Alertable_Wait_Is_Not_Cut_Short;
+var
+  results : IRunResults;
+begin
+  GInterruptAlertableWaitResult := WAIT_FAILED;
+  RunInterruptFixture(CreateInterruptFixture(['BusyLoop', 'WaitsAlertably'], [INTERRUPT_MAX_TIME, INTERRUPT_GENEROUS]),
+    results);
+  CheckResult(results, 'BusyLoop', TTestResultType.Failure, SOperationTimedOut);
+  CheckResult(results, 'WaitsAlertably', TTestResultType.Pass);
+  Assert.AreEqual(Cardinal(0), GInterruptAlertableWaitResult, 'SleepEx in the next test ended early (WAIT_IO_COMPLETION ' +
+    'is 192)');
+end;
+
+procedure TMaxTimeInterruptTests.An_Interrupted_Test_Records_That_It_Timed_Out;
+var
+  fixture : ITestFixture;
+  results : IRunResults;
+begin
+  fixture := CreateInterruptFixture(['BusyLoop'], [INTERRUPT_MAX_TIME]);
+  RunInterruptFixture(fixture, results);
+  Assert.IsFalse(GInterruptRanToTheEnd, 'the test ran to its end instead of being interrupted');
+  Assert.IsTrue(fixture.Tests[0].TimedOut, 'the interrupted test does not record that it timed out');
+end;
+
+procedure TMaxTimeInterruptTests.An_Interrupted_WillRaise_Test_Reports_The_Timeout;
+var
+  fixture : ITestFixture;
+  results : IRunResults;
+  elapsed : Cardinal;
+begin
+  fixture := CreateInterruptFixture(['BusyLoop'], [INTERRUPT_MAX_TIME], EConvertError);
+  elapsed := RunInterruptFixture(fixture, results);
+  CheckInterrupted(results, elapsed);
+  Assert.IsTrue(fixture.Tests[0].TimedOut, 'the interrupted [WillRaise] test does not record that it timed out');
+end;
+
+procedure TMaxTimeInterruptTests.A_Caught_Interruption_Is_Repeated;
+var
+  results : IRunResults;
+  elapsed : Cardinal;
+begin
+  //Interrupted at about INTERRUPT_MAX_TIME, again a second later: well before the safety net at INTERRUPT_UNINTERRUPTED.
+  elapsed := RunInterruptFixture(CreateInterruptFixture(['CatchesTheInterruptionThenHangsAgain'], [INTERRUPT_MAX_TIME]),
+    results);
+  Assert.AreEqual(1, GInterruptCaught, 'the test did not catch the first interruption');
+  CheckInterrupted(results, elapsed, INTERRUPT_UNINTERRUPTED - 500);
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TTestClassWithNonPublicSetup);
   TDUnitX.RegisterTestFixture(TTestClassWithTestSource);
   TDUnitX.RegisterTestFixture(TTestRepeatAttribute);
   TDUnitX.RegisterTestFixture(TTestMaxTimeAttribute);
+  TDUnitX.RegisterTestFixture(TMaxTimeInterruptTests);
   TDUnitX.RegisterTestFixture(TDUnitXTestFixtureTests);
   TDUnitX.RegisterTestFixture(TRunnerBehaviourTests);
 

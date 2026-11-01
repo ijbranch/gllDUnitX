@@ -155,7 +155,13 @@ type
   ///	</summary>
   ///	<remarks>
   ///	  If [MaxTime(1000)] used then the test will fail if the
-  ///   test takes longer than 1000ms
+  ///   test takes longer than 1000ms.  A test still running then is
+  ///   interrupted, again every second until it stops, so the run
+  ///   continues; a lock it holds then (the memory manager's included)
+  ///   stays taken, which can hang the run.  A test blocked in a wait
+  ///   that never ends and is not alertable (Sleep(INFINITE), or
+  ///   WaitForSingleObject with INFINITE), or one that catches every
+  ///   interruption and retries forever, is not stopped.
   ///	</remarks>
   MaxTimeAttribute = class(TCustomAttribute)
   private

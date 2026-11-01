@@ -181,8 +181,8 @@ type
     procedure TestTwoOne;
 
     /// <summary>
-    ///   Proves a test that finishes inside its [MaxTime] limit passes; [MaxTime] is checked after the method returns,
-    ///   and exceeding it would fail the test with ETimedOut.
+    ///   Proves a test that finishes inside its [MaxTime] limit passes; exceeding it would interrupt the test and fail
+    ///   it with ETimedOut.
     /// </summary>
     [Test]
     [MaxTime(1000)]
@@ -418,9 +418,8 @@ var
   elapsedTime : Int64;
   stopwatch : TStopWatch;
 begin
-  //[MaxTime] is checked once the test method returns, so it can no longer be observed
-  //from inside the test the way this example used to do. Exceeding the limit fails the
-  //test with ETimedOut; staying inside it, as here, simply passes.
+  //Exceeding the limit interrupts the test and fails it with ETimedOut (TMaxTimeInterruptTests
+  //proves that through a private runner); staying inside it, as here, simply passes.
   stopwatch := TStopWatch.Create;
   stopwatch.Reset;
   stopwatch.Start;

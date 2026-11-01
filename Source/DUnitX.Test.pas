@@ -259,7 +259,8 @@ type
     ///   The execution context (not used by the base implementation).
     /// </param>
     /// <exception cref="ETimedOut">
-    ///   Raised when the body overran its [MaxTime] limit, including when it ended early with Assert.Pass.
+    ///   Raised when the body overran its [MaxTime] limit, including when it ended early with Assert.Pass, and when
+    ///   the watchdog interrupted a body still running at the limit.
     /// </exception>
     /// <remarks>
     ///   Any exception from the test body (ETestFailure, ETestPass, ETestIgnored and so on) propagates to the runner.
@@ -615,12 +616,35 @@ begin
     if FMaxTime > 0 then
       timeout := InitialiseTimeOut(FMaxTime);
     try
-      ExecuteMethod;
+      try
+        ExecuteMethod;
+      finally
+        //Stopped here, before anything else runs: once stopped, the watchdog cannot interrupt the test.
+        if timeout <> nil then
+          timeout.Stop;
+      end;
     except
       //Assert.Pass ends the body early with ETestPass; an overrun before it is still a failure.
       on ETestPass do
       begin
         CheckTimeout;
+        raise;
+      end;
+      //The watchdog interrupted the test.
+      on ETimedOut do
+      begin
+        FTimedOut := True;
+        raise;
+      end;
+      //An interruption caught and replaced on its way out ([WillRaise], Assert.WillRaise, or the test's own except
+      //raising a failure) is still the timeout, not what replaced it.
+      on Exception do
+      begin
+        if (timeout <> nil) and timeout.Interrupted then
+        begin
+          FTimedOut := True;
+          raise ETimedOut.Create(SOperationTimedOut);
+        end;
         raise;
       end;
     end;
