@@ -244,7 +244,9 @@ begin
   while not Terminated do
   begin
     Interrupt;
-    Inc(nextInterrupt, REINTERRUPT_INTERVAL);
+    //Counted from now, not from the first deadline: after a stall (a debugger stopped on the interruption) the
+    //deadlines already passed would otherwise all fire at once, interrupting the test while it unwinds the first.
+    nextInterrupt := stopwatch.ElapsedMilliseconds + REINTERRUPT_INTERVAL;
     WaitUntil(stopwatch, nextInterrupt);
   end;
 end;
@@ -262,6 +264,8 @@ var
   //GetThreadContext needs the context 16-byte aligned on Win64.
   contextBuffer : array [0 .. SizeOf(_CONTEXT) + 15] of Byte;
   context : PTimeoutContext;
+  //True when the thread has not run since an earlier pass redirected it.
+  pending : Boolean;
 begin
   context := PTimeoutContext((NativeUInt(@contextBuffer) + 15) and not NativeUInt(15));
   if SuspendThread(ThreadHandle) = Cardinal(-1) then
@@ -274,27 +278,39 @@ begin
     //If the test stopped the timeout first, it finished: leave it alone.  (A fenced read.)
     if InterlockedCompareExchange(State, TIMEOUT_RUNNING, TIMEOUT_RUNNING) <> TIMEOUT_RUNNING then
       Exit;
+    //Still blocked where the last interruption left it, so it raises (Win32) or faults (Win64) as soon as it runs:
+    //redirecting it again would stack a second redirect and queue another wake-up.  A synchronous read it is blocked
+    //in is still ended below, as the last cancel may have come before the read was issued.
 {$IFDEF CPUX86}
-    context^.Eip := Cardinal(@RaiseTimeOutException);
+    pending := context^.Eip = Cardinal(@RaiseTimeOutException);
 {$ENDIF}
 {$IFDEF CPUX64}
-    if (GTimeoutFaultAddress = nil) or not StackSlotWritable(context^.Rsp - SizeOf(NativeUInt)) then
-      Exit;
-    context^.Rsp := context^.Rsp - SizeOf(NativeUInt);
-    PNativeUInt(context^.Rsp)^ := context^.Rip;
-    context^.Rip := NativeUInt(GTimeoutFaultAddress);
+    pending := context^.Rip = NativeUInt(GTimeoutFaultAddress);
 {$ENDIF}
-    if not SetThreadContext(ThreadHandle, context^) then
-      Exit;
-    Interrupted := True;
-    //Queued while the thread is still suspended, so only a wait it is already in is ended.
-    QueueUserAPC(@WakeAlertableWait, ThreadHandle, 0);
+    if not pending then
+    begin
+{$IFDEF CPUX86}
+      context^.Eip := Cardinal(@RaiseTimeOutException);
+{$ENDIF}
+{$IFDEF CPUX64}
+      if (GTimeoutFaultAddress = nil) or not StackSlotWritable(context^.Rsp - SizeOf(NativeUInt)) then
+        Exit;
+      context^.Rsp := context^.Rsp - SizeOf(NativeUInt);
+      PNativeUInt(context^.Rsp)^ := context^.Rip;
+      context^.Rip := NativeUInt(GTimeoutFaultAddress);
+{$ENDIF}
+      if not SetThreadContext(ThreadHandle, context^) then
+        Exit;
+      Interrupted := True;
+      //Queued while the thread is still suspended, so only a wait it is already in is ended.
+      QueueUserAPC(@WakeAlertableWait, ThreadHandle, 0);
+    end;
   finally
     ResumeThread(ThreadHandle);
   end;
-  //Reached only once the thread is redirected (every Exit above skips it).  CancelSynchronousIo waits for the call to
-  //end, so the thread must be running (on a suspended thread it hangs).  It is called at once, so the read or write
-  //ended is the one the thread was blocked in.
+  //Reached only once the thread is redirected, by this pass or an earlier one (every Exit above skips it).
+  //CancelSynchronousIo waits for the call to end, so the thread must be running (on a suspended thread it hangs).  It
+  //is called at once, so the read or write ended is the one the thread was blocked in.
   CancelSynchronousIo(ThreadHandle);
 end;
 
