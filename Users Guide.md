@@ -147,20 +147,20 @@ Categories drive the `-i:` and `-e:` switches, so `MyTests.exe -e:slow` runs eve
 
 ```pascal
     [Test]
-    [TestCase( 'Integers',  '2,2,4' )]
-    [TestCase( 'Negatives', '-2,-2,-4' )]
+    [NamedTestCase( 'Integers',  '2,2,4' )]
+    [NamedTestCase( 'Negatives', '-2,-2,-4' )]
     procedure Adding( const A, B, Expected : Integer );
 
     [Test]
-    [AutoNameTestCase( '2|2|4', '|' )]
+    [TestCase( '2|2|4', '|' )]
     procedure Multiplying( const A, B, Expected : Integer );
 ```
 
-`[TestCase]` is `Create( ACaseName, AValues, ASeparator = ',', ATrimValues = False )` — **the first parameter is the case name**, the second is the value list. (Upstream's abandoned `dev` branch removes that first parameter; taking it would leave every existing `[TestCase]` in the estate compiling and meaning something else. See Help.md §1.) `[AutoNameTestCase]` drops the name and derives it from the values.
+`[TestCase]` is `Create( AValues, ASeparator = ',', ATrimValues = False )` and names each case from its values, as `Multiplying(2|2|4)`; `[NamedTestCase]` is `Create( ACaseName, AValues, ASeparator = ',', ATrimValues = False )`, the case name first.  **Until 2026-11-01 `[TestCase]` took the name first** (upstream #533 changed it): an old two-argument `[TestCase( 'Name', 'values' )]` still compiles, so a separator containing a letter or digit errors the case with advice to use `[NamedTestCase]`.  `[TestCaseSource( 'ClassFunction' )]` takes the cases from a class function instead.  Help.md §6 has the details, and what the guard misses.
 
 **Bad test-case data is an error, not a zero** (fork change, 2026-10-12). Each value must convert to its parameter's type, and there must be exactly one value per parameter: RTTI cannot see Pascal default parameter values, so a trailing parameter you leave out is not defaulted. A case that breaks either rule is reported as an **Error** naming the case, parameter, value and type; before the fix it silently ran with 0, `''` or 30/12/1899. Values are read without reference to the machine's locale:
 
-- **Numbers** use `.` as the decimal point, and a `,` is also read as one (`'2,5'` is 2.5). A comma that could be a thousands separator (`'1,000'`, `'-12,500'`) is a conversion error, not 1.0 (since 2026-10-13): to pass a comma-containing value, use another separator (`[TestCase( 'Big', '1000|2', '|' )]`).
+- **Numbers** use `.` as the decimal point, and a `,` is also read as one (`'2,5'` is 2.5). A comma that could be a thousands separator (`'1,000'`, `'-12,500'`) is a conversion error, not 1.0 (since 2026-10-13): to pass a comma-containing value, use another separator (`[TestCase( '1000|2', '|' )]`).
 - **Dates and times** are read as ISO 8601 first (`2020-02-01`, `2020-02-01T13:45:00`), then in the invariant (US, month-first) format, then the local format. Use ISO 8601 and the meaning cannot change between machines.
 - **Integers and ordinals** are range-checked: `'300'` for a `Byte` parameter is an error, not 44.
 - **Enumerations** must name a member.

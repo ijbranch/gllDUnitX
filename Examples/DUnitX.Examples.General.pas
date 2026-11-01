@@ -41,14 +41,14 @@ uses
 type
   {$M+}
   /// <summary>
-  ///   Tour of the test attributes: TestCase and AutoNameTestCase parameters, categories, MaxTime, disabled and
+  ///   Tour of the test attributes: NamedTestCase and TestCase parameters, categories, MaxTime, disabled and
   ///   ignored tests, Setup/TearDown, logging, and published methods as implicit tests. Some tests fail on purpose.
   /// </summary>
   [TestFixture('Examples.Fixture1','General Example Tests')]
   TMyExampleTests = class
   public
     /// <summary>
-    ///   Runs once per TestCase attribute, showing one test fed several parameter sets; it only reports the values.
+    ///   Runs once per NamedTestCase attribute, showing one test fed several parameter sets; it only reports the values.
     /// </summary>
     /// <param name="param1">
     ///   First value from the test case.
@@ -57,19 +57,19 @@ type
     ///   Second value from the test case.
     /// </param>
     /// <remarks>
-    ///   Ideally this would be <c>[TestCase('Case 1',[1,3,4])]</c>, but the Delphi compiler does not accept arrays of
+    ///   Ideally this would be <c>[NamedTestCase('Case 1',[1,3,4])]</c>, but the Delphi compiler does not accept arrays of
     ///   TValue as attribute parameters, so a string constant is used: the attribute splits it and converts the values
     ///   to the test method's parameter types.
     /// </remarks>
     [Test]
-    [TestCase('Case 1','1,2')]
-    [TestCase('Case 2','3,4')]
-    [TestCase('Case 3','5,6')]
+    [NamedTestCase('Case 1','1,2')]
+    [NamedTestCase('Case 2','3,4')]
+    [NamedTestCase('Case 3','5,6')]
     procedure TestOne(param1 : integer; param2 : integer);
 
 
     /// <summary>
-    ///   Runs once per AutoNameTestCase attribute, showing cases named from their values rather than given a name, and
+    ///   Runs once per TestCase attribute, showing cases named from their values rather than given a name, and
     ///   the Category attribute; it only reports the values.
     /// </summary>
     /// <param name="param1">
@@ -79,14 +79,14 @@ type
     ///   Second value from the test case.
     /// </param>
     [Test]
-    [AutoNameTestCase('1,2')]
-    [AutoNameTestCase('3,4')]
-    [AutoNameTestCase('5,6')]
+    [TestCase('1,2')]
+    [TestCase('3,4')]
+    [TestCase('5,6')]
     [Category('auto')]
     procedure TestAutoName(param1 : integer; param2 : integer);
 
     /// <summary>
-    ///   Shows that a TestCase attribute alone, without [Test], makes a method a test; converts a string and an integer
+    ///   Shows that a NamedTestCase attribute alone, without [Test], makes a method a test; converts a string and an integer
     ///   and only reports them.
     /// </summary>
     /// <param name="a">
@@ -95,7 +95,7 @@ type
     /// <param name="b">
     ///   Integer value from the test case.
     /// </param>
-    [TestCase('Case 3','Blah,1')]
+    [NamedTestCase('Case 3','Blah,1')]
     procedure AnotherTestMethod(const a : string; const b : integer);
 
     /// <summary>
@@ -108,7 +108,7 @@ type
     ///   Second string from the test case.
     /// </param>
     [Test]
-    [TestCase('Case4','password="",password=""')]
+    [NamedTestCase('Case4','password="",password=""')]
     procedure TestCaseWithStrings(const AInput : string; const AResult : string);
 
     /// <summary>
@@ -295,6 +295,68 @@ type
     /// </summary>
     [Test]
     procedure Testing;
+  end;
+
+  /// <summary>
+  ///   A source of test cases declared outside the fixture that uses it.
+  /// </summary>
+  TExternalTestCaseSource = class
+  public
+    /// <summary>
+    ///   Supplies two cases of three Integers: two operands and their sum.
+    /// </summary>
+    /// <returns>
+    ///   One array of values per case.
+    /// </returns>
+    class function AddSource : TArray<TArray<integer>>; static;
+  end;
+
+  /// <summary>
+  ///   Shows [TestCaseSource]: cases supplied by a class function of the fixture, or of another class, each named
+  ///   from its values, as Add_Two_Integers(1, 2, 3).
+  /// </summary>
+  [TestFixture]
+  TTestCaseSourceExampleFixture = class
+  public
+    /// <summary>
+    ///   A source of cases: a public class function with no parameters that returns one array of values per case.
+    /// </summary>
+    /// <returns>
+    ///   Two cases of two operands and their sum.
+    /// </returns>
+    class function AddSource : TArray<TArray<integer>>; static;
+
+    /// <summary>
+    ///   Runs once per case of the fixture's own AddSource; proves the sum of each case.
+    /// </summary>
+    /// <param name="a">
+    ///   First operand.
+    /// </param>
+    /// <param name="b">
+    ///   Second operand.
+    /// </param>
+    /// <param name="expected">
+    ///   Their sum.
+    /// </param>
+    [Test]
+    [TestCaseSource('AddSource')]
+    procedure Add_Two_Integers(a : integer; b : integer; expected : integer);
+
+    /// <summary>
+    ///   Runs once per case of TExternalTestCaseSource.AddSource; proves the sum of each case.
+    /// </summary>
+    /// <param name="a">
+    ///   First operand.
+    /// </param>
+    /// <param name="b">
+    ///   Second operand.
+    /// </param>
+    /// <param name="expected">
+    ///   Their sum.
+    /// </param>
+    [Test]
+    [TestCaseSource(TExternalTestCaseSource, 'AddSource')]
+    procedure Add_Two_Integers_externalsource(a : integer; b : integer; expected : integer);
   end;
 
 
@@ -487,6 +549,36 @@ begin
   Assert.IsNotNull(FObject, 'Problem with inheritance');
 end;
 
+{ TTestCaseSourceExampleFixture }
+
+class function TTestCaseSourceExampleFixture.AddSource : TArray<TArray<integer>>;
+begin
+  Result := TArray<TArray<Integer>>.Create(
+    TArray<Integer>.Create(1, 2, 3),
+    TArray<Integer>.Create(-5, -2, -7)
+  );
+end;
+
+procedure TTestCaseSourceExampleFixture.Add_Two_Integers(a, b, expected : integer);
+begin
+  Assert.AreEqual(expected, a + b);
+end;
+
+procedure TTestCaseSourceExampleFixture.Add_Two_Integers_externalsource(a, b, expected : integer);
+begin
+  Assert.AreEqual(expected, a + b);
+end;
+
+{ TExternalTestCaseSource }
+
+class function TExternalTestCaseSource.AddSource : TArray<TArray<integer>>;
+begin
+  Result := TArray<TArray<Integer>>.Create(
+    TArray<Integer>.Create(4, 5, 9),
+    TArray<Integer>.Create(-1, 1, 0)
+  );
+end;
+
 initialization
 //I was hoping to use RTTI to discover the TestFixture classes, however unlike .NET
 //if we don't touch the class somehow then the linker will remove
@@ -507,4 +599,5 @@ initialization
   TDUnitX.RegisterTestFixture(TExampleFixture3);
   TDUnitX.RegisterTestFixture(TExampleFixture5);
   TDUnitX.RegisterTestFixture(TExampleFixture7);
+  TDUnitX.RegisterTestFixture(TTestCaseSourceExampleFixture);
 end.

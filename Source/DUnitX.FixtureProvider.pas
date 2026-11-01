@@ -175,6 +175,53 @@ uses
   DUnitX.ServiceLocator,
   DUnitX.Test;
 
+//The fixture provider knows better than the case's constructor what is wrong with these values; the case reports it
+//when it runs, so only that case errors.
+procedure SetArgError(const ATest : ITest; const AMessage : string);
+begin
+  if (ATest as TObject) is TDUnitXTestCase then
+    TDUnitXTestCase(ATest as TObject).ArgError := AMessage;
+end;
+
+//A TArray<TValue> holds its values as TValues that hold TValues
+function Unwrapped(const AValue : TValue) : TValue;
+begin
+  Result := AValue;
+  while Result.TypeInfo = TypeInfo(TValue) do
+    Result := Result.AsType<TValue>;
+end;
+
+//The values of one case from a [TestCaseSource]: an array is the case's values, anything else its one value.  For a
+//method whose one parameter is an array, the array is that value.
+function CaseValues(const AValue : TValue; const AOneArrayParameter : boolean) : TValueArray;
+var
+  value : TValue;
+  i : Integer;
+begin
+  value := Unwrapped(AValue);
+  if value.IsArray and not AOneArrayParameter then
+    Result := value.ToArray
+  else
+    Result := [value];
+  for i := 0 to High(Result) do
+    Result[i] := Unwrapped(Result[i]);
+end;
+
+//The name of a case from a [TestCaseSource]: its values, as (1, 2, 3)
+function FormatValues(const AValues : TValueArray) : string;
+var
+  i : Integer;
+begin
+  Result := '(';
+  for i := 0 to High(AValues) do
+  begin
+    if i > 0 then
+      Result := Result + ', ';
+    Result := Result + AValues[i].ToString;
+  end;
+  Result := Result + ')';
+end;
+
 { TDUnitXFixtureProvider }
 
 constructor TDUnitXFixtureProvider.Create;
@@ -422,9 +469,12 @@ var
   willRaiseAttrib : WillRaiseAttribute;
   testCases : TArray<CustomTestCaseAttribute>;
   testCaseAttrib : CustomTestCaseAttribute;
-  testCaseSources : TArray<CustomTestCaseSourceAttribute>;
-  testCaseSourceAttrb : CustomTestCaseSourceAttribute;
+  testCaseGenerators : TArray<CustomTestCaseGeneratorAttribute>;
+  testCaseGeneratorAttrib : CustomTestCaseGeneratorAttribute;
+  testCaseSources : TArray<TestCaseSourceAttribute>;
+  testCaseSourceAttrib : TestCaseSourceAttribute;
   testCaseData : TestCaseInfo;
+  test : ITest;
   testEnabled : boolean;
   isTestMethod : boolean;
   repeatAttrib : RepeatTestAttribute;
@@ -446,6 +496,111 @@ var
   repeatCount : Cardinal;
   i : Integer;
   currentFixture : ITestFixture;
+  autoCaseNames : TArray<string>;
+
+  //A case named from its values is numbered when the method already has a case of that name: [TestCase]s with the
+  //same values would otherwise give tests with the same name.  The number depends only on the order of the cases.
+  function UniqueCaseName(const AName : string) : string;
+  var
+    used : string;
+    found : boolean;
+    n : integer;
+  begin
+    result := AName;
+    n := 1;
+    repeat
+      found := false;
+      for used in autoCaseNames do
+        if used = result then
+        begin
+          found := true;
+          Inc(n);
+          result := Format('%s #%d', [AName, n]);
+          break;
+        end;
+    until not found;
+    autoCaseNames := autoCaseNames + [result];
+  end;
+
+  //Adds the cases a [TestCaseSource] supplies, or, when the source cannot be used, a test that errors saying why, so it
+  //is not mistaken for a source with no cases.
+  procedure AddSourceCases(const ASourceAttrib : TestCaseSourceAttribute);
+  var
+    sourceClass : TClass;
+    sourceType : TRttiType;
+    sourceMethod : TRttiMethod;
+    candidate : TRttiMethod;
+    sourceName : string;
+    rows : TValue;
+    problem : string;
+    row : integer;
+    values : TValueArray;
+    name : string;
+    n : Cardinal;
+    caseTest : ITest;
+    parameters : TArray<TRttiParameter>;
+    oneArrayParameter : boolean;
+  begin
+    problem := '';
+    sourceMethod := nil;
+    sourceClass := ASourceAttrib.SourceClass;
+    if sourceClass = nil then
+      sourceClass := fixture.TestClass;
+    sourceName := sourceClass.ClassName + '.' + ASourceAttrib.SourceMethodName;
+    sourceType := FRttiContext.GetType(sourceClass);
+    if sourceType <> nil then
+      //Of overloads, the one without parameters
+      for candidate in sourceType.GetMethods(ASourceAttrib.SourceMethodName) do
+        if (sourceMethod = nil) or (Length(candidate.GetParameters) = 0) then
+        begin
+          sourceMethod := candidate;
+          if Length(candidate.GetParameters) = 0 then
+            break;
+        end;
+    if sourceMethod = nil then
+      problem := Format(STestCaseSourceNotFound, [ASourceAttrib.SourceMethodName, sourceClass.ClassName])
+    else if (not sourceMethod.IsClassMethod) or (Length(sourceMethod.GetParameters) > 0) or (sourceMethod.ReturnType = nil) or
+      not (sourceMethod.ReturnType.TypeKind in [tkArray, tkDynArray]) then
+      problem := Format(STestCaseSourceSignature, [sourceName])
+    else
+    begin
+      try
+        rows := sourceMethod.Invoke(sourceClass, []);
+      except
+        //Reported as the test's error, which is where it belongs
+        on e : Exception do
+          problem := Format(STestCaseSourceRaised, [sourceName, e.ClassName, e.Message]);
+      end;
+      if (problem = '') and (rows.GetArrayLength = 0) then
+        problem := Format(STestCaseSourceEmpty, [sourceName]);
+    end;
+
+    if problem <> '' then
+    begin
+      //Named after the source, so two sources that cannot be used give two tests
+      currentFixture.Tests.Add(TDUnitXErrorTest.Create(currentFixture, method.Name,
+        method.Name + '.' + UniqueCaseName(ASourceAttrib.SourceMethodName), category, problem));
+      exit;
+    end;
+
+    parameters := method.GetParameters();
+    oneArrayParameter := (Length(parameters) = 1) and Assigned(parameters[0].ParamType) and
+      (parameters[0].ParamType.TypeKind in [tkArray, tkDynArray]);
+    for row := 0 to rows.GetArrayLength - 1 do
+    begin
+      values := CaseValues(rows.GetArrayElement(row), oneArrayParameter);
+      name := UniqueCaseName(FormatValues(values));
+      for n := 1 to repeatCount do
+      begin
+        caseTest := currentFixture.AddTestCase(method.Name, name, FormatTestName(method.Name, n, repeatCount), category, method, testEnabled,
+          values, maxTime, willRaise, willRaiseInherit);
+        //An empty row would otherwise give a single parameter an empty string, as [TestCase('')] does on purpose
+        if (Length(values) = 0) and (Length(parameters) > 0) then
+          SetArgError(caseTest, Format(STestCaseValueCount, [caseTest.Name, 0, Length(parameters)]));
+      end;
+    end;
+  end;
+
 begin
   //  WriteLn('Generating Tests for : ' + fixture.FullName);
 
@@ -496,6 +651,7 @@ begin
     willRaise := nil;
     willRaiseInherit := exExact;
     currentFixture := fixture;
+    autoCaseNames := nil;
 
     //if the test has a category attribute then we'll use it to override the fixtures's category.
     if method.TryGetAttributeOfType<CategoryAttribute>(categoryAttrib) then
@@ -595,12 +751,14 @@ begin
     begin
       //find out if the test fixture has test cases.
       testCases := method.GetAttributesOfType<CustomTestCaseAttribute>;
-      //find out if the test has test sources
-      testCaseSources := method.GetAttributesOfType<CustomTestCaseSourceAttribute>;
+      //find out if the test has test case generators
+      testCaseGenerators := method.GetAttributesOfType<CustomTestCaseGeneratorAttribute>;
+      //find out if the test has test case sources
+      testCaseSources := method.GetAttributesOfType<TestCaseSourceAttribute>;
       //Find out if we got a TestProviderAttribute
       tstProviderAttribs := Method.GetAttributesOfType<TestCaseProviderAttribute>;
 
-      if (Length(testCases) > 0) or (Length(testCaseSources) > 0) or (Length(tstProviderAttribs) > 0) then
+      if (Length(testCases) > 0) or (Length(testCaseGenerators) > 0) or (Length(testCaseSources) > 0) or (Length(tstProviderAttribs) > 0) then
       begin
         if not ignoredTest then
         begin
@@ -640,24 +798,33 @@ begin
           // Add individual test cases
           for testCaseAttrib in testCases do
           begin
+            //A [TestCase] is named from its values; a [NamedTestCase], or another kind of test case, has a name.  A
+            //[NamedTestCase('', ...)] keeps the plain method name, as the old [TestCase('', ...)] it replaces did.
+            if (testCaseAttrib is TestCaseAttribute) and not (testCaseAttrib is NamedTestCaseAttribute) and
+              (testCaseAttrib.CaseInfo.Name = '') then
+              caseName := UniqueCaseName('(' + TestCaseAttribute(testCaseAttrib).ValuesText + ')')
+            else
+              caseName := testCaseAttrib.CaseInfo.Name;
             for i := 1 to repeatCount do
             begin
-              if testCaseAttrib is AutoNameTestCaseAttribute then
-                caseName := '(' + AutoNameTestCaseAttribute(testCaseAttrib).ValuesText + ')'
-              else
-                caseName := testCaseAttrib.CaseInfo.Name;
-              currentFixture.AddTestCase(method.Name, caseName, FormatTestName(method.Name, i, repeatCount), category, method, testEnabled,
+              test := currentFixture.AddTestCase(method.Name, caseName, FormatTestName(method.Name, i, repeatCount), category, method, testEnabled,
                 testCaseAttrib.CaseInfo.Values, maxTime, willRaise, willRaiseInherit);
+              //A [TestCase] written for the old TestCase is reported in place of its value-count or conversion error
+              if (testCaseAttrib is TestCaseAttribute) and (TestCaseAttribute(testCaseAttrib).ValuesError <> '') then
+                SetArgError(test, TestCaseAttribute(testCaseAttrib).ValuesError);
             end;
           end;
-          // Add test case from test \case sources
-          if Length(testCaseSources) > 0 then
+          // Add test cases from test case sources
+          for testCaseSourceAttrib in testCaseSources do
+            AddSourceCases(testCaseSourceAttrib);
+          // Add test cases from test case generators
+          if Length(testCaseGenerators) > 0 then
           begin
-            for testCaseSourceAttrb in testCaseSources do
+            for testCaseGeneratorAttrib in testCaseGenerators do
             begin
-              if Length(testCaseSourceAttrb.CaseInfoArray) > 0 then
+              if Length(testCaseGeneratorAttrib.CaseInfoArray) > 0 then
               begin
-                for testCaseData in testCaseSourceAttrb.CaseInfoArray do
+                for testCaseData in testCaseGeneratorAttrib.CaseInfoArray do
                 begin
                   for i := 1 to repeatCount do
                   begin

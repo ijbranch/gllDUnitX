@@ -18,6 +18,11 @@ What the fork adds or changes
   a precondition that can only be discovered by looking (an external tool, a source tree, a database, an
   interactive desktop). Added here first; upstream merged it from this fork as #531 on 2026-11-01, so code
   using it builds against upstream `master` from `a28803b`, but not against RAD Studio's bundled DUnitX.
+* **`[TestCase]` names its cases from their values; `[NamedTestCase]` takes a name** (upstream #533, taken
+  2026-11-01, a breaking change): an old `[TestCase('Name', 'values')]` is now `[NamedTestCase('Name', 'values')]`.
+  `[TestCaseSource]` takes cases from a class function.  A two-argument `[TestCase]` written for the old form still
+  compiles, so one whose separator contains a letter or digit errors the case; see [Help.md](Help.md) §6 for the
+  conversion table and what the guard misses.
 * **Defect fixes** across the framework, the VCL GUI runner and the IDE expert - several of them cases where
   a test passed, or a run reported success, when it should have failed. Each is in [CHANGELOG.md](CHANGELOG.md);
   those that apply upstream have been offered back as issues and pull requests (see

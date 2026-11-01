@@ -163,8 +163,8 @@ resourcestring
     'end;'#13#10;
 
   /// <summary>
-  ///   Interface declarations of two sample tests - a plain [Test] and one fed by two [TestCase] attributes - inserted
-  ///   as argument 3 of <see cref="STestUnit" />. Takes no format arguments.
+  ///   Interface declarations of two sample tests - a plain [Test] and one fed by a [TestCase] and a [NamedTestCase]
+  ///   attribute - inserted as argument 3 of <see cref="STestUnit" />. Takes no format arguments.
   /// </summary>
   SSampleMethodsIntf =
     '    // Sample Methods'#13#10 +
@@ -172,9 +172,10 @@ resourcestring
     '    [Test]'#13#10 +
     '    procedure Test1;'#13#10 +
     '    // Test with TestCase Attribute to supply parameters.'#13#10 +
+    '    // Each case is named from its values; NamedTestCase gives it a name.'#13#10 +
     '    [Test]'#13#10 +
-    '    [TestCase(''TestA'',''1,2'')]'#13#10 +
-    '    [TestCase(''TestB'',''3,4'')]'#13#10 +
+    '    [TestCase(''1,2'')]'#13#10 +
+    '    [NamedTestCase(''TestB'',''3,4'')]'#13#10 +
     '    procedure Test2(const AValue1 : Integer;const AValue2 : Integer);'#13#10;
 
   /// <summary>
@@ -206,7 +207,7 @@ resourcestring
   SInvalidFixtureClassName = '''%0:s'' is not a valid TestFixture class name.'#13#10#13#10 +
     'Enter a Delphi identifier (a letter or underscore, then letters, digits or underscores) that is not a reserved word ' +
     'and does not hide a name the generated unit uses (TDUnitX, Integer, TestAttribute, TestCaseAttribute, ' +
-    'SetupAttribute, TearDownAttribute).';
+    'NamedTestCaseAttribute, SetupAttribute, TearDownAttribute).';
 
 /// <summary>
 ///   Checks whether a name can be used as the generated fixture's class name.
@@ -239,8 +240,9 @@ const
   // Names the generated unit uses unqualified. A fixture class of that name hides the original: TDUnitX breaks the
   // RegisterTestFixture call (E2003), an *Attribute name breaks the matching attribute (E2010), and Integer turns
   // the sample Test2 parameters into the fixture class, so its TestCase values cannot be converted at run time.
-  CHiddenNames : array[0..5] of string = (
-    'TDUnitX', 'Integer', 'TestAttribute', 'TestCaseAttribute', 'SetupAttribute', 'TearDownAttribute');
+  CHiddenNames : array[0..6] of string = (
+    'TDUnitX', 'Integer', 'TestAttribute', 'TestCaseAttribute', 'NamedTestCaseAttribute', 'SetupAttribute',
+    'TearDownAttribute');
 
 function IsValidFixtureClassName(const AName : string) : Boolean;
 var

@@ -103,14 +103,14 @@ type
     ///   The date text to convert.
     /// </param>
     [Test]
-    [TestCase('EN-US local format', 'EN-US,06/22/2020')]
-    [TestCase('EN-US iso8601 format', 'EN-US,2020-06-22')]
-    [TestCase('EN-GB local format', 'EN-GB,22/06/2020')]
-    [TestCase('EN-GB iso8601 format', 'EN-GB,2020-06-22')]
-    [TestCase('DE local format', 'DE,22.06.2020')]
-    [TestCase('DE local format, no leading zeroes', 'DE,22.6.2020')]
-    [TestCase('DE local format, no explicit century', 'DE,22.06.20')]
-    [TestCase('DE iso8601 format', 'DE,2020-06-22')]
+    [NamedTestCase('EN-US local format', 'EN-US,06/22/2020')]
+    [NamedTestCase('EN-US iso8601 format', 'EN-US,2020-06-22')]
+    [NamedTestCase('EN-GB local format', 'EN-GB,22/06/2020')]
+    [NamedTestCase('EN-GB iso8601 format', 'EN-GB,2020-06-22')]
+    [NamedTestCase('DE local format', 'DE,22.06.2020')]
+    [NamedTestCase('DE local format, no leading zeroes', 'DE,22.6.2020')]
+    [NamedTestCase('DE local format, no explicit century', 'DE,22.06.20')]
+    [NamedTestCase('DE iso8601 format', 'DE,2020-06-22')]
     procedure TestDateConversion(const locale : string; const text : string);
 
     /// <summary>
@@ -124,13 +124,13 @@ type
     ///   The time text to convert.
     /// </param>
     [Test]
-    [TestCase('EN-US local format, no leading zero, no seconds', 'EN-US,6:36 pm')]
-    [TestCase('EN-US local format, with seconds', 'EN-US,06:36:00 PM')]
-    [TestCase('DE local format, no seconds', 'DE,18:36')]
-    [TestCase('DE local format, with seconds', 'DE,18:36:00')]
-    [TestCase('DE iso8601 format', 'DE,18:36:00.000')]
-    [TestCase('EN-GB local 12 h format', 'EN-GB,06:36 pm')]
-    [TestCase('EN-GB local 24 h format', 'EN-GB,18:36')]
+    [NamedTestCase('EN-US local format, no leading zero, no seconds', 'EN-US,6:36 pm')]
+    [NamedTestCase('EN-US local format, with seconds', 'EN-US,06:36:00 PM')]
+    [NamedTestCase('DE local format, no seconds', 'DE,18:36')]
+    [NamedTestCase('DE local format, with seconds', 'DE,18:36:00')]
+    [NamedTestCase('DE iso8601 format', 'DE,18:36:00.000')]
+    [NamedTestCase('EN-GB local 12 h format', 'EN-GB,06:36 pm')]
+    [NamedTestCase('EN-GB local 24 h format', 'EN-GB,18:36')]
     procedure TestTimeConversion(const locale : string; const text : string);
 
     /// <summary>
@@ -144,17 +144,17 @@ type
     ///   The date-time text to convert.
     /// </param>
     [Test]
-    [TestCase('EN-US local format, verbose', 'EN-US,06/22/2020 06:36:00 pm')]
-    [TestCase('EN-US local format short', 'EN-US,6/22/2020 6:36 pm')]
-    [TestCase('EN-US iso 8601 format', 'EN-US,2020-06-22 18:36:00')]
-    [TestCase('EN-US iso 8601 format, verbose', 'EN-US,2020-06-22T18:36:00.000Z')]
-    [TestCase('EN-GB local format, 24 h, verbose', 'EN-GB,22/06/2020 18:36:00')]
-    [TestCase('EN-GB local format, 12 h, verbose', 'EN-GB,22/06/2020 06:36:00 pm')]
-    [TestCase('EN-GB iso8601 format', 'EN-GB,2020-06-22 18:36')]
-    [TestCase('EN-GB iso8601 format, verbose', 'EN-GB,2020-06-22T18:36:00+00')]
-    [TestCase('DE local format, verbose', 'DE,22.06.2020 18:36:00.000')]
-    [TestCase('DE local format, short', 'DE,22.6.20 18:36')]
-    [TestCase('DE iso8601 format', 'DE,2020-06-22 18:36:00')]
+    [NamedTestCase('EN-US local format, verbose', 'EN-US,06/22/2020 06:36:00 pm')]
+    [NamedTestCase('EN-US local format short', 'EN-US,6/22/2020 6:36 pm')]
+    [NamedTestCase('EN-US iso 8601 format', 'EN-US,2020-06-22 18:36:00')]
+    [NamedTestCase('EN-US iso 8601 format, verbose', 'EN-US,2020-06-22T18:36:00.000Z')]
+    [NamedTestCase('EN-GB local format, 24 h, verbose', 'EN-GB,22/06/2020 18:36:00')]
+    [NamedTestCase('EN-GB local format, 12 h, verbose', 'EN-GB,22/06/2020 06:36:00 pm')]
+    [NamedTestCase('EN-GB iso8601 format', 'EN-GB,2020-06-22 18:36')]
+    [NamedTestCase('EN-GB iso8601 format, verbose', 'EN-GB,2020-06-22T18:36:00+00')]
+    [NamedTestCase('DE local format, verbose', 'DE,22.06.2020 18:36:00.000')]
+    [NamedTestCase('DE local format, short', 'DE,22.6.20 18:36')]
+    [NamedTestCase('DE iso8601 format', 'DE,2020-06-22 18:36:00')]
     procedure TestDateTimeConversion(const locale : string; const text : string);
 
     /// <summary>
@@ -173,12 +173,12 @@ type
     ///   because DUnitX.inc defines DELPHI_XE8_UP.
     /// </remarks>
     [Test]
-    [TestCase('EN-US local format, verbose', 'EN-US,06/22/2020 06:36:00 pm')]
-    [TestCase('EN-US local format short', 'EN-US,6/22/2020 6:36 pm')]
-    [TestCase('EN-GB local format, 24 h, verbose', 'EN-GB,22/06/2020 18:36:00')]
-    [TestCase('EN-GB local format, 12 h, verbose', 'EN-GB,22/06/2020 06:36:00 pm')]
-    [TestCase('DE local format, verbose', 'DE,22.06.2020 18:36:00.000')]
-    [TestCase('DE local format, short', 'DE,22.6.20 18:36')]
+    [NamedTestCase('EN-US local format, verbose', 'EN-US,06/22/2020 06:36:00 pm')]
+    [NamedTestCase('EN-US local format short', 'EN-US,6/22/2020 6:36 pm')]
+    [NamedTestCase('EN-GB local format, 24 h, verbose', 'EN-GB,22/06/2020 18:36:00')]
+    [NamedTestCase('EN-GB local format, 12 h, verbose', 'EN-GB,22/06/2020 06:36:00 pm')]
+    [NamedTestCase('DE local format, verbose', 'DE,22.06.2020 18:36:00.000')]
+    [NamedTestCase('DE local format, short', 'DE,22.6.20 18:36')]
     procedure TestDateTimeConversion2(const locale : string; const text : string);
 
     /// <summary>
@@ -192,11 +192,11 @@ type
     ///   The colour's expected ordinal value.
     /// </param>
     [Test]
-    [TestCase('claRed = xFFFF0000', 'claRed,xFFFF0000')]
-    [TestCase('Red = xFFFF0000', 'Red,xFFFF0000')]
-    [TestCase('red = xFFFF0000', 'red,xFFFF0000')]
-    [TestCase('$FFFF0000 = xFFFF0000', '$FFFF0000,xFFFF0000')]
-    [TestCase('xFFFF0000 = xFFFF0000', 'xFFFF0000,xFFFF0000')]
+    [NamedTestCase('claRed = xFFFF0000', 'claRed,xFFFF0000')]
+    [NamedTestCase('Red = xFFFF0000', 'Red,xFFFF0000')]
+    [NamedTestCase('red = xFFFF0000', 'red,xFFFF0000')]
+    [NamedTestCase('$FFFF0000 = xFFFF0000', '$FFFF0000,xFFFF0000')]
+    [NamedTestCase('xFFFF0000 = xFFFF0000', 'xFFFF0000,xFFFF0000')]
     procedure TestAlphaColorTestCase(const AColor : TAlphaColor; const AColorOrd : Cardinal);
 
     /// <summary>
@@ -209,12 +209,12 @@ type
     ///   The colour's expected ordinal value.
     /// </param>
     [Test]
-    [TestCase('clRed = 255', 'clRed,255')]
-    [TestCase('clred = 255', 'clred,255')]
-    [TestCase('clRed = $000000FF', 'clRed,$000000FF')]
-    [TestCase('clBlue = $00FF0000', 'clBlue,$00FF0000')]
-    [TestCase('$00FF0000 = $00FF0000', '$00FF0000,$00FF0000')]
-    [TestCase('$000000FF = $000000FF', '$000000FF,$000000FF')]
+    [NamedTestCase('clRed = 255', 'clRed,255')]
+    [NamedTestCase('clred = 255', 'clred,255')]
+    [NamedTestCase('clRed = $000000FF', 'clRed,$000000FF')]
+    [NamedTestCase('clBlue = $00FF0000', 'clBlue,$00FF0000')]
+    [NamedTestCase('$00FF0000 = $00FF0000', '$00FF0000,$00FF0000')]
+    [NamedTestCase('$000000FF = $000000FF', '$000000FF,$000000FF')]
     procedure TestColorTestCase(const AColor : TColor; const AColorOrd : Integer);
 
     /// <summary>

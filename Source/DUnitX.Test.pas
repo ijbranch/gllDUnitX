@@ -489,6 +489,13 @@ type
     ///   Destroys the test case.
     /// </summary>
     destructor Destroy; override;
+    /// <summary>
+    ///   The problem with the case's values that running it reports as an error instead of invoking the method; empty
+    ///   when the values are good.  The constructor sets it for a count mismatch or a failed conversion; the fixture
+    ///   provider overwrites it when it knows better (a [TestCase] written for the old TestCase, or an empty
+    ///   [TestCaseSource] row).
+    /// </summary>
+    property ArgError : string read FArgError write FArgError;
   end;
 
   /// <summary>
@@ -796,7 +803,7 @@ begin
   //Bad data must not silently become 0 / defaults. Raising here would abort the whole run,
   //so the problem is stored and Execute reports it as an error for this case alone.
   args := AArgs;
-  //[TestCase('Empty', '')] splits into no values: for a single parameter that is one empty value.
+  //[TestCase('')] splits into no values: for a single parameter that is one empty value.
   if (len = 1) and (Length(args) = 0) then
     args := [TValue.From<string>('')];
   if Length(args) <> len then

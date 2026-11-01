@@ -71,7 +71,7 @@ type
   /// <summary>
   ///   Custom test-case source attribute: supplies three cases, 'DataTest0' to 'DataTest2', with values 0 to 2.
   /// </summary>
-  MockTestSourceAttribute = class(CustomTestCaseSourceAttribute)
+  MockTestSourceAttribute = class(CustomTestCaseGeneratorAttribute)
   protected
     /// <summary>
     ///   Builds the three cases.
@@ -84,7 +84,7 @@ type
 
 {$M+}
   /// <summary>
-  ///   Proves a CustomTestCaseSourceAttribute descendant generates test cases for the method it decorates.
+  ///   Proves a CustomTestCaseGeneratorAttribute descendant generates test cases for the method it decorates.
   /// </summary>
   [TestFixture]
   TTestClassWithTestSource = class
@@ -146,7 +146,7 @@ type
     /// </param>
     [RepeatTest(TIMES_RUN_TEST_CASE)]
     [Test]
-    [TestCase('Sum Case', '1,2,3')]
+    [NamedTestCase('Sum Case', '1,2,3')]
     procedure Sum(const A, B, Expected : Integer);
 
     /// <summary>
@@ -427,7 +427,8 @@ type
     procedure LoggerStateIsNotATestLeak;
     /// <summary>
     ///   Proves that TNameFilter (the command line's --run) matches a fixture name only as a whole name segment:
-    ///   naming Unit.TCustomer does not select Unit.TCustomerOrder, and naming a test method selects its test cases.
+    ///   naming Unit.TCustomer does not select Unit.TCustomerOrder, and naming a test method selects its test cases,
+    ///   including one named from its values (Method(1,2), with no '.').
     /// </summary>
     [Test]
     procedure NameFilterMatchesWholeNameSegments;
@@ -811,7 +812,7 @@ type
     ///   The case value; unused.
     /// </param>
     [Test]
-    [TestCase('DoesNotRaise', '1')]
+    [NamedTestCase('DoesNotRaise', '1')]
     [WillRaise(EArgumentOutOfRangeException)]
     procedure CaseExpectedToRaise(const AValue : Integer);
     /// <summary>
@@ -821,7 +822,7 @@ type
     ///   Milliseconds to sleep.
     /// </param>
     [Test]
-    [TestCase('Slow', '150')]
+    [NamedTestCase('Slow', '150')]
     [MaxTime(100)]
     procedure CaseOverItsMaxTime(const ADelay : Integer);
     /// <summary>
@@ -891,7 +892,7 @@ type
     /// </param>
     [Test]
     [RepeatTest(2)]
-    [TestCase('One', '1')]
+    [NamedTestCase('One', '1')]
     procedure RepeatedCaseSeesItsSetup(const AValue : Integer);
   end;
 
@@ -2574,6 +2575,7 @@ var
   customerTest : ITest;
   orderTest : ITest;
   caseTest : ITest;
+  autoCaseTest : ITest;
   filter : ITestFilter;
 begin
   Context := TRttiContext.Create;
@@ -2583,6 +2585,7 @@ begin
     customer := TDUnitXTestFixture.Create('Unit.TCustomer', EmptyStr, TTestCaseAttribute, MyClass.UnitName) as ITestFixture;
     customerTest := customer.AddTest(MyMethod.Name, nil, 'Run', '', MyMethod);
     caseTest := customer.AddTestCase(MyMethod.Name, 'One', MyMethod.Name, '', MyMethod, true, []);
+    autoCaseTest := customer.AddTestCase(MyMethod.Name, '(1,2)', MyMethod.Name, '', MyMethod, true, []);
     customerOrder := TDUnitXTestFixture.Create('Unit.TCustomerOrder', EmptyStr, TTestCaseAttribute, MyClass.UnitName) as ITestFixture;
     orderTest := customerOrder.AddTest(MyMethod.Name, nil, 'Run', '', MyMethod);
 
@@ -2597,11 +2600,13 @@ begin
 
     filter := TNameFilter.Create(customer.FullName + '.' + MyMethod.Name);
     Assert.IsTrue(filter.Match(caseTest), 'a test case of the named method');
+    Assert.IsTrue(filter.Match(autoCaseTest), 'a test case of the named method, named from its values');
     Assert.IsFalse(filter.Match(customerTest), 'another test of the fixture');
   finally
     filter := nil;
     customerTest := nil;
     caseTest := nil;
+    autoCaseTest := nil;
     orderTest := nil;
     customer := nil;
     customerOrder := nil;

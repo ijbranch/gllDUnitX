@@ -103,14 +103,20 @@ type
 
   /// <summary>Re-export of <c>DUnitX.Attributes.CustomTestCaseAttribute</c>: base for attributes that supply one test case.</summary>
   CustomTestCaseAttribute = DUnitX.Attributes.CustomTestCaseAttribute;
-  /// <summary>Re-export of <c>DUnitX.Attributes.CustomTestCaseSourceAttribute</c>: base for attributes that supply many test cases.</summary>
-  CustomTestCaseSourceAttribute = DUnitX.Attributes.CustomTestCaseSourceAttribute;
-  /// <summary>Re-export of <c>DUnitX.Attributes.TestCaseAttribute</c>: a named test case with its arguments.</summary>
+  /// <summary>Re-export of <c>DUnitX.Attributes.CustomTestCaseGeneratorAttribute</c>: base for attributes that supply many test cases.</summary>
+  CustomTestCaseGeneratorAttribute = DUnitX.Attributes.CustomTestCaseGeneratorAttribute;
+  /// <summary>Re-export of <c>DUnitX.Attributes.TestCaseAttribute</c>: a test case named from its arguments.</summary>
   TestCaseAttribute = DUnitX.Attributes.TestCaseAttribute;
-  /// <summary>Re-export of <c>DUnitX.Attributes.AutoNameTestCaseAttribute</c>: a test case named from its arguments.</summary>
-  AutoNameTestCaseAttribute = DUnitX.Attributes.AutoNameTestCaseAttribute;
+  /// <summary>Re-export of <c>DUnitX.Attributes.NamedTestCaseAttribute</c>: a named test case with its arguments.</summary>
+  NamedTestCaseAttribute = DUnitX.Attributes.NamedTestCaseAttribute;
   /// <summary>Re-export of <c>DUnitX.Attributes.TestCaseProviderAttribute</c>: takes a test's cases from a registered provider.</summary>
   TestCaseProviderAttribute = DUnitX.Attributes.TestCaseProviderAttribute;
+  /// <summary>Re-export of <c>DUnitX.Attributes.TestCaseSourceAttribute</c>: takes a test's cases from a class function.</summary>
+  TestCaseSourceAttribute = DUnitX.Attributes.TestCaseSourceAttribute;
+  /// <summary>Deprecated: <c>TestCaseAttribute</c> now names its cases from their arguments, as this did.</summary>
+  AutoNameTestCaseAttribute = DUnitX.Attributes.TestCaseAttribute deprecated 'Use TestCase, which now names its cases from their values';
+  /// <summary>Deprecated: renamed <c>CustomTestCaseGeneratorAttribute</c>, to keep it apart from <c>TestCaseSourceAttribute</c>.</summary>
+  CustomTestCaseSourceAttribute = DUnitX.Attributes.CustomTestCaseGeneratorAttribute deprecated 'Use CustomTestCaseGeneratorAttribute';
 
   /// <summary>Re-export of <c>DUnitX.Types.TExceptionInheritance</c>: whether an expected exception must match exactly or may descend.</summary>
   TExceptionInheritance = DUnitX.Types.TExceptionInheritance;

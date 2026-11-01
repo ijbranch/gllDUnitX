@@ -304,6 +304,20 @@ resourcestring
   STestCaseValueConvert = 'Test case [%s]: value [%s] cannot be converted to parameter [%s] of type %s%s';
   /// <summary>Error: a TestCaseProvider attribute names an unregistered provider. Args: provider name, method.</summary>
   SUnknownTestCaseProvider = 'Test case provider [%s] used by %s is not registered';
+  /// <summary>
+  ///   Error: a [TestCase] separator contains an ASCII letter or digit, the sign of a [TestCase('Name', 'values')]
+  ///   written for the old TestCase.  Args: 0 = the values (the old case name), 1 = the separator (the old values).
+  /// </summary>
+  STestCaseOldForm  = 'TestCase separator ''%1:s'' contains a letter or digit: this looks like [TestCase(''%0:s'', ''%1:s'')] ' +
+    'written for the old TestCase, which is now [NamedTestCase(''%0:s'', ''%1:s'')]';
+  /// <summary>Error: a [TestCaseSource] names a method the class does not have, or not publicly. Args: method, class.</summary>
+  STestCaseSourceNotFound = 'TestCaseSource method ''%s'' not found on %s (it must be public)';
+  /// <summary>Error: a [TestCaseSource] method has the wrong signature. Arg: class.method.</summary>
+  STestCaseSourceSignature = 'TestCaseSource method %s must be a class function with no parameters that returns an array';
+  /// <summary>Error: a [TestCaseSource] method raised. Args: class.method, exception class, message.</summary>
+  STestCaseSourceRaised = 'TestCaseSource method %s raised %s: %s';
+  /// <summary>Error: a [TestCaseSource] method returned no cases. Arg: class.method.</summary>
+  STestCaseSourceEmpty = 'TestCaseSource method %s returned no cases';
   /// <summary>Error: creating the fixture instance raised. Args: fixture, error.</summary>
   SFixtureCreateError = 'Error creating Fixture. Fixture: %s Error: %s';
   /// <summary>Warning: a [SetupFixture] method is not run because the fixture's parameterless constructor is its fixture setup. Args: method, fixture.</summary>

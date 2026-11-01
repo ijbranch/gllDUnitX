@@ -1392,6 +1392,16 @@ type
     ///   For an interface, the implementing object (<c>as TObject</c>); otherwise <c>AsObject</c>.
     /// </returns>
     function ToObject : TObject;
+    /// <summary>
+    ///   Returns the elements of an array value.
+    /// </summary>
+    /// <returns>
+    ///   One TValue per element, in order; empty for an empty array.
+    /// </returns>
+    /// <exception cref="EInvalidCast">
+    ///   Raised when the value is not an array.
+    /// </exception>
+    function ToArray : TArray<TValue>;
     ///	<summary>
     ///	  Converts the value to a TVarRec. A TVarRec cannot own memory, so its
     ///	  pointers refer into AStorage, which must outlive the result unchanged.
@@ -4479,6 +4489,17 @@ begin
     Result := AsInterface as TObject
   else
     Result := AsObject;
+end;
+
+function TValueHelper.ToArray : TArray<TValue>;
+var
+  len : Integer;
+  i : Integer;
+begin
+  len := GetArrayLength;
+  SetLength(Result, len);
+  for i := 0 to len - 1 do
+    Result[i] := GetArrayElement(i);
 end;
 
 class function TValueHelper.ToString(const Values : array of TValue) : string;
