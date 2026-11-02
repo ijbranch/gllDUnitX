@@ -206,8 +206,8 @@ resourcestring
   /// </remarks>
   SInvalidFixtureClassName = '''%0:s'' is not a valid TestFixture class name.'#13#10#13#10 +
     'Enter a Delphi identifier (a letter or underscore, then letters, digits or underscores) that is not a reserved word ' +
-    'and does not hide a name the generated unit uses (TDUnitX, Integer, TestAttribute, TestCaseAttribute, ' +
-    'NamedTestCaseAttribute, SetupAttribute, TearDownAttribute).';
+    'and does not hide a name the generated unit uses (TDUnitX, Integer, TestFixtureAttribute, TestAttribute, ' +
+    'TestCaseAttribute, NamedTestCaseAttribute, SetupAttribute, TearDownAttribute).';
 
 /// <summary>
 ///   Checks whether a name can be used as the generated fixture's class name.
@@ -238,11 +238,12 @@ const
     'var', 'while', 'with', 'xor', 'out');
 
   // Names the generated unit uses unqualified. A fixture class of that name hides the original: TDUnitX breaks the
-  // RegisterTestFixture call (E2003), an *Attribute name breaks the matching attribute (E2010), and Integer turns
-  // the sample Test2 parameters into the fixture class, so its TestCase values cannot be converted at run time.
-  CHiddenNames : array[0..6] of string = (
-    'TDUnitX', 'Integer', 'TestAttribute', 'TestCaseAttribute', 'NamedTestCaseAttribute', 'SetupAttribute',
-    'TearDownAttribute');
+  // RegisterTestFixture call (E2003), an *Attribute name breaks the matching attribute (E2010; TestFixtureAttribute
+  // the class's own [TestFixture], as upstream #577 found), and Integer turns the sample Test2 parameters into the
+  // fixture class, so its TestCase values cannot be converted at run time.
+  CHiddenNames : array[0..7] of string = (
+    'TDUnitX', 'Integer', 'TestFixtureAttribute', 'TestAttribute', 'TestCaseAttribute', 'NamedTestCaseAttribute',
+    'SetupAttribute', 'TearDownAttribute');
 
 function IsValidFixtureClassName(const AName : string) : Boolean;
 var
