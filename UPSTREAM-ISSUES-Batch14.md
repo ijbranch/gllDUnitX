@@ -10,7 +10,7 @@ The runner changes from the #398 list ("happy for all of the above to be address
 | 4 | Misspelt `DELPHI_SEATTLE_UP`: the C++Builder gallery entry makes a Delphi project (report 5.1) | [#570](https://github.com/VSoftTechnologies/DUnitX/issues/570) | [#575](https://github.com/VSoftTechnologies/DUnitX/pull/575) | `fix/expert-seattle-conditional` | `e5ca9f3` | 2026-11-02 `52b429c` |
 | 5 | Cancel on the save prompt still creates the project; nil active project (report 5.2, 5.3) | [#571](https://github.com/VSoftTechnologies/DUnitX/issues/571) | [#576](https://github.com/VSoftTechnologies/DUnitX/pull/576) | `fix/expert-cancel-save` | `078d681` | 2026-11-02 `a87c1c6` |
 | 6 | Fixture class names that do not compile are accepted (report 5.4) | [#572](https://github.com/VSoftTechnologies/DUnitX/issues/572) | [#577](https://github.com/VSoftTechnologies/DUnitX/pull/577) | `fix/expert-fixture-name-ident` | `079f481` | 2026-11-02 `f4b9811` |
-| 7 | `Assert.AreSame` / `AreNotSame(TObject)` call `Equals`, not identity (#414, re-offered; #415 was closed in batch 2) | [#414](https://github.com/VSoftTechnologies/DUnitX/issues/414) | [#579](https://github.com/VSoftTechnologies/DUnitX/pull/579) | `fix/aresame-identity-2` | `0521642` | |
+| 7 | `Assert.AreSame` / `AreNotSame(TObject)` call `Equals`, not identity (#414, re-offered; #415 was closed in batch 2) | [#414](https://github.com/VSoftTechnologies/DUnitX/issues/414) | [#579](https://github.com/VSoftTechnologies/DUnitX/pull/579) | `fix/aresame-identity-2` | `0521642` | 2026-11-02 `f3f9373` |
 
 ## 1. A raising fixture constructor (posted 16:25 +11, Ian: "Approved to publish")
 
@@ -40,6 +40,8 @@ Built on `f5ab75a` (touch only `Expert\`; clean on `8224015` and with each other
 ## 7. `AreSame` identity, re-offered (posted 17:30 +11, Ian: "Approved to publish")
 
 #414 was still open (batch 2's record said closed; corrected).  #415 had been closed after Vincent's "This is a behavior change - not sure about this"; with 2.0.0 collecting behaviour changes it went again on `2299609` with a `BREAKINGCHANGES.md` section.  The `TObject` overloads compare references; a nil shows as `nil` in the message instead of an access violation.  Seven tests red on `2299609`; four mutants killed; review 4 findings, all fixed (doc accuracy, a nil-message test).  Not changed, reported: the DUnit-compatibility `CheckSame(TObject)` goes through `AreEqual<TObject>` (so `Equals`), the same flaw; this fork fixed its own copy in October.
+
+**#579 merged 2026-11-02** as `f3f9373` (tree identical to `0521642`); #414 closed with it.  Nothing to port: this fork has compared references since October.
 
 ## This fork
 
