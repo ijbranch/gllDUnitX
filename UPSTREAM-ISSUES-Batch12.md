@@ -6,12 +6,14 @@ The behaviour changes from the list on [#398](https://github.com/VSoftTechnologi
 
 | # | Defect | Issue | PR | Branch | Head | Merged |
 |---|---|---|---|---|---|---|
-| 1 | A misspelt or unregistered `[TestCaseProvider]` (or one with no cases) silently gives the method no tests (report 2.9) | [#553](https://github.com/VSoftTechnologies/DUnitX/issues/553) | [#559](https://github.com/VSoftTechnologies/DUnitX/pull/559) | `fix/testcaseprovider-unregistered` | `2eebcdc` | |
-| 2 | A method's `[Category]` replaces the fixture's instead of adding to it (report 2.8) | [#554](https://github.com/VSoftTechnologies/DUnitX/issues/554) | [#560](https://github.com/VSoftTechnologies/DUnitX/pull/560) | `fix/method-category-adds-to-fixture` | `3f1438c` | |
-| 3 | `[SetupFixture]` runs when a filter leaves only ignored tests, and is skipped when only `[RepeatTest]` repetitions will run | [#555](https://github.com/VSoftTechnologies/DUnitX/issues/555) | [#561](https://github.com/VSoftTechnologies/DUnitX/pull/561) | `fix/setupfixture-all-ignored` | `089bcf2` | |
-| 4 | `--run` matches by text prefix (`Unit.TFoo` runs `Unit.TFooBar`) | [#556](https://github.com/VSoftTechnologies/DUnitX/issues/556) | [#562](https://github.com/VSoftTechnologies/DUnitX/pull/562) | `fix/run-exact-name-match` | `3a7ca8e` | |
-| 5 | A bare argument is taken as the XML output file | [#557](https://github.com/VSoftTechnologies/DUnitX/issues/557) | [#563](https://github.com/VSoftTechnologies/DUnitX/pull/563) | `fix/bare-argument-not-xml-file` | `9dd3819` | |
+| 1 | A misspelt or unregistered `[TestCaseProvider]` (or one with no cases) silently gives the method no tests (report 2.9) | [#553](https://github.com/VSoftTechnologies/DUnitX/issues/553) | [#559](https://github.com/VSoftTechnologies/DUnitX/pull/559) | `fix/testcaseprovider-unregistered` | `2eebcdc` | 2026-11-02 `98cc9c0` |
+| 2 | A method's `[Category]` replaces the fixture's instead of adding to it (report 2.8) | [#554](https://github.com/VSoftTechnologies/DUnitX/issues/554) | [#560](https://github.com/VSoftTechnologies/DUnitX/pull/560) | `fix/method-category-adds-to-fixture` | `3f1438c` | 2026-11-02 `34c9c48` |
+| 3 | `[SetupFixture]` runs when a filter leaves only ignored tests, and is skipped when only `[RepeatTest]` repetitions will run | [#555](https://github.com/VSoftTechnologies/DUnitX/issues/555) | [#561](https://github.com/VSoftTechnologies/DUnitX/pull/561) | `fix/setupfixture-all-ignored` | `089bcf2` | 2026-11-02 `cc247a9` |
+| 4 | `--run` matches by text prefix (`Unit.TFoo` runs `Unit.TFooBar`) | [#556](https://github.com/VSoftTechnologies/DUnitX/issues/556) | [#562](https://github.com/VSoftTechnologies/DUnitX/pull/562) | `fix/run-exact-name-match` | `3a7ca8e` | 2026-11-02 `de7a7cd` |
+| 5 | A bare argument is taken as the XML output file | [#557](https://github.com/VSoftTechnologies/DUnitX/issues/557) | [#563](https://github.com/VSoftTechnologies/DUnitX/pull/563) | `fix/bare-argument-not-xml-file` | `9dd3819` | 2026-11-02 `9c85dd5` |
 | 6 | `Assert.IsType<T>` can never fail: remove, make it fail, or leave (question only) | [#558](https://github.com/VSoftTechnologies/DUnitX/issues/558) | - | - | - | |
+
+**Outcome (2026-11-02):** all five merged by 15:31 +11, each unchanged (`git patch-id` equal to its branch); the distinct `BREAKINGCHANGES.md` anchors meant no PR ever went into conflict.  #558 answered: "Lets go with option 2" (always fail), sent as #566 in batch 13.
 
 ## How this batch was built
 

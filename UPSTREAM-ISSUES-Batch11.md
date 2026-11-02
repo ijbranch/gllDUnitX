@@ -6,9 +6,11 @@ The three small fixes from the list on [#398](https://github.com/VSoftTechnologi
 
 | # | Defect | Issue | PR | Branch | Head | Merged |
 |---|---|---|---|---|---|---|
-| 1 | JUnit logger: suite name loses the first `.Name`, not the trailing one; `<failure>` body repeats the message instead of the stack trace | [#547](https://github.com/VSoftTechnologies/DUnitX/issues/547) | [#550](https://github.com/VSoftTechnologies/DUnitX/pull/550) | `fix/junit-suite-name-failure-body` | `4642fdf` | |
-| 2 | `[TestCase]` 'abc' still becomes 0 for `Int64` / `UInt64` (and `NativeInt` / `NativeUInt` on Win64), following #522 | [#548](https://github.com/VSoftTechnologies/DUnitX/issues/548) | [#551](https://github.com/VSoftTechnologies/DUnitX/pull/551) | `fix/testcase-int64-values` | `9fffd31` | |
-| 3 | NUnit and JUnit XML write the exe path into attributes unescaped | [#549](https://github.com/VSoftTechnologies/DUnitX/issues/549) | [#552](https://github.com/VSoftTechnologies/DUnitX/pull/552) | `fix/xml-escape-exe-name` | `86d0146` | |
+| 1 | JUnit logger: suite name loses the first `.Name`, not the trailing one; `<failure>` body repeats the message instead of the stack trace | [#547](https://github.com/VSoftTechnologies/DUnitX/issues/547) | [#550](https://github.com/VSoftTechnologies/DUnitX/pull/550) | `fix/junit-suite-name-failure-body` | `4642fdf` | 2026-11-02 `410f623` |
+| 2 | `[TestCase]` 'abc' still becomes 0 for `Int64` / `UInt64` (and `NativeInt` / `NativeUInt` on Win64), following #522 | [#548](https://github.com/VSoftTechnologies/DUnitX/issues/548) | [#551](https://github.com/VSoftTechnologies/DUnitX/pull/551) | `fix/testcase-int64-values` | `9fffd31` | 2026-11-02 `4536571` |
+| 3 | NUnit and JUnit XML write the exe path into attributes unescaped | [#549](https://github.com/VSoftTechnologies/DUnitX/issues/549) | [#552](https://github.com/VSoftTechnologies/DUnitX/pull/552) | `fix/xml-escape-exe-name` | `86d0146` | 2026-11-02 `16580ec` |
+
+**Outcome (2026-11-02):** all three merged within an hour, each unchanged (`git patch-id` equal to its branch).
 
 ## How this batch was built
 
