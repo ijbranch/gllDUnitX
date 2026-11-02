@@ -381,7 +381,12 @@ Batch 13 merged on 2026-11-02.  **Batch 14**, the runner changes, one PR at a ti
 
 | Item | Issue | PR |
 |---|---|---|
-| 2.3 (a) one raising fixture constructor aborts the whole run | [#567](https://github.com/VSoftTechnologies/DUnitX/issues/567) | [#568](https://github.com/VSoftTechnologies/DUnitX/pull/568) |
+| 2.3 (a) one raising fixture constructor aborts the whole run (merged `8224015`) | [#567](https://github.com/VSoftTechnologies/DUnitX/issues/567) | [#568](https://github.com/VSoftTechnologies/DUnitX/pull/568) |
+| 2.5 (a), (b), A, B false leak reports | [#573](https://github.com/VSoftTechnologies/DUnitX/issues/573) | [#578](https://github.com/VSoftTechnologies/DUnitX/pull/578) |
+| The D13 IDE expert does not compile for Win64 | [#569](https://github.com/VSoftTechnologies/DUnitX/issues/569) | [#574](https://github.com/VSoftTechnologies/DUnitX/pull/574) |
+| 5.1 misspelt `DELPHI_SEATTLE_UP` (C++ entry makes a Delphi project) | [#570](https://github.com/VSoftTechnologies/DUnitX/issues/570) | [#575](https://github.com/VSoftTechnologies/DUnitX/pull/575) |
+| 5.2 / 5.3 Cancel still creates the project; nil active project | [#571](https://github.com/VSoftTechnologies/DUnitX/issues/571) | [#576](https://github.com/VSoftTechnologies/DUnitX/pull/576) |
+| 5.4 fixture class names that do not compile | [#572](https://github.com/VSoftTechnologies/DUnitX/issues/572) | [#577](https://github.com/VSoftTechnologies/DUnitX/pull/577) |
 
 **Outside the batches: [#372](https://github.com/VSoftTechnologies/DUnitX/issues/372) (bitmask exit codes) ->
 [PR #411](https://github.com/VSoftTechnologies/DUnitX/pull/411)**, branch `feature/bitmask-exit-codes`, posted
