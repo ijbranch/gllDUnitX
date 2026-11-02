@@ -434,6 +434,15 @@ type
     procedure Unparseable_Or_Out_Of_Range_Int64_Does_Not_Convert;
 
     /// <summary>
+    ///   Proves a hex [TestCase] value for a 32-bit or smaller integer type errors when it is 64 bits wide or its sign
+    ///   was flipped: TryStrToInt64 reads '$FFFFFFFFFFFFFFFF' as -1 and '-$FFFFFFFFFFFFFFFF' as +1, both of which fit an
+    ///   Integer or the subrange -10..10, so they used to convert.  A negative hex value such as '-$1', and '-$0',
+    ///   still convert.  The same two flaws as upstream #551 fixed for Int64.
+    /// </summary>
+    [Test]
+    procedure Hex_Integer_Wider_Than_The_Type_Or_Sign_Flipped_Does_Not_Convert;
+
+    /// <summary>
     ///   Proves a hex value that fits 64 bits is its bit pattern for Int64 and UInt64, as in code
     ///   ('$FFFFFFFFFFFFFFFF' is the Int64 -1), that a negative hex value is refused when TryStrToInt64 flips its sign
     ///   ('-$FFFFFFFFFFFFFFFF' came back as +1), and that an Int64 subrange only range-checks its hex values, even one
@@ -661,6 +670,30 @@ begin
   Assert.AreEqual<UInt64>(High(UInt64), asTValue.AsType<UInt64>, '''18446744073709551615'' to UInt64');
   Assert.IsTrue(TValue.From<string>('+9223372036854775808').TryConvert<UInt64>(asTValue), '''+9223372036854775808'' to UInt64');
   Assert.AreEqual<UInt64>(UInt64(High(Int64)) + 1, asTValue.AsType<UInt64>, '''+9223372036854775808'' to UInt64');
+end;
+
+procedure TValueHelperTests.Hex_Integer_Wider_Than_The_Type_Or_Sign_Flipped_Does_Not_Convert;
+var
+  asTValue : TValue;
+begin
+  Assert.IsFalse(TValue.From<string>('$FFFFFFFFFFFFFFFF').TryConvert<Integer>(asTValue), '''$FFFFFFFFFFFFFFFF'' to Integer');
+  Assert.IsFalse(TValue.From<string>('$FFFFFFFF80000000').TryConvert<Integer>(asTValue), '''$FFFFFFFF80000000'' to Integer');
+  Assert.IsFalse(TValue.From<string>('$FFFFFFFFFFFFFFFF').TryConvert<TSignedSubrange>(asTValue), '''$FFFFFFFFFFFFFFFF'' to -10..10');
+  Assert.IsFalse(TValue.From<string>('-$FFFFFFFFFFFFFFFF').TryConvert<Integer>(asTValue), '''-$FFFFFFFFFFFFFFFF'' to Integer');
+  Assert.IsFalse(TValue.From<string>('-$FFFFFFFFFFFFFFFF').TryConvert<ShortInt>(asTValue), '''-$FFFFFFFFFFFFFFFF'' to ShortInt');
+  Assert.IsFalse(TValue.From<string>('-$FFFFFFFFFFFFFFFF').TryConvert<TSignedSubrange>(asTValue), '''-$FFFFFFFFFFFFFFFF'' to -10..10');
+  //Unsigned types too: the flipped sign gave +1, which fits
+  Assert.IsFalse(TValue.From<string>('-$FFFFFFFFFFFFFFFF').TryConvert<Byte>(asTValue), '''-$FFFFFFFFFFFFFFFF'' to Byte');
+  Assert.IsFalse(TValue.From<string>('-$FFFFFFFFFFFFFFFF').TryConvert<Cardinal>(asTValue), '''-$FFFFFFFFFFFFFFFF'' to Cardinal');
+
+  Assert.IsTrue(TValue.From<string>('-$1').TryConvert<Integer>(asTValue), '''-$1'' to Integer');
+  Assert.AreEqual(-1, asTValue.AsInteger, '''-$1'' to Integer');
+  Assert.IsTrue(TValue.From<string>('-$0').TryConvert<Integer>(asTValue), '''-$0'' to Integer');
+  Assert.AreEqual(0, asTValue.AsInteger, '''-$0'' to Integer');
+  Assert.IsTrue(TValue.From<string>('$0').TryConvert<TSignedSubrange>(asTValue), '''$0'' to -10..10');
+  Assert.AreEqual(0, asTValue.AsInteger, '''$0'' to -10..10');
+  Assert.IsTrue(TValue.From<string>('-$A').TryConvert<TSignedSubrange>(asTValue), '''-$A'' to -10..10');
+  Assert.AreEqual(-10, asTValue.AsInteger, '''-$A'' to -10..10');
 end;
 
 procedure TValueHelperTests.Hex_Int64_Is_Read_As_A_Bit_Pattern_Of_Its_Type;
