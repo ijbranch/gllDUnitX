@@ -77,7 +77,8 @@ type
   /// </summary>
   /// <remarks>
   ///   Accepts <c>--name[:value]</c>, <c>-name[:value]</c> and <c>/name[:value]</c>; <c>@file</c> reads an options
-  ///   file through the option marked <c>IsOptionFile</c>; any other argument fills the next registered unnamed option.
+  ///   file directly, as <c>--options:file</c> does, and inside an options file a relative name is found beside it;
+  ///   any other argument fills the next registered unnamed option.
   ///   Option files contain one argument per line; blank lines and lines starting with <c>#</c> or <c>;</c> are skipped.
   /// </remarks>
   TCommandLineParser = class(TInterfacedObject, ICommandLineParser)
@@ -98,8 +99,16 @@ type
     /// </summary>
     /// <param name="fileName">The options file to read.</param>
     /// <param name="parseErrors">Where to record errors.</param>
-    /// <exception cref="EFOpenError">The file cannot be opened (the caller in <c>InternalParse</c> records it as an error).</exception>
+    /// <exception cref="EFOpenError">The file cannot be opened (the caller, <c>ReadOptionsFile</c>, records it as an error).</exception>
     procedure InternalParseFile(const fileName : string; const parseErrors : IParseResultAddError);
+    /// <summary>
+    ///   Reads an options file named by '@&lt;file&gt;' or by an options-file option.  A relative name inside an
+    ///   options file is resolved against that file's folder, not the current directory.  A missing file, or one that
+    ///   cannot be read, is recorded as an error.
+    /// </summary>
+    /// <param name="fileName">The options file named on the command line or in an options file.</param>
+    /// <param name="parseErrors">Where to record errors.</param>
+    procedure ReadOptionsFile(const fileName : string; const parseErrors : IParseResultAddError);
     /// <summary>
     ///   Parses a list of arguments, invoking the action of each recognised option. Unknown options, missing values,
     ///   missing option files and values the option cannot convert are recorded as errors and parsing continues.
@@ -145,17 +154,6 @@ begin
   end;
 end;
 
-//The registered option that names an options file, or nil if there is none.
-function FindOptionFileOption : IOptionDefinition;
-var
-  option : IOptionDefinition;
-begin
-  Result := nil;
-  for option in TOptionsRegistry.RegisteredOptions.Values do
-    if option.IsOptionFile then
-      Exit(option);
-end;
-
 { TCommandLineParser }
 
 constructor TCommandLineParser.Create;
@@ -179,7 +177,6 @@ var
   option : IOptionDefinition;
   bTryValue : boolean;
   bUseKey : boolean;
-  isAtFile : boolean;
 begin
   for i := 0 to values.Count - 1 do
   begin
@@ -187,7 +184,6 @@ begin
     option := nil;
     bTryValue := true;
     bUseKey := false;
-    isAtFile := false;
     value := values.Strings[i];
 
     if value = '' then
@@ -200,12 +196,12 @@ begin
       Delete(value, 1, 1)
     else if StartsStr('@', value) then
     begin
-      //'@<file>' reads an options file. The name is taken whole, so a drive colon does not split it.
+      //'@<file>' reads an options file, whether or not an options-file option is registered (upstream #507).  The
+      //name is taken whole, so a drive colon does not split it.
       Delete(value, 1, 1);
       StripQuotes(value);
-      option := FindOptionFileOption;
-      bTryValue := false;
-      isAtFile := true;
+      ReadOptionsFile(value, parseErrors);
+      continue;
     end
     else if FUnamedIndex < TOptionsRegistry.RegisteredUnamedOptions.Count then
     begin
@@ -238,8 +234,6 @@ begin
       key := value;
       value := '';
     end;
-    if isAtFile then
-      value := key;
 
     if option = nil then
       TOptionsRegistry.RegisteredOptions.TryGetValue(LowerCase(key), option);
@@ -255,24 +249,7 @@ begin
       begin
         if not option.HasValue then
           value := key;
-        //A relative name inside an options file is relative to that file's folder, not the current directory.
-        if (FOpenOptionFiles.Count > 0) and IsRelativePath(value) then
-          value := ExpandFileName(ExtractFilePath(FOpenOptionFiles[FOpenOptionFiles.Count - 1]) + value);
-
-        //TODO : should options file override other options or vica versa?
-        if not FileExists(value) then
-        begin
-          parseErrors.AddError(Format(SParameterFileDoesNotExist, [value]));
-          continue;
-        end;
-        try
-          InternalParseFile(value, parseErrors);
-        except
-          on e : Exception do
-          begin
-            parseErrors.AddError(Format(SErrorParsingParameterFile, [value]) + e.Message);
-          end;
-        end;
+        ReadOptionsFile(value, parseErrors);
       end
       else
       begin
@@ -294,6 +271,28 @@ begin
       parseErrors.AddError(SUnknownCommandLineOption + values.Strings[i]);
       continue;
     end;
+  end;
+end;
+
+procedure TCommandLineParser.ReadOptionsFile(const fileName : string; const parseErrors : IParseResultAddError);
+var
+  fullName : string;
+begin
+  fullName := fileName;
+  //A relative name inside an options file is relative to that file's folder, not the current directory.
+  if (FOpenOptionFiles.Count > 0) and IsRelativePath(fullName) then
+    fullName := ExpandFileName(ExtractFilePath(FOpenOptionFiles[FOpenOptionFiles.Count - 1]) + fullName);
+  //TODO : should options file override other options or vica versa?
+  if not FileExists(fullName) then
+  begin
+    parseErrors.AddError(Format(SParameterFileDoesNotExist, [fullName]));
+    exit;
+  end;
+  try
+    InternalParseFile(fullName, parseErrors);
+  except
+    on e : Exception do
+      parseErrors.AddError(Format(SErrorParsingParameterFile, [fullName]) + e.Message);
   end;
 end;
 

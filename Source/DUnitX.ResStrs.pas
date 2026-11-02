@@ -302,6 +302,10 @@ resourcestring
   SParameterFileIncludesItself = 'Parameter File [%s] includes itself';
   /// <summary>Error: a test case value cannot be converted to the parameter type. Args: case, value, parameter, type, detail.</summary>
   STestCaseValueConvert = 'Test case [%s]: value [%s] cannot be converted to parameter [%s] of type %s%s';
+  /// <summary>Appended to <c>STestCaseValueConvert</c> for a TDate or TDateTime parameter: how to write a date that
+  /// cannot be misread.</summary>
+  STestCaseDateHint = ' (a date converts only when it cannot be misread: write it as yyyy-mm-dd, as in 2020-06-22 ' +
+    '(ISO 8601); a two-digit year, or a day and month that could be read either way, does not convert)';
   /// <summary>Error: a TestCaseProvider attribute names an unregistered provider. Args: provider name, method.</summary>
   SUnknownTestCaseProvider = 'Test case provider [%s] used by %s is not registered';
   /// <summary>

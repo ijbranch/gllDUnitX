@@ -2432,54 +2432,223 @@ begin
     AResult := TValue.FromOrdinal(ATarget, LValue);
 end;
 
-function StripIso8601TimeZone(const ASource : string) : string;
+//An ISO 8601 value reads the same on every machine, so it is read first, and strictly: only its own forms count (a
+//four-digit year, two-digit fields, and a fraction that is a fraction of a second).  Anything else is read with both
+//the invariant format and the machine's locale: when only one of them reads it, or both read the same value, that
+//value is used.  When they read different values (01/02/2020 is 2 January in the invariant format but 1 February on
+//an en-GB machine) the value is ambiguous and is refused, as is one that neither reads.  Upstream #528.
+function TryReadDigits(const ASource : string; AIndex : Integer; ACount : Integer; out AValue : Integer) : Boolean;
 var
   i : Integer;
-  len : Integer;
 begin
-  // TestCase values such as '1988-10-21T17:44:23.456Z' / '+02:30' are wall-clock
-  // timestamps; the suffix is not applied. StrToDateTimeDef rejects those suffixes
-  // and returns 0 (30.12.1899), which is what the ISO-8601 verbose tests hit.
-  Result := ASource;
-  len := Length(Result);
-  if len = 0 then
-    Exit;
-
-  if CharInSet(Result[len], ['Z', 'z']) then
+  AValue := 0;
+  Result := (AIndex >= 1) and (AIndex + ACount - 1 <= Length(ASource));
+  i := AIndex;
+  while Result and (i < AIndex + ACount) do
   begin
-    SetLength(Result, len - 1);
-    Exit;
-  end;
-
-  // yyyy-mm-dd is 10 characters; any later '+' or '-' is a timezone offset.
-  for i := 11 to len do
-  begin
-    if CharInSet(Result[i], ['+', '-']) then
-    begin
-      SetLength(Result, i - 1);
-      Exit;
-    end;
+    Result := CharInSet(ASource[i], ['0'..'9']);
+    if Result then
+      AValue := AValue * 10 + Ord(ASource[i]) - Ord('0');
+    Inc(i);
   end;
 end;
 
-// ISO 8601 first, then the invariant culture, so that a value has the same meaning on every machine;
-// the machine locale is the last resort, for test cases written in the local format.
-function Iso8601FormatSettings : TFormatSettings;
+//hh:mm, hh:mm:ss, or hh:mm:ss followed by '.' or ',' and the digits of a decimal fraction of a second ('.5' is half a
+//second, where the RTL reads 5 milliseconds).  On success APosition is the position after the time.
+function TryReadIso8601Time(const ASource : string; var APosition : Integer; out ATime : TDateTime) : Boolean;
+var
+  hour : Integer;
+  minute : Integer;
+  second : Integer;
+  fraction : Double;
+  scale : Double;
 begin
-  Result := TFormatSettings.Invariant();
-  Result.ShortDateFormat := 'yyyy/mm/dd';
-  Result.DateSeparator := '-';
-  Result.ShortTimeFormat := 'hh:nn:ss\.nnn';
-  Result.TimeSeparator := ':';
+  second := 0;
+  fraction := 0;
+  Result := TryReadDigits(ASource, APosition, 2, hour) and (APosition + 2 <= Length(ASource))
+    and (ASource[APosition + 2] = ':') and TryReadDigits(ASource, APosition + 3, 2, minute);
+  if not Result then
+    Exit;
+  Inc(APosition, 5);
+  if (APosition <= Length(ASource)) and (ASource[APosition] = ':') then
+  begin
+    Result := TryReadDigits(ASource, APosition + 1, 2, second);
+    if not Result then
+      Exit;
+    Inc(APosition, 3);
+    if (APosition <= Length(ASource)) and CharInSet(ASource[APosition], ['.', ',']) then
+    begin
+      Inc(APosition);
+      Result := (APosition <= Length(ASource)) and CharInSet(ASource[APosition], ['0'..'9']);
+      scale := 0.1;
+      while (APosition <= Length(ASource)) and CharInSet(ASource[APosition], ['0'..'9']) do
+      begin
+        fraction := fraction + (Ord(ASource[APosition]) - Ord('0')) * scale;
+        scale := scale / 10;
+        Inc(APosition);
+      end;
+    end;
+  end;
+  Result := Result and TryEncodeTime(hour, minute, second, 0, ATime);
+  if Result then
+    ATime := ATime + fraction / SecsPerDay;
+end;
+
+//True when the rest of the text from APosition is 'Z', or '+' or '-' followed by hh, hhmm or hh:mm.
+function IsIso8601TimeZone(const ASource : string; APosition : Integer) : Boolean;
+var
+  len : Integer;
+  hour : Integer;
+  minute : Integer;
+begin
+  len := Length(ASource) - APosition + 1;
+  if len = 1 then
+    Exit(CharInSet(ASource[APosition], ['Z', 'z']));
+  Result := ((len = 3) or (len = 5) or (len = 6)) and CharInSet(ASource[APosition], ['+', '-'])
+    and TryReadDigits(ASource, APosition + 1, 2, hour) and (hour <= 23);
+  if Result and (len > 3) then
+    Result := ((len = 5) or (ASource[APosition + 3] = ':')) and TryReadDigits(ASource, Length(ASource) - 1, 2, minute)
+      and (minute <= 59);
+end;
+
+//An ISO 8601 time and nothing else, optionally followed by a time zone, which is ignored as for a date and time.
+function TryStrToIso8601Time(const ASource : string; out ATime : TDateTime) : Boolean;
+var
+  position : Integer;
+begin
+  position := 1;
+  Result := TryReadIso8601Time(ASource, position, ATime)
+    and ((position > Length(ASource)) or IsIso8601TimeZone(ASource, position));
+end;
+
+//yyyy-mm-dd, then (unless ADateOnly) optionally 'T' or a space and a time, then optionally a time zone.  The zone is
+//ignored: TestCase values are wall-clock timestamps, and the value is the time as written.
+function TryStrToIso8601DateTime(const ASource : string; ADateOnly : Boolean; out AValue : TDateTime) : Boolean;
+var
+  year : Integer;
+  month : Integer;
+  day : Integer;
+  position : Integer;
+  time : TDateTime;
+begin
+  Result := (Length(ASource) >= 10) and TryReadDigits(ASource, 1, 4, year) and (ASource[5] = '-')
+    and TryReadDigits(ASource, 6, 2, month) and (ASource[8] = '-') and TryReadDigits(ASource, 9, 2, day)
+    and TryEncodeDate(year, month, day, AValue);
+  if (not Result) or (Length(ASource) = 10) then
+    Exit;
+  position := 12;
+  Result := (not ADateOnly) and CharInSet(ASource[11], ['T', 't', ' ']) and TryReadIso8601Time(ASource, position, time)
+    and ((position > Length(ASource)) or IsIso8601TimeZone(ASource, position));
+  //Before 30/12/1899 a TDateTime is negative and its time is subtracted, as in TryStrToDateTime.
+  if Result then
+    if AValue < 0 then
+      AValue := AValue - time
+    else
+      AValue := AValue + time;
+end;
+
+//TryStrToDateTime also reads a date in the wrong order when the last digits of its year can be taken for an hour:
+//'22/06/2020' under yyyy/mm/dd is 20 June 2022 at 20:00.  So a reading counts only when the text is a date, a time, or
+//a date, a space and a time that read the same value on their own.
+function TryStrToDateTimeExactly(const ASource : string; out AValue : TDateTime;
+  const AFormatSettings : TFormatSettings) : Boolean;
+var
+  i : Integer;
+  datePart : TDateTime;
+  timePart : TDateTime;
+begin
+  Result := TryStrToDateTime(ASource, AValue, AFormatSettings);
+  if not Result then
+    Exit;
+  if TryStrToDate(ASource, datePart, AFormatSettings) then
+    Exit(datePart = AValue);
+  if TryStrToTime(ASource, timePart, AFormatSettings) then
+    Exit(timePart = AValue);
+  for i := Length(ASource) downto 2 do
+    if (ASource[i] = ' ') and TryStrToDate(Copy(ASource, 1, i - 1), datePart, AFormatSettings) then
+      //For a date before 1899 the time is subtracted, as TryStrToDateTime does.  Compared to within half a millisecond,
+      //because Win32 adds in extended precision; a misread differs by hours or days.
+      Exit(TryStrToTime(Copy(ASource, i + 1, MaxInt), timePart, AFormatSettings)
+        and (Abs(Abs(AValue) - (Abs(datePart) + timePart)) < 0.5 / MSecsPerDay));
+  Result := False;
+end;
+
+//The value of whichever reading succeeded; False when neither did, or when both did and they disagree.
+function ChooseUnambiguous(AInvariantRead : Boolean; const AInvariantValue : TDateTime; ALocaleRead : Boolean;
+  const ALocaleValue : TDateTime; out AValue : TDateTime) : Boolean;
+begin
+  if AInvariantRead then
+  begin
+    AValue := AInvariantValue;
+    Result := (not ALocaleRead) or (ALocaleValue = AInvariantValue);
+  end
+  else
+  begin
+    AValue := ALocaleValue;
+    Result := ALocaleRead;
+  end;
+end;
+
+//True when the year ADate was read as is written in full in AValue, as a group of exactly four digits: the only year a
+//date can be read by without guessing.  A two-digit year cannot be told from a day or a month, so '22-06-20' is 22 June
+//2020 read day first and 20 June 2022 read year first, and nothing in the text says which (Ian, 2026-11-02).  Asking
+//for the year that was READ, rather than for any four digits, refuses '6/22/20 10:30:00.0123' and '1/2/20 0010' too,
+//and still accepts a locale that writes spaces inside its dates ('22. 6. 2020').
+function YearWrittenInFull(const AValue : string; const ADate : TDateTime) : Boolean;
+var
+  year : Word;
+  month : Word;
+  day : Word;
+  yearText : string;
+  i : Integer;
+  start : Integer;
+begin
+  DecodeDate(ADate, year, month, day);
+  yearText := Format('%.4d', [year]);
+  Result := False;
+  start := 0;
+  for i := 1 to Length(AValue) + 1 do
+    if (i <= Length(AValue)) and CharInSet(AValue[i], ['0'..'9']) then
+    begin
+      if start = 0 then
+        start := i;
+    end
+    else if start > 0 then
+    begin
+      if Copy(AValue, start, i - start) = yearText then
+        Exit(True);
+      start := 0;
+    end;
+end;
+
+//True when AValue is a time and nothing else: it reads as a time and not as a date, in the invariant format or the
+//locale.  Under fi-FI, '22.06.20' reads as both 22:06:20 and a date, so it is a date with a two-digit year, not a time.
+function IsTimeOnly(const AValue : string) : Boolean;
+var
+  value : TDateTime;
+begin
+  Result := (TryStrToTime(AValue, value, TFormatSettings.Invariant) or TryStrToTime(AValue, value))
+    and not TryStrToDate(AValue, value, TFormatSettings.Invariant) and not TryStrToDate(AValue, value);
 end;
 
 function Str2DateTimeValue(const ASource : string; out AResult : TValue) : Boolean;
 var
   dateTime : TDateTime;
+  invariantDateTime : TDateTime;
+  localeDateTime : TDateTime;
+  invariantRead : Boolean;
+  localeRead : Boolean;
 begin
-  Result := TryStrToDateTime(StripIso8601TimeZone(ASource), dateTime, Iso8601FormatSettings)
-    or TryStrToDateTime(ASource, dateTime, TFormatSettings.Invariant)
-    or TryStrToDateTime(ASource, dateTime);
+  Result := TryStrToIso8601DateTime(ASource, False, dateTime) or TryStrToIso8601Time(ASource, dateTime);
+  if not Result then
+  begin
+    invariantRead := TryStrToDateTimeExactly(ASource, invariantDateTime, TFormatSettings.Invariant);
+    localeRead := TryStrToDateTimeExactly(ASource, localeDateTime, FormatSettings);
+    Result := ChooseUnambiguous(invariantRead, invariantDateTime, localeRead, localeDateTime, dateTime);
+    //A date needs its year in full; a time on its own has no year to write.
+    if Result and not IsTimeOnly(ASource) then
+      Result := YearWrittenInFull(ASource, dateTime);
+  end;
   if Result then
     AResult := TValue.From<TDateTime>(dateTime);
 end;
@@ -2487,10 +2656,18 @@ end;
 function Str2TimeValue(const ASource : string; out AResult : TValue) : Boolean;
 var
   time : TDateTime;
+  invariantTime : TDateTime;
+  localeTime : TDateTime;
+  invariantRead : Boolean;
+  localeRead : Boolean;
 begin
-  Result := TryStrToTime(ASource, time, Iso8601FormatSettings)
-    or TryStrToTime(ASource, time, TFormatSettings.Invariant)
-    or TryStrToTime(ASource, time);
+  Result := TryStrToIso8601Time(ASource, time);
+  if not Result then
+  begin
+    invariantRead := TryStrToTime(ASource, invariantTime, TFormatSettings.Invariant);
+    localeRead := TryStrToTime(ASource, localeTime);
+    Result := ChooseUnambiguous(invariantRead, invariantTime, localeRead, localeTime, time);
+  end;
   if Result then
     AResult := TValue.From<TDateTime>(time);
 end;
@@ -2498,10 +2675,21 @@ end;
 function Str2DateValue(const ASource : string; out AResult : TValue) : Boolean;
 var
   date : TDateTime;
+  invariantDate : TDateTime;
+  localeDate : TDateTime;
+  invariantRead : Boolean;
+  localeRead : Boolean;
 begin
-  Result := TryStrToDate(ASource, date, Iso8601FormatSettings)
-    or TryStrToDate(ASource, date, TFormatSettings.Invariant)
-    or TryStrToDate(ASource, date);
+  Result := TryStrToIso8601DateTime(ASource, True, date);
+  if not Result then
+  begin
+    invariantRead := TryStrToDate(ASource, invariantDate, TFormatSettings.Invariant);
+    localeRead := TryStrToDate(ASource, localeDate);
+    Result := ChooseUnambiguous(invariantRead, invariantDate, localeRead, localeDate, date);
+    //A date needs its year in full.
+    if Result then
+      Result := YearWrittenInFull(ASource, date);
+  end;
   if Result then
     AResult := TValue.From<TDate>(date);
 end;
@@ -2556,10 +2744,23 @@ begin
   end;
 end;
 
+//'$FF', '0xFF' and 'xFF', with a leading space or '+', as StrToInt64 reads them.
+function IsHexLiteral(const AText : string) : Boolean;
+var
+  text : string;
+begin
+  text := Trim(AText);
+  if (text <> '') and (text[1] = '+') then
+    Delete(text, 1, 1);
+  Result := (text <> '') and (CharInSet(text[1], ['$', 'x', 'X'])
+    or ((Length(text) > 1) and (text[1] = '0') and CharInSet(text[2], ['x', 'X'])));
+end;
+
 function ConvStr2Int(const ASource : TValue; ATarget : PTypeInfo; out AResult : TValue) : Boolean;
 var
   LTypeData : PTypeData;
   LValue : Int64;
+  LBits : Integer;
 begin
   try
     if ATarget = TypeInfo(TAlphaColor) then
@@ -2572,8 +2773,21 @@ begin
     on EConvertError do
       Exit(False);
   end;
-  // Range-check before FromOrdinal, which would silently truncate ('300' -> Byte 44).
   LTypeData := GetTypeData(ATarget);
+  // A hex value that fits the type's width is its bit pattern, as it is in code: '$FFFFFFFF' is the Integer -1 (upstream
+  // #522).  Only for a signed type that covers its whole width: in the subrange -10..10, '$FF' is 255, which does not fit.
+  case LTypeData.OrdType of
+    otSByte : LBits := 8;
+    otSWord : LBits := 16;
+    otSLong : LBits := 32;
+  else
+    LBits := 0;
+  end;
+  if (LBits > 0) and (LTypeData.MinValue = -(Int64(1) shl (LBits - 1)))
+    and (LTypeData.MaxValue = (Int64(1) shl (LBits - 1)) - 1) and (LValue > LTypeData.MaxValue)
+    and (LValue < (Int64(1) shl LBits)) and IsHexLiteral(ASource.AsString) then
+    LValue := LValue - (Int64(1) shl LBits);
+  // Range-check before FromOrdinal, which would silently truncate ('300' -> Byte 44).
   if LTypeData.OrdType = otULong then
     Result := (LValue >= Cardinal(LTypeData.MinValue)) and (LValue <= Cardinal(LTypeData.MaxValue))
   else

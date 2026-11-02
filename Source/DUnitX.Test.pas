@@ -270,6 +270,12 @@ type
     ///   Runs the test body; Execute times it against [MaxTime]. The base implementation calls the bound method.
     /// </summary>
     procedure ExecuteMethod; virtual;
+    /// <summary>
+    ///   True when the test states that a [MaxTime] interruption is its expected outcome ([WillRaise(ETimedOut)],
+    ///   exact or exDescendant: the watchdog raises ETimedOut itself); the base test expects no exception.
+    /// </summary>
+    /// <returns>Whether an interruption the body's [WillRaise] check accepted is a pass.</returns>
+    function ExpectsTimeout : Boolean; virtual;
   public
     /// <summary>
     ///   Creates a test bound to a fixture method.
@@ -331,6 +337,11 @@ type
     ///   this test) made a reference cycle that leaked the whole run.
     /// </remarks>
     procedure ExecuteMethod; override;
+    /// <summary>
+    ///   True when the expected exception is ETimedOut, the class the watchdog raises.
+    /// </summary>
+    /// <returns>Whether the test expects its [MaxTime] interruption.</returns>
+    function ExpectsTimeout : Boolean; override;
   public
     /// <summary>
     ///   Creates a test that expects its body to raise.
@@ -420,13 +431,18 @@ type
     /// <summary>
     ///   Invokes the method with the case's arguments, applying [WillRaise] to each case as to a plain test.
     /// </summary>
-    /// <exception cref="EArgumentException">
+    /// <exception cref="ETestFrameworkException">
     ///   Raised when the case's values did not match the method's parameters (count or conversion).
     /// </exception>
     /// <exception cref="ETestFailure">
     ///   Raised when [WillRaise] is set and the method raises nothing or a different exception class.
     /// </exception>
     procedure ExecuteMethod; override;
+    /// <summary>
+    ///   True when the case's expected exception is ETimedOut, the class the watchdog raises.
+    /// </summary>
+    /// <returns>Whether the case expects its [MaxTime] interruption.</returns>
+    function ExpectsTimeout : Boolean; override;
     /// <summary>
     ///   Rebinds the case to a new fixture instance.
     /// </summary>
@@ -504,7 +520,7 @@ type
     /// <summary>
     ///   Reports the stored problem as an error.
     /// </summary>
-    /// <exception cref="EArgumentException">
+    /// <exception cref="ETestFrameworkException">
     ///   Always raised, with the stored message.
     /// </exception>
     procedure ExecuteMethod; override;
@@ -593,6 +609,9 @@ var
     begin
       timeout.Stop;
       FTimedOut := timeout.TimedOut;
+      //[WillRaise(ETimedOut)] accepted the interruption: the timeout was the expected outcome.
+      if timeout.Interrupted and ExpectsTimeout then
+        Exit;
       timeout.RaiseIfTimedOut;
     end;
   end;
@@ -624,6 +643,12 @@ begin
         FTimedOut := True;
         raise;
       end;
+      //Assert.Ignore is the test's own choice, even after it caught the interruption, so it stands.
+      on ETestIgnored do
+      begin
+        FTimedOut := (timeout <> nil) and timeout.Interrupted;
+        raise;
+      end;
       //An interruption caught and replaced on its way out ([WillRaise], Assert.WillRaise, or the test's own except
       //raising a failure) is still the timeout, not what replaced it.
       on Exception do
@@ -647,6 +672,11 @@ end;
 procedure TDUnitXTest.ExecuteMethod;
 begin
   FMethod();
+end;
+
+function TDUnitXTest.ExpectsTimeout : Boolean;
+begin
+  Result := False;
 end;
 
 function TDUnitXTest.GetActive : boolean;
@@ -846,6 +876,10 @@ begin
       typeName := '(untyped)';
     if not converted then
     begin
+      //A date that does not convert is nearly always one that could be misread: say how to write it.
+      if (reason = '') and Assigned(parameters[index].ParamType) and
+        ((parameters[index].ParamType.Handle = TypeInfo(TDate)) or (parameters[index].ParamType.Handle = TypeInfo(TDateTime))) then
+        reason := STestCaseDateHint;
       FArgError := Format(STestCaseValueConvert, [GetName, args[index].ToString, parameters[index].Name, typeName, reason]);
       Exit;
     end;
@@ -862,7 +896,7 @@ end;
 procedure TDUnitXTestCase.ExecuteMethod;
 begin
   if FArgError <> '' then
-    raise EArgumentException.Create(FArgError);
+    raise ETestFrameworkException.Create(FArgError);
   //[WillRaise] applies to each case of the method, as it does to a plain test.
   if FExpectedException = nil then
     InvokeMethod
@@ -870,6 +904,11 @@ begin
     Assert.WillRaiseDescendant(InvokeMethod, FExpectedException)
   else
     Assert.WillRaise(InvokeMethod, FExpectedException);
+end;
+
+function TDUnitXTestCase.ExpectsTimeout : Boolean;
+begin
+  Result := (FExpectedException <> nil) and FExpectedException.InheritsFrom(ETimedOut);
 end;
 
 procedure TDUnitXTestCase.InvokeMethod;
@@ -925,6 +964,11 @@ begin
     Assert.WillRaise(FMethod, FExpectedException);
 end;
 
+function TDUnitXExceptionTest.ExpectsTimeout : Boolean;
+begin
+  Result := (FExpectedException <> nil) and FExpectedException.InheritsFrom(ETimedOut);
+end;
+
 { TDUnitXErrorTest }
 
 constructor TDUnitXErrorTest.Create(const AFixture : ITestFixture; const AMethodName, AName, ACategory, AError : string);
@@ -935,7 +979,7 @@ end;
 
 procedure TDUnitXErrorTest.ExecuteMethod;
 begin
-  raise EArgumentException.Create(FError);
+  raise ETestFrameworkException.Create(FError);
 end;
 
 end.

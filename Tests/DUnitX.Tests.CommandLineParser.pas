@@ -204,6 +204,14 @@ type
     procedure Nested_Relative_Options_File_Resolves_Against_Its_Parent_Folder;
 
     /// <summary>
+    ///   Proves '@&lt;file&gt;' reads an options file even when no options-file option is registered, and that an
+    ///   '@' name inside it is found beside that file, not in the current directory: '@' used to be routed through a
+    ///   registered options-file option, so without one it failed as an unknown option.  Upstream #507.
+    /// </summary>
+    [Test]
+    procedure At_Prefix_In_An_Options_File_Is_Relative_To_That_File;
+
+    /// <summary>
     ///   Proves the bare argument that names the XML output file must be an .xml file name: a test name given without
     ///   --run used to become the output file, so every test ran and a file of that name was overwritten.
     /// </summary>
@@ -340,6 +348,44 @@ begin
   end;
   Assert.IsFalse(parseResult.HasErrors, parseResult.ErrorText);
   Assert.AreEqual('abc', test, False, 'The nested options file was not read');
+end;
+
+procedure TCommandLineParserTests.At_Prefix_In_An_Options_File_Is_Relative_To_That_File;
+var
+  def : IOptionDefinition;
+  fromFile : boolean;
+  folder, oldDir : string;
+  parseResult : ICommandLineParseResult;
+  sList : TStringList;
+begin
+  fromFile := false;
+  def := TOptionsRegistry.RegisterOption<boolean>('fromfile', 'ff',
+    procedure(value : boolean)
+    begin
+      fromFile := value;
+    end);
+  def.HasValue := False;
+  //outer.txt names inner.txt without a folder; the current directory is not their folder.
+  folder := TPath.Combine(TPath.GetTempPath, 'DUnitX.Tests.AtNested.' + TGUID.NewGuid.ToString);
+  TDirectory.CreateDirectory(folder);
+  oldDir := GetCurrentDir;
+  try
+    TFile.WriteAllText(TPath.Combine(folder, 'inner.txt'), '--fromfile');
+    TFile.WriteAllText(TPath.Combine(folder, 'outer.txt'), '@inner.txt');
+    SetCurrentDir(TPath.GetTempPath);
+    sList := TStringList.Create;
+    try
+      sList.Add('@' + TPath.Combine(folder, 'outer.txt'));
+      parseResult := TOptionsRegistry.Parse(sList);
+    finally
+      sList.Free;
+    end;
+  finally
+    SetCurrentDir(oldDir);
+    TDirectory.Delete(folder, True);
+  end;
+  Assert.IsFalse(parseResult.HasErrors, parseResult.ErrorText);
+  Assert.IsTrue(fromFile, 'the option in the nested file was not read');
 end;
 
 procedure TCommandLineParserTests.Bare_Argument_Must_Name_An_XML_File;

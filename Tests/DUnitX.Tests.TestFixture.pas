@@ -30,6 +30,7 @@ unit DUnitX.Tests.TestFixture;
 interface
 
 uses
+  DUnitX.Exceptions,
   DUnitX.TestFramework,
   DUnitX.TestFixture;
 
@@ -187,12 +188,13 @@ type
     procedure MaxTimeIsZero;
 
     /// <summary>
-    ///   Ignored: would prove a 150 ms test under [MaxTime(100)] times out. It is ignored because a timeout fails the
-    ///   test itself; TRunnerBehaviourTests.MaxTimeOverrunIsCaughtWhateverTheTiming proves this through a private
-    ///   runner instead.
+    ///   Proves a 150 ms test under [MaxTime(100)] is interrupted: [WillRaise(ETimedOut)] states that the timeout is
+    ///   its expected outcome, so it passes only if the watchdog stops it (it fails if the body reaches Assert.Fail).
+    ///   It was ignored until 2026-11-02, when a timeout could not be expected.
     /// </summary>
-    [Test, Ignore('A timeout fails the test itself; MaxTimeOverrunIsCaughtWhateverTheTiming proves it via a private runner')]
+    [Test]
     [MaxTime(100)]
+    [WillRaise(ETimedOut)]
     procedure TestTimeout;
 
     /// <summary>
@@ -262,6 +264,18 @@ type
     /// </summary>
     [Test]
     procedure A_Caught_Interruption_Is_Repeated;
+    /// <summary>
+    ///   Proves [WillRaise(ETimedOut)] passes when the watchdog interrupts the test: it states that the timeout is the
+    ///   expected outcome, so reporting it as the timeout would leave no way to write such a test.  Upstream #541.
+    /// </summary>
+    [Test]
+    procedure An_Interrupted_Test_That_Expects_ETimedOut_Passes;
+    /// <summary>
+    ///   Proves Assert.Ignore after catching the interruption is reported as ignored: ignoring is the test's own
+    ///   choice, so the timeout does not replace it.  Upstream #541.
+    /// </summary>
+    [Test]
+    procedure A_Caught_Interruption_The_Test_Ignores_Is_Ignored;
   end;
 {$M-}
 
@@ -376,6 +390,18 @@ type
     /// </summary>
     [Test]
     procedure RepeatedTestsRunWithTheirSetupOnTheirInstance;
+    /// <summary>
+    ///   Proves each [RepeatTest] repetition gets the [Setup] and [TearDown] its fixture inherits from a base class:
+    ///   three repetitions, three Setups, three TearDowns, each repetition after its own Setup.  Upstream #479.
+    /// </summary>
+    [Test]
+    procedure RepeatTest_Gets_The_Setup_And_TearDown_Of_A_Base_Class;
+    /// <summary>
+    ///   Proves each [RepeatTest] repetition gets the [Setup] and [TearDown] declared AFTER the repeated method in the
+    ///   same class, which upstream's repetitions missed (#479).
+    /// </summary>
+    [Test]
+    procedure RepeatTest_Gets_The_Setup_And_TearDown_Declared_After_It;
     /// <summary>
     ///   Proves that when [SetupFixture] fails no test of the fixture runs, repetitions included, each is reported as
     ///   an error, and an [Ignore]d test is still reported as ignored rather than as an error.
@@ -576,7 +602,6 @@ uses
   DUnitX.InternalInterfaces,
   DUnitX.TestRunner,
   System.Classes,
-  DUnitX.Exceptions,
   DUnitX.FixtureProvider,
   DUnitX.RunResults,
   DUnitX.ServiceLocator,
@@ -685,8 +710,14 @@ begin
 end;
 
 procedure TTestMaxTimeAttribute.TestTimeout;
+var
+  start : Cardinal;
 begin
-  Sleep(150);
+  //A busy loop, which the watchdog interrupts where it stands, bounded far beyond the [MaxTime] of 100 ms so that a
+  //slow or loaded machine still interrupts it in time (a Sleep is only interrupted when it returns).
+  start := GetTickCount;
+  while GetTickCount - start < 3000 do
+    ;
   Assert.Fail('Timeout should catch this test.'); // the test should time out before this point
 end;
 
@@ -848,6 +879,10 @@ var
   GLogSetupCalls : Integer;
   /// <summary>Set if TRunnerSetupFixtureIgnores's [TearDownFixture] ran after its [SetupFixture] ignored the fixture.</summary>
   GTearDownFixtureRan : boolean;
+  /// <summary>Number of times the [Setup] of a repeat fixture of #479 ran.</summary>
+  GRepeatSetups : Integer;
+  /// <summary>Number of times the [TearDown] of a repeat fixture of #479 ran.</summary>
+  GRepeatTearDowns : Integer;
 
 type
 {$M+}
@@ -946,6 +981,63 @@ type
     [RepeatTest(2)]
     [NamedTestCase('One', '1')]
     procedure RepeatedCaseSeesItsSetup(const AValue : Integer);
+  end;
+
+  /// <summary>
+  ///   Base class declaring the [Setup] and [TearDown] that TRunnerRepeatWithBaseSetupAndTearDown's repetitions must
+  ///   each get.  Upstream #479.
+  /// </summary>
+  TRunnerSetupAndTearDownBase = class
+  public
+    /// <summary>
+    ///   Inherited per-test setup; counts in GRepeatSetups.
+    /// </summary>
+    [Setup]
+    procedure Setup;
+    /// <summary>
+    ///   Inherited per-test teardown; counts in GRepeatTearDowns.
+    /// </summary>
+    [TearDown]
+    procedure TearDown;
+  end;
+
+  /// <summary>
+  ///   Runner fixture whose repeated test inherits its [Setup] and [TearDown] from a base class.  Upstream #479.
+  /// </summary>
+  TRunnerRepeatWithBaseSetupAndTearDown = class(TRunnerSetupAndTearDownBase)
+  public
+    /// <summary>
+    ///   Repeated three times; fails on any repetition not preceded by its own Setup and by the previous one's
+    ///   TearDown.
+    /// </summary>
+    [Test]
+    [RepeatTest(3)]
+    procedure Repeated;
+  end;
+
+  /// <summary>
+  ///   Runner fixture whose repeated test is declared BEFORE its [Setup] and [TearDown].  Upstream #479: the
+  ///   repetitions' child fixture was given the Setup and TearDown seen so far, which was none.
+  /// </summary>
+  TRunnerRepeatBeforeSetupAndTearDown = class
+  public
+    /// <summary>
+    ///   Repeated three times; fails on any repetition not preceded by its own Setup and by the previous one's
+    ///   TearDown.
+    /// </summary>
+    [Test]
+    [RepeatTest(3)]
+    procedure Repeated;
+    /// <summary>
+    ///   Per-test setup declared after the repeated test; counts in GRepeatSetups.
+    /// </summary>
+    [Setup]
+    procedure Setup;
+    /// <summary>
+    ///   Per-test teardown declared after the repeated test; counts in GRepeatTearDowns.
+    /// </summary>
+    [TearDown]
+    procedure TearDown;
   end;
 
   /// <summary>
@@ -1729,6 +1821,36 @@ begin
   FSetupDone := false;
 end;
 
+procedure TRunnerSetupAndTearDownBase.Setup;
+begin
+  Inc(GRepeatSetups);
+end;
+
+procedure TRunnerSetupAndTearDownBase.TearDown;
+begin
+  Inc(GRepeatTearDowns);
+end;
+
+procedure TRunnerRepeatWithBaseSetupAndTearDown.Repeated;
+begin
+  Assert.AreEqual(GRepeatTearDowns + 1, GRepeatSetups, 'one Setup per repetition, and a TearDown after each before it');
+end;
+
+procedure TRunnerRepeatBeforeSetupAndTearDown.Repeated;
+begin
+  Assert.AreEqual(GRepeatTearDowns + 1, GRepeatSetups, 'one Setup per repetition, and a TearDown after each before it');
+end;
+
+procedure TRunnerRepeatBeforeSetupAndTearDown.Setup;
+begin
+  Inc(GRepeatSetups);
+end;
+
+procedure TRunnerRepeatBeforeSetupAndTearDown.TearDown;
+begin
+  Inc(GRepeatTearDowns);
+end;
+
 procedure TRunnerSetupFixtureFails.SetupFixture;
 begin
   raise Exception.Create('setup fixture boom');
@@ -2259,6 +2381,34 @@ begin
     CheckResult(results, Format('RepeatedTestSeesItsSetup-%d-of-3', [i]), TTestResultType.Pass);
   for i := 1 to 2 do
     CheckResult(results, Format('RepeatedCaseSeesItsSetup-%d-of-2.One', [i]), TTestResultType.Pass);
+end;
+
+procedure TRunnerBehaviourTests.RepeatTest_Gets_The_Setup_And_TearDown_Of_A_Base_Class;
+var
+  results : IRunResults;
+  i : Integer;
+begin
+  GRepeatSetups := 0;
+  GRepeatTearDowns := 0;
+  results := RunFixture(BuildFixture(TRunnerRepeatWithBaseSetupAndTearDown));
+  for i := 1 to 3 do
+    CheckResult(results, Format('Repeated-%d-of-3', [i]), TTestResultType.Pass);
+  Assert.AreEqual(3, GRepeatSetups, 'Setup runs once per repetition');
+  Assert.AreEqual(3, GRepeatTearDowns, 'TearDown runs once per repetition');
+end;
+
+procedure TRunnerBehaviourTests.RepeatTest_Gets_The_Setup_And_TearDown_Declared_After_It;
+var
+  results : IRunResults;
+  i : Integer;
+begin
+  GRepeatSetups := 0;
+  GRepeatTearDowns := 0;
+  results := RunFixture(BuildFixture(TRunnerRepeatBeforeSetupAndTearDown));
+  for i := 1 to 3 do
+    CheckResult(results, Format('Repeated-%d-of-3', [i]), TTestResultType.Pass);
+  Assert.AreEqual(3, GRepeatSetups, 'Setup runs once per repetition');
+  Assert.AreEqual(3, GRepeatTearDowns, 'TearDown runs once per repetition');
 end;
 
 procedure TRunnerBehaviourTests.AfterSetupFixtureFailsNothingRunsAndIgnoredStayIgnored;
@@ -2855,6 +3005,7 @@ type
     procedure AlertableWait;
     procedure WaitsAlertably;
     procedure CatchesTheInterruptionThenHangsAgain;
+    procedure CatchesTheInterruptionAndIgnores;
   end;
 
 var
@@ -2935,6 +3086,17 @@ begin
   end;
   LoopUntilStopped;
   GInterruptRanToTheEnd := True;
+end;
+
+//Catches the interruption and ignores itself, as a test that finds its environment too slow might.
+procedure TMaxTimeInterruptClass.CatchesTheInterruptionAndIgnores;
+begin
+  try
+    LoopUntilStopped;
+  except
+    on ETimedOut do
+      Assert.Ignore('too slow here');
+  end;
 end;
 
 //A fixture of the named methods of TMaxTimeInterruptClass, in order, each with the [MaxTime] at the same index and, if
@@ -3112,6 +3274,29 @@ begin
     results);
   Assert.AreEqual(1, GInterruptCaught, 'the test did not catch the first interruption');
   CheckInterrupted(results, elapsed, INTERRUPT_UNINTERRUPTED - 500);
+end;
+
+procedure TMaxTimeInterruptTests.An_Interrupted_Test_That_Expects_ETimedOut_Passes;
+var
+  results : IRunResults;
+  elapsed : Cardinal;
+begin
+  elapsed := RunInterruptFixture(CreateInterruptFixture(['BusyLoop'], [INTERRUPT_MAX_TIME], ETimedOut), results);
+  Assert.AreEqual(1, results.TestCount, 'the number of tests');
+  Assert.AreEqual(1, results.PassCount, 'a test that expects the timeout did not pass');
+  Assert.IsFalse(GInterruptRanToTheEnd, 'the test ran to its end instead of being interrupted');
+  Assert.IsTrue(elapsed < INTERRUPT_UNINTERRUPTED div 2, Format('the test was stopped after %d ms, not soon after its ' +
+    '[MaxTime] of %d ms', [elapsed, INTERRUPT_MAX_TIME]));
+end;
+
+procedure TMaxTimeInterruptTests.A_Caught_Interruption_The_Test_Ignores_Is_Ignored;
+var
+  results : IRunResults;
+begin
+  RunInterruptFixture(CreateInterruptFixture(['CatchesTheInterruptionAndIgnores'], [INTERRUPT_MAX_TIME]), results);
+  Assert.AreEqual(1, results.TestCount, 'the number of tests');
+  Assert.AreEqual(1, results.IgnoredCount, 'a test that ignored itself was not reported ignored');
+  Assert.AreEqual(0, results.FailureCount, 'a test that ignored itself was reported as failing');
 end;
 
 initialization

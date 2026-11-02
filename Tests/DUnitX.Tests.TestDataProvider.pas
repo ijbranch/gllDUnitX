@@ -277,6 +277,16 @@ type
     [TestCase('abc')]
     procedure NotAnInteger(const value : integer);
     /// <summary>
+    ///   A [TestCase] date with a two-digit year, 22 June 2020 day first and 20 June 2022 year first; the case must
+    ///   error and say how to write it.
+    /// </summary>
+    /// <param name="value">
+    ///   The one parameter.
+    /// </param>
+    [Test]
+    [TestCase('22-06-20')]
+    procedure DateWithTwoDigitYear(const value : TDate);
+    /// <summary>
     ///   A [TestCase] with two values for one parameter; the case must error.
     /// </summary>
     /// <param name="value">
@@ -932,6 +942,8 @@ var
 begin
   msg := ExecuteMessage(AFixture, AName);
   Assert.IsTrue(msg <> '', AName + ' errors');
+  //Bad case data is a framework error, as upstream reports it, not an argument error of the test method.
+  Assert.StartsWith('ETestFrameworkException: ', msg, False, AName + ' exception class');
   Assert.Contains(msg, AMessagePart, False, AName + ' message');
 end;
 
@@ -1094,6 +1106,10 @@ begin
 end;
 
 procedure TAutoNamedCases.NotAnInteger(const value : integer);
+begin
+end;
+
+procedure TAutoNamedCases.DateWithTwoDigitYear(const value : TDate);
 begin
 end;
 
@@ -1463,6 +1479,7 @@ var
 begin
   fixture := GenerateCases(TAutoNamedCases);
   CheckErrors(fixture, 'NotAnInteger(abc)', 'value [abc] cannot be converted to parameter [value] of type Integer');
+  CheckErrors(fixture, 'DateWithTwoDigitYear(22-06-20)', 'write it as yyyy-mm-dd');
   CheckErrors(fixture, 'TooManyValues(1,2)', 'supplies 2 value(s) but the method has 1 parameter(s)');
   CheckErrors(fixture, 'TooFewValues(1)', 'supplies 1 value(s) but the method has 2 parameter(s)');
   CheckErrors(fixture, 'NamedNotAnInteger.Named', 'value [abc] cannot be converted to parameter [value] of type Integer');

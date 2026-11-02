@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [In-Service]
 
 ### Added
-
+- (2026-11-02) **Each `[RepeatTest]` repetition gets the `[Setup]` and `[TearDown]` of a base class, and those declared after the repeated method (upstream #479)** — `Tests/DUnitX.Tests.TestFixture.pas`.  `RepeatTest_Gets_The_Setup_And_TearDown_Of_A_Base_Class` and `RepeatTest_Gets_The_Setup_And_TearDown_Declared_After_It` count three Setups and three TearDowns for three repetitions, each repetition after its own Setup.  They passed on first run: this fork keeps repetitions in the fixture itself (`Source/DUnitX.FixtureProvider.pas`), so the copy-too-early fault upstream's `70cee9c` fixed never applied.  Upstream's own two #479 tests also assert that the repetitions form one child fixture, a structure this fork does not have, so they are not taken.
 - (2026-10-26) **`README.md`: the suite's 9 ignored tests are listed, each with why** — `README.md`, `DUnitX.Tests.TestFixture.pas`.  All nine prove DUnitX honours `[Ignore]` or `[RepeatTest(0)]`; none pins a defect.  `TestTimeout`, the one with a blank reason in run reports, now carries its reason in the `[Ignore]` attribute.  **Why:** `verify_change` warns on every ignored test ("check each is listed in the suite README"); Ian asked for that check, 2026-10-26.
 - (2026-10-25) **This change log** — `CHANGELOG.md`.  The suite's own record, per the estate rule that every test
   suite has one; test-only history moved in from `..\CHANGELOG.md` ( 9 entries ).
@@ -30,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- (2026-11-02) **`TestTimeout` runs instead of being ignored; every `TValueHelperTests` test restores the locale** — `DUnitX.Tests.TestFixture.pas`, `DUnitX.Tests.Utils.pas`, `README.md`.  `TestTimeout` expects its own interruption with `[WillRaise(ETimedOut)]`, which passes since the same day, so the suite reports 8 ignored tests, not 9; its body is now a busy loop bounded at 3 s, which the watchdog interrupts where it stands, instead of a `Sleep(150)` that is only interrupted when it returns (50 ms of slack against a 100 ms `[MaxTime]`, found by review).  `TValueHelperTests` restored `FormatSettings` only in its destructor, so a test that set no locale ran under whatever the last one left; a `[TearDown]` now restores it after each test (found by the port's review).
 - (2026-10-26) **Unit-scope names in every `uses` clause** — `Tests/DUnitX.SingleNameSpace.pas`, `Tests/DUnitX.Tests.CommandLineParser.pas`, `Tests/DUnitX.Tests.TestFixture.pas`, `Tests/DUnitX.Tests.TestNameParser.pas`, `Tests/DUnitX.Tests.Utils.pas`, `Tests/DUnitXTestProject.dpr`.  8 bare RTL/VCL unit names in `uses` clauses given their unit-scope names, 1 partly-scoped name (`Generics.Collections`) completed, 1 scoped name respelt as the unit declares itself; generated code is byte-identical in every mode built.  **Why:** Ian, 2026-10-26: "all the gll* forks are our own code because they have all been modified to suite our needs/preferences/standards".  Divergence from upstream: a later upstream merge conflicts wherever upstream edits a converted `uses` line; resolve by taking upstream's change and keeping the scoped spelling.
 
 ### Fixed
