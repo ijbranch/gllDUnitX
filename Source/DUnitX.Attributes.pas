@@ -199,7 +199,7 @@ type
 
   /// <summary>
   ///   This attribute allows you to specify a test Category which can be used
-  ///   when filtering the tests to run.
+  ///   when filtering the tests to run.  On a test method it adds to its fixture's categories.
   /// </summary>
   CategoryAttribute = class(TCustomAttribute)
   private

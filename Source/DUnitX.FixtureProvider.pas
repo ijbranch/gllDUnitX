@@ -115,7 +115,8 @@ type
     /// <remarks>
     ///   An override is bound to the fixture class's own implementation and takes the attributes of the nearest
     ///   declaration that has any, so an overridden test is one test. A [TestCaseProvider] naming an unregistered
-    ///   provider produces an error test rather than silently producing none.
+    ///   provider, or one returning no cases for the method, produces an error test rather than silently producing
+    ///   none.  A method's [Category] adds to its fixture's categories.
     /// </remarks>
     procedure GenerateTests(const context : IFixtureProviderContext; const fixture : ITestFixture);
     /// <summary>
@@ -207,6 +208,42 @@ begin
     Result := Result + AValues[i].ToString;
   end;
   Result := Result + ')';
+end;
+
+//A fixture's categories with a method's [Category] added, comma separated.  Each is trimmed, and empty ones and
+//repeats (compared without case, as the category filters compare them) are left out (upstream #560).
+function AddCategories(const AFixtureCategories : TList<string>; const AMethodCategory : string) : string;
+var
+  categories : TList<string>;
+  category : string;
+
+  function IsHeld(const ACategory : string) : Boolean;
+  var
+    held : string;
+  begin
+    Result := False;
+    for held in categories do
+      if AnsiCompareText(held, ACategory) = 0 then
+        Exit(True);
+  end;
+
+  procedure Add(const ACategory : string);
+  begin
+    if (Trim(ACategory) <> '') and (not IsHeld(Trim(ACategory))) then
+      categories.Add(Trim(ACategory));
+  end;
+
+begin
+  categories := TList<string>.Create;
+  try
+    for category in AFixtureCategories do
+      Add(category);
+    for category in TStrUtils.SplitString(AMethodCategory, ',') do
+      Add(category);
+    Result := TStrUtils.Join(TListStringUtils.ToArray(categories), ',');
+  finally
+    categories.Free;
+  end;
 end;
 
 { TDUnitXFixtureProvider }
@@ -640,9 +677,10 @@ begin
     currentFixture := fixture;
     autoCaseNames := nil;
 
-    //if the test has a category attribute then we'll use it to override the fixtures's category.
+    //A test's category attribute adds to the fixture's categories, so a filter on the fixture's category reaches it
+    //(upstream #560; until 2026-11-02 it replaced them).
     if method.TryGetAttributeOfType<CategoryAttribute>(categoryAttrib) then
-      category := categoryAttrib.Category;
+      category := AddCategories(fixture.Categories, categoryAttrib.Category);
 
     if method.TryGetAttributeOfType<RepeatTestAttribute>(repeatAttrib) then
     begin
@@ -757,6 +795,16 @@ begin
             if (iProvider <> nil) then
             begin
               count := iProvider.GetCaseCount(method.name);
+              //A provider with no cases for the method would otherwise make it vanish from the run (upstream #559).
+              if count <= 0 then
+              begin
+                if tstProviderAttrib.ProviderClass <> nil then
+                  caseName := tstProviderAttrib.ProviderClass.ClassName
+                else
+                  caseName := tstProviderAttrib.ProviderName;
+                currentFixture.Tests.Add(TDUnitXErrorTest.Create(currentFixture, method.Name, method.Name, category,
+                  Format(SEmptyTestCaseProvider, [caseName, method.Name])));
+              end;
               for x := 0 to count - 1 do
               begin
                 caseName := iProvider.GetCaseName(method.name, x);

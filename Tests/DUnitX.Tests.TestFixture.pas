@@ -458,6 +458,26 @@ type
     [Test]
     procedure UnregisteredTestCaseProviderIsAnError;
     /// <summary>
+    ///   Proves that a registered [TestCaseProvider] returning no cases for a method produces an error naming the
+    ///   provider and the method, rather than the method silently vanishing from the run, as an empty
+    ///   [TestCaseSource] already does.  Upstream #559.
+    /// </summary>
+    [Test]
+    procedure EmptyTestCaseProviderIsAnError;
+    /// <summary>
+    ///   Proves that a method's [Category] adds to its fixture's categories instead of replacing them, each held once
+    ///   (trimmed, compared without case, as the filters compare them, in the order first written).  Upstream #560.
+    /// </summary>
+    [Test]
+    procedure MethodCategoryAddsToTheFixtureCategory;
+    /// <summary>
+    ///   Proves that, because a method's [Category] adds to its fixture's, excluding the fixture's category excludes
+    ///   the method, and including either category selects it, as --exclude and --include build their filters.
+    ///   Upstream #560.
+    /// </summary>
+    [Test]
+    procedure CategoryFiltersReachAMethodWithItsOwnCategory;
+    /// <summary>
     ///   Proves the leak check, with a monitor that counts simulated allocations: memory held by the runner's own log
     ///   lists, and the ETestPass object raised by a pass, are not leaks; a test that frees earlier memory (a
     ///   negative delta) is not a leak; a real allocation still is.
@@ -624,7 +644,10 @@ uses
   DUnitX.Filters,
   DUnitX.TestResult,
   DUnitX.ResStrs,
-  DUnitX.MemoryLeakMonitor.Default;
+  DUnitX.MemoryLeakMonitor.Default,
+  DUnitX.InternalDataProvider,
+  DUnitX.TestDataProvider,
+  DUnitX.CategoryExpression;
 
 var
   _TimesRun : Integer;
@@ -1259,6 +1282,41 @@ type
     [Test]
     [TestCaseProvider('DUnitX.Tests.NoSuchProvider')]
     procedure UsesAnUnregisteredProvider(const AValue : Integer);
+  end;
+
+  /// <summary>
+  ///   Runner fixture naming a test-case provider that is registered but returns no cases.
+  /// </summary>
+  TRunnerEmptyProvider = class
+  public
+    /// <summary>
+    ///   Must produce an error naming 'DUnitX.Tests.EmptyProvider' rather than no tests.
+    /// </summary>
+    /// <param name="AValue">
+    ///   Would come from the provider; unused.
+    /// </param>
+    [Test]
+    [TestCaseProvider('DUnitX.Tests.EmptyProvider')]
+    procedure UsesAnEmptyProvider(const AValue : Integer);
+  end;
+
+  /// <summary>
+  ///   Not registered as a fixture: the category tests generate its tests in a fixture whose category is Integration.
+  /// </summary>
+  TRunnerCategorisedMethods = class
+  public
+    /// <summary>
+    ///   Carries its own category, Slow, besides its fixture's.
+    /// </summary>
+    [Test]
+    [Category('Slow')]
+    procedure Slow;
+    /// <summary>
+    ///   Repeats its fixture's category and its own, with spacing and case differences, so each must be held once.
+    /// </summary>
+    [Test]
+    [Category(' integration ,Slow,, slow')]
+    procedure Repeated;
   end;
 
   /// <summary>
@@ -1981,6 +2039,48 @@ procedure TRunnerUnknownProvider.UsesAnUnregisteredProvider(const AValue : Integ
 begin
 end;
 
+procedure TRunnerEmptyProvider.UsesAnEmptyProvider(const AValue : Integer);
+begin
+end;
+
+procedure TRunnerCategorisedMethods.Slow;
+begin
+end;
+
+procedure TRunnerCategorisedMethods.Repeated;
+begin
+end;
+
+type
+  //A registered provider with no cases for any method.
+  TEmptyTestCaseProvider = class(TTestDataProvider)
+  public
+    constructor Create; override;
+    function GetCaseCount(const methodName : string) : Integer; override;
+    function GetCaseName(const methodName : string; const caseNumber : Integer) : string; override;
+    function GetCaseParams(const methodName : string; const caseNumber : Integer) : TValueArray; override;
+  end;
+
+constructor TEmptyTestCaseProvider.Create;
+begin
+  //Nothing to set up; TTestDataProvider.Create is abstract, so it is not called.
+end;
+
+function TEmptyTestCaseProvider.GetCaseCount(const methodName : string) : Integer;
+begin
+  Result := 0;
+end;
+
+function TEmptyTestCaseProvider.GetCaseName(const methodName : string; const caseNumber : Integer) : string;
+begin
+  Result := '';
+end;
+
+function TEmptyTestCaseProvider.GetCaseParams(const methodName : string; const caseNumber : Integer) : TValueArray;
+begin
+  Result := nil;
+end;
+
 procedure TRunnerLeakChecks.PassesWithAssertPass;
 begin
   raise ETestPassCounted.Create('passed with a message');
@@ -2528,6 +2628,68 @@ begin
   results := RunFixture(BuildFixture(TRunnerUnknownProvider));
   Assert.AreEqual(1, results.TestCount, 'one result for the method');
   CheckResult(results, 'UsesAnUnregisteredProvider', TTestResultType.Error, 'DUnitX.Tests.NoSuchProvider');
+end;
+
+procedure TRunnerBehaviourTests.EmptyTestCaseProviderIsAnError;
+var
+  results : IRunResults;
+begin
+  results := RunFixture(BuildFixture(TRunnerEmptyProvider));
+  Assert.AreEqual(1, results.TestCount, 'one result for the method');
+  CheckResult(results, 'UsesAnEmptyProvider', TTestResultType.Error, 'DUnitX.Tests.EmptyProvider');
+  CheckResult(results, 'UsesAnEmptyProvider', TTestResultType.Error, 'no cases');
+end;
+
+//Generates the tests of TRunnerCategorisedMethods in a fixture whose category is Integration, and returns the one
+//named AName.  AFixture keeps the fixture, which the test only references weakly, alive.
+function CategorisedTest(out AFixture : ITestFixture; const AName : string) : ITest;
+var
+  provider : TDUnitXFixtureProvider;
+  providerIntf : IFixtureProvider;
+  test : ITest;
+begin
+  AFixture := TDUnitXTestFixture.Create(TRunnerCategorisedMethods.ClassName, 'Integration', TRunnerCategorisedMethods,
+    TRunnerCategorisedMethods.UnitName);
+  provider := TDUnitXFixtureProvider.Create;
+  providerIntf := provider;
+  TProviderAccess(provider).GenerateTests(nil, AFixture);
+  Result := nil;
+  for test in AFixture.Tests do
+    if test.Name = AName then
+      Result := test;
+  Assert.IsNotNull(Result, 'the test ' + AName + ' is generated');
+end;
+
+//A test's categories, in order, each followed by a semicolon.
+function CategoryList(const ATest : ITest) : string;
+var
+  category : string;
+begin
+  Result := '';
+  for category in ATest.Categories do
+    Result := Result + category + ';';
+end;
+
+procedure TRunnerBehaviourTests.MethodCategoryAddsToTheFixtureCategory;
+var
+  fixture : ITestFixture;
+begin
+  Assert.AreEqual('Integration;Slow;', CategoryList(CategorisedTest(fixture, 'Slow')), False, 'Slow');
+  Assert.AreEqual('Integration;Slow;', CategoryList(CategorisedTest(fixture, 'Repeated')), False, 'Repeated');
+end;
+
+procedure TRunnerBehaviourTests.CategoryFiltersReachAMethodWithItsOwnCategory;
+var
+  fixture : ITestFixture;
+  test : ITest;
+  filter : ITestFilter;
+begin
+  test := CategorisedTest(fixture, 'Slow');
+  //As --exclude:Integration builds it
+  filter := TNotFilter.Create(TCategoryExpression.CreateFilter('Integration'));
+  Assert.IsFalse(filter.Match(test), 'excluded by its fixture''s category');
+  Assert.IsTrue(TCategoryExpression.CreateFilter('Integration').Match(test), 'selected by its fixture''s category');
+  Assert.IsTrue(TCategoryExpression.CreateFilter('Slow').Match(test), 'selected by its own category');
 end;
 
 procedure TRunnerBehaviourTests.LeakCheckCountsOnlyTheTestsOwnGrowth;
@@ -3384,6 +3546,7 @@ initialization
   TDUnitX.RegisterTestFixture(TMaxTimeInterruptTests);
   TDUnitX.RegisterTestFixture(TDUnitXTestFixtureTests);
   TDUnitX.RegisterTestFixture(TRunnerBehaviourTests);
+  TestDataProviderManager.RegisterProvider('DUnitX.Tests.EmptyProvider', TEmptyTestCaseProvider);
 
 end.
 

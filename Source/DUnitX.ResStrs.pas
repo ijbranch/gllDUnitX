@@ -308,6 +308,8 @@ resourcestring
     '(ISO 8601); a two-digit year, or a day and month that could be read either way, does not convert)';
   /// <summary>Error: a TestCaseProvider attribute names an unregistered provider. Args: provider name, method.</summary>
   SUnknownTestCaseProvider = 'Test case provider [%s] used by %s is not registered';
+  /// <summary>Error: a registered TestCaseProvider returned no cases for a method. Args: provider name, method.</summary>
+  SEmptyTestCaseProvider = 'Test case provider [%s] returned no cases for %s';
   /// <summary>
   ///   Error: a [TestCase] separator contains an ASCII letter or digit, the sign of a [TestCase('Name', 'values')]
   ///   written for the old TestCase.  Args: 0 = the values (the old case name), 1 = the separator (the old values).
