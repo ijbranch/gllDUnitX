@@ -179,11 +179,7 @@ implementation
 
 uses
   DUnitX.ResStrs,
-{$IFDEF USE_NS}
   System.SysUtils,
-{$ELSE}
-  SysUtils,
-{$ENDIF}
   DUnitX.AutoDetect.Console,
   DUnitX.ServiceLocator;
 

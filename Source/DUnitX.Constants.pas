@@ -29,17 +29,10 @@ unit DUnitX.Constants;
 interface
 
 const
-{$IFDEF NEXTGEN}
-  /// <summary>Index of the first character of a string (0 on NEXTGEN zero-based-string compilers).</summary>
-  MinStringOffset   : integer = 0;
-  /// <summary>Amount subtracted from Length() to get the index of the last character (1 for zero-based strings).</summary>
-  MaxStringOffset   : integer = 1;
-{$ELSE}
   /// <summary>Index of the first character of a string (1 on the Windows one-based-string compilers).</summary>
   MinStringOffset   : integer = 1;
   /// <summary>Amount subtracted from Length() to get the index of the last character (0 for one-based strings).</summary>
   MaxStringOffset   : integer = 0;
-{$ENDIF}
 
 implementation
 

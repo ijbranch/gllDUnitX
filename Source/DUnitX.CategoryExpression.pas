@@ -151,15 +151,9 @@ uses
   DUnitX.Constants,
   DUnitX.Exceptions,
   DUnitX.ResStrs,
-{$IFDEF USE_NS}
   System.Character,
   System.SysUtils,
   System.StrUtils;
-{$ELSE}
-  Character,
-  SysUtils,
-  StrUtils;
-{$ENDIF}
 
 const
   Operators         : array[1..7] of Char = (',', ';', '-', '|', '+', '(', ')');
@@ -186,7 +180,6 @@ begin
   end;
 end;
 
-{$IFNDEF NEXTGEN}
 function IndexOfAny(const value : string; const AnyOf : array of Char; StartIndex : Integer) : Integer;
 var
   i, j : Integer;
@@ -207,7 +200,6 @@ begin
   end;
   Result := -1;
 end;
-{$ENDIF}
 
 function TCategoryExpression.GetExpression : ITestFilter;
 var
@@ -285,24 +277,6 @@ var
   idx : integer;
 begin
   SkipWhiteSpace;
-{$IFDEF NEXTGEN}
-  if EndOfText then
-    FToken := string.Empty
-  else if NextIsOperator then
-  begin
-    FToken := FText.Substring(FNext, 1);
-    Inc(FNext);
-  end
-  else
-  begin
-    idx := FText.IndexOfAny(Operators, FNext);
-    if idx < 0 then
-      idx := FText.Length;
-
-    FToken := FText.Substring(FNext, idx - FNext).TrimRight;
-    FNext := idx;
-  end;
-{$ELSE}
   if EndOfText then
     FToken := ''
   else if NextIsOperator then
@@ -319,7 +293,6 @@ begin
     FToken := TrimRight(Copy(FText, FNext, idx - FNext));
     FNext := idx;
   end;
-{$ENDIF}
   result := FToken;
 end;
 
@@ -330,13 +303,8 @@ end;
 
 procedure TCategoryExpression.SkipWhiteSpace;
 begin
-{$IFDEF NEXTGEN}
-  while ((FNext < (FText.Length - 1)) and FText.Chars[FNext].IsWhiteSpace) do
+  while ((FNext <= Length(Ftext)) and FText[FNext].IsWhiteSpace) do
     Inc(FNext);
-{$ELSE}
-  while ((FNext <= Length(Ftext)) and {$IFDEF DELPHI_XE4_UP}FText[FNext].IsWhiteSpace{$ELSE}TCharacter.IsWhiteSpace(FText[FNext]){$ENDIF}) do
-    Inc(FNext);
-{$ENDIF}
 end;
 
 function TCategoryExpression.NextIsOperator : boolean;
@@ -348,11 +316,7 @@ begin
   begin
     for op in Operators do
     begin
-{$IFDEF NEXTGEN}
-      if FText.Chars[FNext] = op then
-{$ELSE}
       if FText[FNext] = op then
-{$ENDIF}
         Exit(true);
     end;
   end;

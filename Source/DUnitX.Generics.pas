@@ -32,13 +32,8 @@ interface
 {$I DUnitX.inc}
 
 uses
-{$IFDEF USE_NS}
   System.Generics.Defaults,
   System.Generics.Collections;
-{$ELSE}
-  Generics.Defaults,
-  Generics.Collections;
-{$ENDIF}
 
 type
   /// <summary>

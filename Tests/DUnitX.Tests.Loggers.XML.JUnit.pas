@@ -32,11 +32,7 @@ interface
 {$I DUnitX.inc}
 
 uses
-{$IFDEF USE_NS}
   System.Classes,
-{$ELSE}
-  Classes,
-{$ENDIF}
   DUnitX.TestFramework,
   DUnitX.Loggers.XML.JUnit;
 
@@ -57,7 +53,6 @@ type
     procedure OnTestingStarts_Fills_The_Start_Of_The_Stream_With_Header_Info;
     //  [Test(false)]
   //    procedure OnTestingEnds_Fills_The_End_Of_The_Stream_With_Testing_Result_Info;
-{$IFDEF DELPHI_XE2_UP}
     /// <summary>
     ///   Disabled upstream, and it cannot be enabled as it stands: it never reports a warning (ITestLogger has no
     ///   warning callback, and the XML loggers have no warning output), so 'WARNING: test: message' is never written.
@@ -71,26 +66,16 @@ type
     /// </summary>
     [Test]
     procedure OnTestingEnds_Reports_Leaks_Timestamp_And_Stack_Trace;
-{$ENDIF}
   end;
 
 implementation
 
 uses
-{$IFDEF USE_NS}
   System.Rtti,
   System.SysUtils,
   System.TimeSpan,
   System.DateUtils,
-{$ELSE}
-  Rtti,
-  SysUtils,
-  TimeSpan,
-  DateUtils,
-{$ENDIF}
-{$IFDEF DELPHI_XE2_UP}
   Delphi.Mocks,
-{$ENDIF}
   System.Generics.Collections,
   DUnitX.Generics,
   DUnitX.FixtureResult,
@@ -208,7 +193,6 @@ begin
   Assert.AreEqual(sAppName, sExpectedAppName);
 end;
 
-{$IFDEF DELPHI_XE2_UP}
 procedure TDUnitX_LoggerXMLJUnitTests.OnTestingEnds_Reports_Leaks_Timestamp_And_Stack_Trace;
 var
   logger : ITestLogger;
@@ -335,8 +319,6 @@ begin
   Assert.IsTrue(iPositionOfWarning > 0);
   Assert.AreEqual(Copy(mockStream.DataString, iPositionOfWarning, Length(sExceptedWarning)), sExceptedWarning);
 end;
-
-{$ENDIF}
 
 initialization
   TDUnitX.RegisterTestFixture(TDUnitX_LoggerXMLJUnitTests);

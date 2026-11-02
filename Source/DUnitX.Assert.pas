@@ -37,13 +37,8 @@ interface
 {$I DUnitX.inc}
 
 uses
-{$IFDEF USE_NS}
   System.Classes,
   System.SysUtils;
-{$ELSE}
-  Classes,
-  SysUtils;
-{$ENDIF}
 
 type
   /// <summary>
@@ -405,7 +400,6 @@ type
     ///   The sizes or contents differ.
     /// </exception>
     class procedure AreEqual(const expected, actual : TStream; const message : string = ''); overload;
-{$IFDEF DELPHI_XE2_UP}
     /// <summary>
     ///   Asserts that two values of any type are equal according to <c>TEqualityComparer&lt;T&gt;.Default</c>.
     /// </summary>
@@ -423,7 +417,7 @@ type
     /// </exception>
     /// <remarks>
     ///   Uses an equality comparer rather than <c>TComparer&lt;T&gt;</c>, which reports a Double NaN equal to
-    ///   everything. Excluded before XE2 because of a Delphi 2010/XE compiler bug.
+    ///   everything.
     /// </remarks>
     class procedure AreEqual<T>(const expected, actual : T; const message : string = ''); overload;
     /// <summary>
@@ -443,7 +437,6 @@ type
     ///   The lengths differ, or an element differs (the first differing index is reported).
     /// </exception>
     class procedure AreEqual<T>(const expected, actual : TArray<T>; const message : string = ''); overload;
-{$ENDIF}
     /// <summary>
     ///   Asserts that two Word values are equal.
     /// </summary>
@@ -797,7 +790,6 @@ type
     ///   The streams are the same instance or have identical contents.
     /// </exception>
     class procedure AreNotEqual(const expected, actual : TStream; const message : string = ''); overload;
-{$IFDEF DELPHI_XE2_UP}
     /// <summary>
     ///   Asserts that two values of any type differ according to <c>TEqualityComparer&lt;T&gt;.Default</c>.
     /// </summary>
@@ -813,11 +805,7 @@ type
     /// <exception cref="ETestFailure">
     ///   The comparer reports the values equal.
     /// </exception>
-    /// <remarks>
-    ///   Excluded before XE2 because of a Delphi 2010/XE compiler bug.
-    /// </remarks>
     class procedure AreNotEqual<T>(const expected, actual : T; const message : string = ''); overload;
-{$ENDIF}
     /// <summary>
     ///   Asserts that two Integer values differ.
     /// </summary>
@@ -952,7 +940,6 @@ type
     /// </exception>
     class procedure AreNotSame(const expected, actual : IInterface; const message : string = ''); overload;
 
-{$IFDEF DELPHI_XE_UP}
     /// <summary>
     ///   Asserts that an enumerable contains a value, compared with <c>TEqualityComparer&lt;T&gt;.Default</c>.
     /// </summary>
@@ -968,9 +955,6 @@ type
     /// <exception cref="ETestFailure">
     ///   No element equals <paramref name="value" />.
     /// </exception>
-    /// <remarks>
-    ///   Excluded before XE because of a Delphi 2010 compiler bug.
-    /// </remarks>
     class procedure Contains<T>(const list : IEnumerable<T>; const value : T; const message : string = ''); overload;
     /// <summary>
     ///   Asserts that an array contains a value, compared with <c>TEqualityComparer&lt;T&gt;.Default</c>.
@@ -1020,7 +1004,6 @@ type
     ///   An element equals <paramref name="value" />.
     /// </exception>
     class procedure DoesNotContain<T>(const arr : array of T; const value : T; const message : string = ''); overload;
-{$ENDIF}
     /// <summary>
     ///   Asserts that an interface reference supports the interface <c>T</c> and returns it as <c>T</c>.
     /// </summary>
@@ -1235,7 +1218,6 @@ type
     ///   The list has any items.
     /// </exception>
     class procedure IsEmpty(const value : IInterfaceList; const message : string = ''); overload;
-{$IFDEF DELPHI_XE_UP}
     /// <summary>
     ///   Asserts that an enumerable yields no elements.
     /// </summary>
@@ -1248,11 +1230,7 @@ type
     /// <exception cref="ETestFailure">
     ///   Enumeration yields any element.
     /// </exception>
-    /// <remarks>
-    ///   Excluded before XE because of a Delphi 2010 compiler bug.
-    /// </remarks>
     class procedure IsEmpty<T>(const value : IEnumerable<T>; const message : string = ''); overload;
-{$ENDIF}
 
     /// <summary>
     ///   Asserts that a string is not empty.
@@ -1319,7 +1297,6 @@ type
     ///   The list is empty.
     /// </exception>
     class procedure IsNotEmpty(const value : IInterfaceList; const message : string = ''); overload;
-{$IFDEF DELPHI_XE_UP}
     /// <summary>
     ///   Asserts that an enumerable yields at least one element.
     /// </summary>
@@ -1332,11 +1309,7 @@ type
     /// <exception cref="ETestFailure">
     ///   Enumeration yields nothing.
     /// </exception>
-    /// <remarks>
-    ///   Excluded before XE because of a Delphi 2010 compiler bug.
-    /// </remarks>
     class procedure IsNotEmpty<T>(const value : IEnumerable<T>; const message : string = ''); overload;
-{$ENDIF}
 
     /// <summary>
     ///   Asserts that two date-times fall on the same calendar day (<c>SameDate</c>); the time parts are ignored.
@@ -1427,7 +1400,6 @@ type
     /// </exception>
     class procedure WillRaiseWithMessage(const AMethod : TTestLocalMethod; const exceptionClass : ExceptClass = nil; const exceptionMsg : string = ''; const msg
       : string = ''); overload;
-{$IFDEF SUPPORTS_REGEX}
     /// <summary>
     ///   Checks that an exception exactly matching ExceptClass and RegExp-matching Message will be raised.
     /// </summary>
@@ -1448,7 +1420,6 @@ type
     /// </exception>
     class procedure WillRaiseWithMessageRegex(const AMethod : TTestLocalMethod; const exceptionClass : ExceptClass = nil; const exceptionMsgRegexPattern :
       string = ''; const msg : string = ''); overload;
-{$ENDIF}
     /// <summary>
     ///   Checks that an exception exactly matching ExceptClass will be raised.
     /// </summary>
@@ -1902,7 +1873,6 @@ type
     ///   Either class is nil, or <paramref name="descendant" /> does not inherit from <paramref name="parent" />.
     /// </exception>
     class procedure InheritsFrom(const descendant : TClass; const parent : TClass; const message : string = '');
-{$IFDEF DELPHI_XE_UP}
     /// <summary>
     ///   Deprecated: a value of type <c>T</c> is always of type <c>T</c>, so this cannot check anything; it now always
     ///   fails so that a test relying on it is not reported as a pass.
@@ -1918,7 +1888,6 @@ type
     /// </exception>
     class procedure IsType<T>(const value : T; const message : string = ''); overload;
       deprecated 'IsType<T> always fails: it cannot check anything. Use InheritsFrom or Implements';
-{$ENDIF}
 
     /// <summary>
     ///   Checks that there is no difference between the given strings. If there is a difference, then
@@ -1959,7 +1928,6 @@ type
     /// </exception>
     class procedure NoDiff(const expected, actual : string; const message : string = ''); overload;
 
-{$IFDEF SUPPORTS_REGEX}
     /// <summary>
     ///   Asserts that a string matches a regular expression (anywhere in the string unless the pattern is anchored).
     /// </summary>
@@ -1976,7 +1944,6 @@ type
     ///   The string does not match.
     /// </exception>
     class procedure IsMatch(const regexPattern : string; const theString : string; const message : string = '');
-{$ENDIF}
 
     /// <summary>
     ///   Fails when an expectation report is non-empty; used to turn a mock or expectation verifier's unmet-expectation
@@ -2013,30 +1980,17 @@ type
     class constructor Create;
   end;
 
-{$IFNDEF DELPHI_XE2_UP}
-/// <summary>
-///   Returns the address the calling routine will return to, for compilers before XE2 that lack the intrinsic.
-/// </summary>
-/// <returns>
-///   The caller's return address, or nil when the frame pointer is invalid.
-/// </returns>
-function ReturnAddress : Pointer; assembler;
-{$ENDIF}
-
 implementation
 
 uses
   DUnitX.ResStrs,
   DUnitX.Utils,
   DUnitX.Exceptions,
-{$IFDEF SUPPORTS_REGEX}
 {$IFDEF USE_TREGEXPR}
   RegExpr,
 {$ELSE}
   System.RegularExpressions,
 {$ENDIF}
-{$ENDIF}
-{$IFDEF USE_NS}
   System.DateUtils,
   System.Generics.Collections,
   System.Generics.Defaults,
@@ -2045,51 +1999,7 @@ uses
   System.StrUtils,
   System.TypInfo,
   System.Variants;
-{$ELSE}
-  Generics.Collections,
-  Generics.Defaults,
-  Math,
-  Rtti,
-  StrUtils,
-  TypInfo,
-  Variants;
-{$ENDIF}
 
-{$IFNDEF DELPHI_XE2_UP}
-function IsBadPointer(P : Pointer) : Boolean; register;
-begin
-  try
-    Result := (p = nil) or ((Pointer(P^) <> P) and (Pointer(P^) = P));
-  except
-    Result := true;
-  end;
-end;
-
-function ReturnAddress : Pointer; assembler;
-const
-  CallerIP          = $4;
-asm
-   mov   eax, ebp
-   call  IsBadPointer
-   test  eax,eax
-   jne   @@Error
-
-   mov   eax, [ebp].CallerIP
-   sub   eax, 5   // 5 bytes for call
-
-   push  eax
-   call  IsBadPointer
-   test  eax,eax
-   pop   eax
-   je    @@Finish
-
-@@Error:
-   xor eax, eax
-@@Finish:
-end;
-{$ENDIF}
-
-{$IFDEF SUPPORTS_REGEX}
 {$IFDEF USE_TREGEXPR}
 function PerformIsMatch(const regexPattern, theString : string) : boolean;
 var
@@ -2109,7 +2019,6 @@ function PerformIsMatch(const regexPattern, theString : string) : boolean;
 begin
   Result := TRegEx.IsMatch(theString, regexPattern);
 end;
-{$ENDIF}
 {$ENDIF}
 
 function ObjectToString(const obj : TObject) : string;
@@ -2136,7 +2045,7 @@ begin
   // expected = actual first: SameValue(Inf, Inf) is False (Inf - Inf is NaN). Infinities equal only themselves:
   // SameValue(Inf, -Inf) is True because its derived epsilon is itself infinite. NaN still equals nothing.
   if not ((expected = actual) or ((not IsInfinite(expected)) and (not IsInfinite(actual)) and
-    {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(expected, actual, tolerance))) then
+    System.Math.SameValue(expected, actual, tolerance))) then
     FailFmt(SUnexpectedErrorExt, [expected, actual, message], ReturnAddress);
 end;
 
@@ -2164,9 +2073,6 @@ begin
     Fail(msg, ReturnAddress);
   end;
 end;
-
-{$IFDEF DELPHI_XE2_UP}
-//Delphi 2010 and XE compiler bug breaks this
 class procedure Assert.AreEqual<T>(const expected, actual : T; const message : string);
 var
   comparer : IEqualityComparer<T>;
@@ -2206,8 +2112,6 @@ begin
     end;
   end;
 end;
-
-{$ENDIF}
 
 class function Assert.AddLineBreak(const msg : string) : string;
 begin
@@ -2266,7 +2170,7 @@ begin
     FailFmt(SNegativeTolerance, [tolerance, message], ReturnAddress);
   // See AreEqual(Extended): expected = actual first for Inf, and infinities equal only themselves.
   if not ((expected = actual) or ((not IsInfinite(expected)) and (not IsInfinite(actual)) and
-    {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(expected, actual, tolerance))) then
+    System.Math.SameValue(expected, actual, tolerance))) then
     FailFmt(SUnexpectedErrorDbl, [expected, actual, message], ReturnAddress);
 end;
 
@@ -2307,7 +2211,7 @@ begin
     FailFmt(SNegativeTolerance, [tolerance, message], ReturnAddress);
   // See AreEqual(Extended): expected = actual first for Inf, and infinities equal only themselves.
   if (expected = actual) or ((not IsInfinite(expected)) and (not IsInfinite(actual)) and
-    {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(expected, actual, tolerance)) then
+    System.Math.SameValue(expected, actual, tolerance)) then
     FailFmt(SEqualsErrorExt, [expected, actual, message], ReturnAddress);
 end;
 
@@ -2350,9 +2254,6 @@ begin
     Fail(msg, ReturnAddress);
   end;
 end;
-
-{$IFDEF DELPHI_XE2_UP}
-//Delphi 2010 and XE compiler bug breaks this
 class procedure Assert.AreNotEqual<T>(const expected, actual : T; const message : string);
 var
   comparer : IEqualityComparer<T>;
@@ -2368,7 +2269,6 @@ begin
     FailFmt(SEqualsErrorStr, [expectedValue.ToString, actualValue.ToString, message], ReturnAddress);
   end;
 end;
-{$ENDIF}
 
 class procedure Assert.AreNotEqual(const expected, actual : Integer; const message : string);
 begin
@@ -2407,7 +2307,7 @@ begin
     FailFmt(SNegativeTolerance, [tolerance, message], ReturnAddress);
   // See AreEqual(Extended): expected = actual first for Inf, and infinities equal only themselves.
   if (expected = actual) or ((not IsInfinite(expected)) and (not IsInfinite(actual)) and
-    {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(expected, actual, tolerance)) then
+    System.Math.SameValue(expected, actual, tolerance)) then
     FailFmt(SEqualsErrorDbl, [expected, actual, message], ReturnAddress);
 end;
 
@@ -2445,9 +2345,6 @@ begin
   if expected <> actual then
     FailFmt(SNotEqualErrorObj, [ObjectToString(expected), ObjectToString(actual), message], ReturnAddress);
 end;
-
-{$IFDEF DELPHI_XE_UP}
-//Delphi 2010 compiler bug breaks this
 class procedure Assert.Contains<T>(const list : IEnumerable<T>; const value : T; const message : string);
 var
   o : T;
@@ -2479,10 +2376,6 @@ begin
 
   FailFmt(SValueNotInList, [TValue.From<T>(value).ToString, message], ReturnAddress);
 end;
-{$ENDIF}
-
-{$IFDEF DELPHI_XE_UP}
-//Delphi 2010 compiler bug breaks this
 class procedure Assert.DoesNotContain<T>(const list : IEnumerable<T>; const value : T; const message : string);
 var
   o : T;
@@ -2510,7 +2403,6 @@ begin
       FailFmt(SValueInList, [TValue.From<T>(value).ToString, message], ReturnAddress);
   end;
 end;
-{$ENDIF}
 
 class procedure Assert.Fail(const message : string; const errorAddrs : pointer);
 begin
@@ -2652,9 +2544,6 @@ begin
   if value.Count > 0 then
     FailFmt(SListNotEmpty, [message], ReturnAddress);
 end;
-
-{$IFDEF DELPHI_XE_UP}
-//Delphi 2010 compiler bug breaks this
 class procedure Assert.IsEmpty<T>(const value : IEnumerable<T>; const message : string);
 var
   o : T;
@@ -2668,7 +2557,6 @@ begin
   if count > 0 then
     FailFmt(SListNotEmpty, [message], ReturnAddress);
 end;
-{$ENDIF}
 
 class procedure Assert.IsFalse(const condition : boolean; const message : string);
 begin
@@ -2711,9 +2599,6 @@ begin
   if VarIsEmpty(value) or VarIsNull(value) then
     FailFmt(SVarEmpty, [message], ReturnAddress);
 end;
-
-{$IFDEF DELPHI_XE_UP}
-//Delphi 2010 compiler bug breaks this
 class procedure Assert.IsNotEmpty<T>(const value : IEnumerable<T>; const message : string);
 var
   x : T;
@@ -2727,7 +2612,6 @@ begin
   if count = 0 then
     FailFmt(SListEmpty, [message], ReturnAddress);
 end;
-{$ENDIF}
 
 class procedure Assert.IsNotNull(const condition : IInterface; const message : string);
 begin
@@ -2877,9 +2761,6 @@ class procedure Assert.NotImplemented;
 begin
   Assert.Fail(SNotImplemented);
 end;
-
-{$IFDEF DELPHI_XE_UP}
-//Delphi 2010 compiler bug breaks this
 class procedure Assert.IsType<T>(const value : T; const message : string);
 begin
   //A value of type T is always of type T, so this used to pass whatever was tested. It fails instead, so a test
@@ -2887,7 +2768,6 @@ begin
   DoAssert;
   Fail(SIsTypeCannotCheck, ReturnAddress);
 end;
-{$ENDIF}
 
 class procedure Assert.WillNotRaise(const AMethod : TTestMethod; const exceptionClass : ExceptClass; const msg : string);
 begin
@@ -3117,7 +2997,6 @@ begin
   Fail(SNoException + AddLineBreak(msg), ReturnAddress);
 end;
 
-{$IFDEF SUPPORTS_REGEX}
 class procedure Assert.WillRaiseWithMessageRegex(const AMethod : TTestLocalMethod; const exceptionClass : ExceptClass; const exceptionMsgRegexPattern : string;
   const msg : string);
 begin
@@ -3137,7 +3016,6 @@ begin
   end;
   Fail(SNoException + AddLineBreak(msg), ReturnAddress);
 end;
-{$ENDIF}
 
 class procedure Assert.AreEqual(const expected : string; const actual : string; const message : string);
 begin
@@ -3226,10 +3104,10 @@ begin
     FailFmt(SStrCannotBeEmpty, [], ReturnAddress);
   if ignoreCase then
   begin
-    if not {$IFDEF USE_NS}System.StrUtils.{$ENDIF}ContainsText(theString, subString) then
+    if not System.StrUtils.ContainsText(theString, subString) then
       FailFmt(SStrDoesNotContain, [theString, subString, message], ReturnAddress);
   end
-  else if not {$IFDEF USE_NS}System.StrUtils.{$ENDIF}ContainsStr(theString, subString) then
+  else if not System.StrUtils.ContainsStr(theString, subString) then
     FailFmt(SStrDoesNotContain, [theString, subString, message], ReturnAddress);
 end;
 
@@ -3250,10 +3128,10 @@ begin
     FailFmt(SStrCannotBeEmpty, [], ReturnAddress);
   if ignoreCase then
   begin
-    if {$IFDEF USE_NS}System.{$ENDIF}StrUtils.ContainsText(theString, subString) then
+    if System.StrUtils.ContainsText(theString, subString) then
       FailFmt(SStrContains, [theString, subString, message], ReturnAddress);
   end
-  else if {$IFDEF USE_NS}System.{$ENDIF}StrUtils.ContainsStr(theString, subString) then
+  else if System.StrUtils.ContainsStr(theString, subString) then
     FailFmt(SStrContains, [theString, subString, message], ReturnAddress);
 end;
 
@@ -3264,14 +3142,13 @@ begin
     FailFmt(SStrCannotBeEmpty, [], ReturnAddress);
   if ignoreCase then
   begin
-    if not {$IFDEF USE_NS}System.StrUtils.{$ENDIF}EndsText(subString, theString) then
+    if not System.StrUtils.EndsText(subString, theString) then
       FailFmt(SStrDoesNotEndWith, [theString, subString, message], ReturnAddress);
   end
-  else if not {$IFDEF USE_NS}System.StrUtils.{$ENDIF}EndsStr(subString, theString) then
+  else if not System.StrUtils.EndsStr(subString, theString) then
     FailFmt(SStrDoesNotEndWith, [theString, subString, message], ReturnAddress);
 end;
 
-{$IFDEF SUPPORTS_REGEX}
 class procedure Assert.IsMatch(const regexPattern, theString, message : string);
 begin
   DoAssert;
@@ -3279,7 +3156,6 @@ begin
   if not PerformIsMatch(regexPattern, theString) then
     FailFmt(SStrDoesNotMatch, [theString, regexPattern, message], ReturnAddress);
 end;
-{$ENDIF}
 
 class procedure Assert.StartsWith(const subString : string; const theString : string; const ignoreCase : boolean; const message : string);
 begin
@@ -3291,10 +3167,10 @@ begin
 
   if ignoreCase then
   begin
-    if not {$IFDEF USE_NS}System.StrUtils.{$ENDIF}StartsText(subString, theString) then
+    if not System.StrUtils.StartsText(subString, theString) then
       FailFmt(SStrDoesNotStartWith, [theString, subString, message], ReturnAddress);
   end
-  else if not {$IFDEF USE_NS}System.StrUtils.{$ENDIF}StartsStr(subString, theString) then
+  else if not System.StrUtils.StartsStr(subString, theString) then
     FailFmt(SStrDoesNotStartWith, [theString, subString, message], ReturnAddress);
 end;
 

@@ -31,11 +31,7 @@ interface
 
 {$I DUnitX.inc}
 uses
-{$IFDEF USE_NS}
   System.Classes,
-{$ELSE}
-  Classes,
-{$ENDIF}
   DUnitX.ConsoleWriter.Base;
 
 type
@@ -94,11 +90,7 @@ type
 implementation
 
 uses
-{$IFDEF USE_NS}
-  Winapi.Windows,                       // Delphi XE2 (CompilerVersion 23) added scopes in front of unit names
-{$ELSE}
-  Windows,
-{$ENDIF}
+  Winapi.Windows,
   DUnitX.Utils,
   DUnitX.ServiceLocator;
 

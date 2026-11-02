@@ -65,21 +65,12 @@ interface
 {$I DUnitX.inc}
 
 uses
-{$IFDEF USE_NS}
   System.Generics.Collections,
   System.TimeSpan,
   System.Rtti,
   System.SysUtils,
   System.Types,
   System.TypInfo;
-{$ELSE}
-  Generics.Collections,
-  TimeSpan,
-  Rtti,
-  SysUtils,
-  Types,
-  TypInfo;
-{$ENDIF}
 
 type
   /// <summary>
@@ -156,33 +147,6 @@ type
     /// </returns>
     class function FindAttributes(const attributes : TArray<TCustomAttribute>; const AttributeClass : TCustomAttributeClass) : TArray<TCustomAttribute>;
   end;
-
-{$IFDEF DELPHI_2010}
-const
-  /// <summary>Number of TTimeSpan ticks (100 ns units) in one millisecond; Delphi 2010 only.</summary>
-  TicksPerMillisecond = 10000;
-
-type
-  /// <summary>
-  ///   Back-fills <c>TTimeSpan.Subtract</c> for Delphi 2010, whose RTL lacks it.
-  /// </summary>
-  TTimeSpanHelper = record helper for TTimeSpan
-  public
-    /// <summary>
-    ///   Returns the time span between two date-times, to millisecond precision.
-    /// </summary>
-    /// <param name="D1">
-    ///   The later date-time.
-    /// </param>
-    /// <param name="D2">
-    ///   The earlier date-time, subtracted from <c>D1</c>.
-    /// </param>
-    /// <returns>
-    ///   <c>D1 - D2</c> as a TTimeSpan (negative when D2 is later).
-    /// </returns>
-    class function Subtract(const D1, D2 : TDateTime) : TTimeSpan; static;
-  end;
-{$ENDIF}
 
 type
   /// <summary>
@@ -527,15 +491,6 @@ type
 {$ENDREGION}
     function TryGetType(out AType : TRttiType) : Boolean;
 
-{$IF CompilerVersion < 23}
-    /// <summary>
-    ///   Back-fills <c>TObject.QualifiedClassName</c> for compilers before XE2.
-    /// </summary>
-    /// <returns>
-    ///   <c>UnitName.ClassName</c>, or just the class name when the unit name is empty.
-    /// </returns>
-    class function QualifiedClassName : string;
-{$IFEND}
   end;
 
 {$REGION 'Documentation'}
@@ -563,36 +518,6 @@ type
     function TryGetValue(Instance : Pointer; out Value : TValue) : Boolean;
   end;
 
-{$IF CompilerVersion < 23}
-
-{$REGION 'Documentation'}
-  ///	<summary>
-  ///	  Extends <see cref="Rtti.TRttiInstanceTypeHelper">TRttiInstanceTypeHelper</see>
-  ///	  for easier RTTI use.
-  ///	</summary>
-{$ENDREGION}
-  TRttiInstanceTypeHelper = class helper for TRttiInstanceType
-  public
-    /// <summary>
-    ///   Back-fills the interfaces declared directly by this class (read from its VMT interface table), for
-    ///   compilers before XE2.
-    /// </summary>
-    /// <returns>
-    ///   The interfaces this class itself declares; ancestors' interfaces are not included.
-    /// </returns>
-    function GetDeclaredImplementedInterfaces : TArray<TRttiInterfaceType>;
-    /// <summary>
-    ///   Back-fills the interfaces implemented by this class and all its ancestors, for compilers before XE2.
-    /// </summary>
-    /// <returns>
-    ///   The declared interfaces of this class followed by those of each ancestor in turn.
-    /// </returns>
-    function GetImplementedInterfaces : TArray<TRttiInterfaceType>;
-  end;
-{$IFEND}
-
-{$IFDEF DELPHI_XE2_UP}
-
 {$REGION 'Documentation'}
   ///	<summary>
   ///	  Extends <see cref="System.Rtti.TRttiInvokableType">TRttiInvokableType</see>
@@ -614,7 +539,6 @@ type
     /// </summary>
     property ParameterCount : Integer read GetParameterCount;
   end;
-{$ENDIF}
 
 {$REGION 'Documentation'}
   ///	<summary>
@@ -1140,7 +1064,7 @@ type
   ///   Re-exports <c>System.Rtti.TValue</c> so units using DUnitX.Utils see the TValueHelper-extended type
   ///   without also naming System.Rtti.
   /// </summary>
-  TValue = {$IFDEF USE_NS}System.{$ENDIF}Rtti.TValue;
+  TValue = System.Rtti.TValue;
 
 {$REGION 'Documentation'}
   ///	<summary>
@@ -1676,7 +1600,6 @@ type
     property RttiType : TRttiType read GetRttiType;
   end;
 
-{$IFDEF DELPHI_XE3_UP}
   /// <summary>Pointer to a <see cref="TPropInfoExt" />.</summary>
   PPropInfoExt = ^TPropInfoExt;
   /// <summary>
@@ -1717,7 +1640,6 @@ type
     /// </returns>
     function Tail : PPropInfoExt; inline;
   end;
-{$ENDIF}
 
   /// <summary>
   ///   A synthetic RTTI property, attached to a class at run time and backed by getter/setter closures, which
@@ -1731,13 +1653,8 @@ type
   /// </remarks>
   TRttiPropertyExtension = class(TRttiInstanceProperty)
   private
-{$IFDEF DELPHI_XE3_UP}
     /// <summary>The synthetic property information this property's Handle points at.</summary>
     FPropInfo : TPropInfoExt;
-{$ELSE}
-    /// <summary>The synthetic property information this property's Handle points at.</summary>
-    FPropInfo : TPropInfo;
-{$ENDIF}
     /// <summary>Closure that reads the property's value from an instance; nil makes it write-only.</summary>
     FGetter : TFunc<Pointer, TValue>;
     /// <summary>Closure that writes the property's value to an instance; nil makes it read-only.</summary>
@@ -1945,38 +1862,7 @@ type
     ///   Number of elements to remove; clamped to the elements from index onwards; zero or less does nothing.
     /// </param>
     class procedure Delete<T>(var source : TArray<T>; index, count : integer); static;
-{$IFDEF DELPHI_2010}
-    /// <summary>
-    ///   Copies an enumerable into a new array, for Delphi 2010 whose TEnumerable lacks ToArray.
-    /// </summary>
-    /// <param name="Enumerable">
-    ///   The collection to copy.
-    /// </param>
-    /// <param name="Count">
-    ///   The collection's exact element count; the array is sized from it.
-    /// </param>
-    /// <returns>
-    ///   The elements in enumeration order.
-    /// </returns>
-    class function ToArray<T>(Enumerable : TEnumerable<T>; Count : Integer) : TArray<T>; static;
-{$ENDIF}
   end;
-
-{$IFNDEF DELPHI_XE8_UP }
-  /// <summary>
-  ///   Back-fills <c>TFormatSettings.Invariant</c> for compilers before XE8.
-  /// </summary>
-  TFormatSettingsHelper = record helper for TFormatSettings
-    /// <summary>
-    ///   Returns culture-invariant format settings (US-style dates, '.' decimal separator, English month and
-    ///   day names).
-    /// </summary>
-    /// <returns>
-    ///   The invariant settings.
-    /// </returns>
-    class function Invariant : TFormatSettings; static;
-  end;
-{$ENDIF}
 
   /// <summary>Pointer to an object reference.</summary>
   PObject = ^TObject;
@@ -2142,23 +2028,6 @@ function SameValue(const Left, Right : TValue) : Boolean;
 /// </returns>
 function StripUnitName(const s : string) : string;
 
-{$IFDEF DELPHI_2010}
-/// <summary>
-///   Back-fills <c>StrUtils.SplitString</c> for Delphi 2010: splits a string at every occurrence of any of the
-///   delimiter characters.
-/// </summary>
-/// <param name="S">
-///   The string to split.
-/// </param>
-/// <param name="Delimiters">
-///   The set of delimiter characters.
-/// </param>
-/// <returns>
-///   The parts, empty parts included; an empty array for an empty S.
-/// </returns>
-function SplitString(const S : string; const Delimiters : string) : TStringDynArray;
-{$ENDIF}
-
 /// <summary>
 ///   Overload of <c>SysUtils.Supports</c> for a TValue: queries the object behind an object or interface value
 ///   for an interface.
@@ -2181,21 +2050,12 @@ implementation
 
 uses
   DUnitX.Helpers,
-{$IFDEF USE_NS}
   System.Classes,
   System.Generics.Defaults,
   System.Math,
   System.StrUtils,
   System.UIConsts,
   System.UITypes;
-{$ELSE}
-  Classes,
-  Generics.Defaults,
-  Math,
-  StrUtils,
-  UIConsts,
-  UITypes;
-{$ENDIF}
 
 var
   Context : TRttiContext;
@@ -2318,7 +2178,6 @@ begin
   Result := False;
 end;
 
-{$IFDEF DELPHI_XE3_UP}
 function ConvStr2DynArray(const ASource : TValue; ATarget : PTypeInfo; out AResult : TValue) : Boolean;
 var
   s : string;
@@ -2346,7 +2205,6 @@ begin
   end;
   Result := True;
 end;
-{$ENDIF}
 
 function ConvAny2Nullable(const ASource : TValue; ATarget : PTypeInfo; out AResult : TValue) : Boolean;
 var
@@ -2728,12 +2586,9 @@ function ConvStr2Ord(const ASource : TValue; ATarget : PTypeInfo; out AResult : 
 var
   LTypeData : PTypeData;
   LValue : Int64;
-{$IFDEF DELPHI_XE6_UP}
   LUValue : UInt64;
-{$ENDIF}
 begin
   LTypeData := GetTypeData(ATarget);
-{$IFDEF DELPHI_XE6_UP}
   // An unsigned 64-bit type stores its range as signed values, so Min > Max.
   if LTypeData.MinInt64Value > LTypeData.MaxInt64Value then
   begin
@@ -2742,7 +2597,6 @@ begin
       AResult := TValue.FromOrdinal(ATarget, Int64(LUValue));
     Exit;
   end;
-{$ENDIF}
   Result := TryStrToInt64(ASource.AsString, LValue)
     and (LValue >= LTypeData.MinInt64Value) and (LValue <= LTypeData.MaxInt64Value);
   if Result then
@@ -2780,7 +2634,7 @@ const
     // tkVariant, tkArray, tkRecord, tkInterface, tkInt64, tkDynArray
     ConvFail, ConvFail, ConvFail, ConvFail, ConvFail, ConvFail,
     // tkUString, tkClassRef, tkPointer, tkProcedure
-    ConvFail, ConvFail, ConvFail, ConvFail{$IFDEF DELPHI_XE103_UP}, ConvFail{$ENDIF}
+    ConvFail, ConvFail, ConvFail, ConvFail, ConvFail
     ),
     // tkInteger
     (
@@ -2791,7 +2645,7 @@ const
     // tkVariant, tkArray, tkRecord, tkInterface, tkInt64, tkDynArray
     ConvFail, ConvFail, ConvFail, ConvFail, ConvOrd2Ord, ConvFail,
     // tkUString, tkClassRef, tkPointer, tkProcedure, tkMRecord
-    ConvOrd2Str, ConvFail, ConvFail, ConvFail{$IFDEF DELPHI_XE103_UP}, ConvFail{$ENDIF}
+    ConvOrd2Str, ConvFail, ConvFail, ConvFail, ConvFail
     ),
     // tkChar
     (
@@ -2802,7 +2656,7 @@ const
     // tkVariant, tkArray, tkRecord, tkInterface, tkInt64, tkDynArray
     ConvFail, ConvFail, ConvFail, ConvFail, ConvOrd2Ord, ConvFail,
     // tkUString, tkClassRef, tkPointer, tkProcedure, tkMRecord
-    ConvFail, ConvFail, ConvFail, ConvFail{$IFDEF DELPHI_XE103_UP}, ConvFail{$ENDIF}
+    ConvFail, ConvFail, ConvFail, ConvFail, ConvFail
     ),
     // tkEnumeration
     (
@@ -2813,7 +2667,7 @@ const
     // tkVariant, tkArray, tkRecord, tkInterface, tkInt64, tkDynArray
     ConvFail, ConvFail, ConvFail, ConvFail, ConvOrd2Ord, ConvFail,
     // tkUString, tkClassRef, tkPointer, tkProcedure, tkMRecord
-    ConvOrd2Str, ConvFail, ConvFail, ConvFail{$IFDEF DELPHI_XE103_UP}, ConvFail{$ENDIF}
+    ConvOrd2Str, ConvFail, ConvFail, ConvFail, ConvFail
     ),
     // tkFloat
     (
@@ -2824,7 +2678,7 @@ const
     // tkVariant, tkArray, tkRecord, tkInterface, tkInt64, tkDynArray
     ConvFail, ConvFail, ConvFail, ConvFail, ConvFloat2Ord, ConvFail,
     // tkUString, tkClassRef, tkPointer, tkProcedure, tkMRecord
-    ConvFloat2Str, ConvFail, ConvFail, ConvFail{$IFDEF DELPHI_XE103_UP}, ConvFail{$ENDIF}
+    ConvFloat2Str, ConvFail, ConvFail, ConvFail, ConvFail
     ),
     // tkString
     (
@@ -2835,7 +2689,7 @@ const
     // tkVariant, tkArray, tkRecord, tkInterface, tkInt64, tkDynArray
     ConvFail, ConvFail, ConvFail, ConvFail, ConvFail, ConvFail,
     // tkUString, tkClassRef, tkPointer, tkProcedure, tkMRecord
-    ConvFail, ConvFail, ConvFail, ConvFail{$IFDEF DELPHI_XE103_UP}, ConvFail{$ENDIF}
+    ConvFail, ConvFail, ConvFail, ConvFail, ConvFail
     ),
     // tkSet
     (
@@ -2846,7 +2700,7 @@ const
     // tkVariant, tkArray, tkRecord, tkInterface, tkInt64, tkDynArray
     ConvFail, ConvFail, ConvFail, ConvFail, ConvFail, ConvFail,
     // tkUString, tkClassRef, tkPointer, tkProcedure, tkMRecord
-    ConvFail, ConvFail, ConvFail, ConvFail{$IFDEF DELPHI_XE103_UP}, ConvFail{$ENDIF}
+    ConvFail, ConvFail, ConvFail, ConvFail, ConvFail
     ),
     // tkClass
     (
@@ -2857,7 +2711,7 @@ const
     // tkVariant, tkArray, tkRecord, tkInterface, tkInt64, tkDynArray
     ConvFail, ConvFail, ConvFail, ConvFail, ConvFail, ConvFail,
     // tkUString, tkClassRef, tkPointer, tkProcedure, tkMRecord
-    ConvFail, ConvFail, ConvFail, ConvFail{$IFDEF DELPHI_XE103_UP}, ConvFail{$ENDIF}
+    ConvFail, ConvFail, ConvFail, ConvFail, ConvFail
     ),
     // tkMethod
     (
@@ -2868,7 +2722,7 @@ const
     // tkVariant, tkArray, tkRecord, tkInterface, tkInt64, tkDynArray
     ConvFail, ConvFail, ConvFail, ConvFail, ConvFail, ConvFail,
     // tkUString, tkClassRef, tkPointer, tkProcedure, tkMRecord
-    ConvFail, ConvFail, ConvFail, ConvFail{$IFDEF DELPHI_XE103_UP}, ConvFail{$ENDIF}
+    ConvFail, ConvFail, ConvFail, ConvFail, ConvFail
     ),
     // tkWChar
     (
@@ -2879,7 +2733,7 @@ const
     // tkVariant, tkArray, tkRecord, tkInterface, tkInt64, tkDynArray
     ConvFail, ConvFail, ConvFail, ConvFail, ConvOrd2Ord, ConvFail,
     // tkUString, tkClassRef, tkPointer, tkProcedure, tkMRecord
-    ConvFail, ConvFail, ConvFail, ConvFail{$IFDEF DELPHI_XE103_UP}, ConvFail{$ENDIF}
+    ConvFail, ConvFail, ConvFail, ConvFail, ConvFail
     ),
     // tkLString
     (
@@ -2890,7 +2744,7 @@ const
     // tkVariant, tkArray, tkRecord, tkInterface, tkInt64, tkDynArray
     ConvFail, ConvFail, ConvFail, ConvFail, ConvFail, ConvFail,
     // tkUString, tkClassRef, tkPointer, tkProcedure, tkMRecord
-    ConvFail, ConvFail, ConvFail, ConvFail{$IFDEF DELPHI_XE103_UP}, ConvFail{$ENDIF}
+    ConvFail, ConvFail, ConvFail, ConvFail, ConvFail
     ),
     // tkWString
     (
@@ -2901,7 +2755,7 @@ const
     // tkVariant, tkArray, tkRecord, tkInterface, tkInt64, tkDynArray
     ConvFail, ConvFail, ConvFail, ConvFail, ConvFail, ConvFail,
     // tkUString, tkClassRef, tkPointer, tkProcedure, tkMRecord
-    ConvFail, ConvFail, ConvFail, ConvFail{$IFDEF DELPHI_XE103_UP}, ConvFail{$ENDIF}
+    ConvFail, ConvFail, ConvFail, ConvFail, ConvFail
     ),
     // tkVariant
     (
@@ -2912,7 +2766,7 @@ const
     // tkVariant, tkArray, tkRecord, tkInterface, tkInt64, tkDynArray
     ConvFail, ConvFail, ConvFail, ConvFail, ConvFail, ConvFail,
     // tkUString, tkClassRef, tkPointer, tkProcedure, tkMRecord
-    ConvFail, ConvFail, ConvFail, ConvFail{$IFDEF DELPHI_XE103_UP}, ConvFail{$ENDIF}
+    ConvFail, ConvFail, ConvFail, ConvFail, ConvFail
     ),
     // tkArray
     (
@@ -2923,7 +2777,7 @@ const
     // tkVariant, tkArray, tkRecord, tkInterface, tkInt64, tkDynArray
     ConvFail, ConvFail, ConvFail, ConvFail, ConvFail, ConvFail,
     // tkUString, tkClassRef, tkPointer, tkProcedure, tkMRecord
-    ConvFail, ConvFail, ConvFail, ConvFail{$IFDEF DELPHI_XE103_UP}, ConvFail{$ENDIF}
+    ConvFail, ConvFail, ConvFail, ConvFail, ConvFail
     ),
     // tkRecord
     (
@@ -2934,7 +2788,7 @@ const
     // tkVariant, tkArray, tkRecord, tkInterface, tkInt64, tkDynArray
     ConvFail, ConvFail, ConvFail, ConvFail, ConvFail, ConvFail,
     // tkUString, tkClassRef, tkPointer, tkProcedure, tkMRecord
-    ConvFail, ConvFail, ConvFail, ConvFail{$IFDEF DELPHI_XE103_UP}, ConvFail{$ENDIF}
+    ConvFail, ConvFail, ConvFail, ConvFail, ConvFail
     ),
     // tkInterface
     (
@@ -2945,7 +2799,7 @@ const
     // tkVariant, tkArray, tkRecord, tkInterface, tkInt64, tkDynArray
     ConvFail, ConvFail, ConvFail, ConvIntf2Intf, ConvFail, ConvFail,
     // tkUString, tkClassRef, tkPointer, tkProcedure, tkMRecord
-    ConvFail, ConvFail, ConvFail, ConvFail{$IFDEF DELPHI_XE103_UP}, ConvFail{$ENDIF}
+    ConvFail, ConvFail, ConvFail, ConvFail, ConvFail
     ),
     // tkInt64
     (
@@ -2956,7 +2810,7 @@ const
     // tkVariant, tkArray, tkRecord, tkInterface, tkInt64, tkDynArray
     ConvFail, ConvFail, ConvFail, ConvFail, ConvOrd2Ord, ConvFail,
     // tkUString, tkClassRef, tkPointer, tkProcedure, tkMRecord
-    ConvOrd2Str, ConvFail, ConvFail, ConvFail{$IFDEF DELPHI_XE103_UP}, ConvFail{$ENDIF}
+    ConvOrd2Str, ConvFail, ConvFail, ConvFail, ConvFail
     ),
     // tkDynArray
     (
@@ -2967,7 +2821,7 @@ const
     // tkVariant, tkArray, tkRecord, tkInterface, tkInt64, tkDynArray
     ConvFail, ConvFail, ConvFail, ConvFail, ConvFail, ConvFail,
     // tkUString, tkClassRef, tkPointer, tkProcedure, tkMRecord
-    ConvFail, ConvFail, ConvFail, ConvFail{$IFDEF DELPHI_XE103_UP}, ConvFail{$ENDIF}
+    ConvFail, ConvFail, ConvFail, ConvFail, ConvFail
     ),
     // tkUString
     (
@@ -2976,9 +2830,9 @@ const
     // tkSet, tkClass, tkMethod, tkWChar, tkLString, tkWString
     ConvStr2Set, ConvFail, ConvFail, ConvFail, ConvFail, ConvFail,
     // tkVariant, tkArray, tkRecord, tkInterface, tkInt64, tkDynArray
-    ConvFail, ConvFail, ConvFail, ConvFail, ConvStr2Ord, {$IFDEF DELPHI_XE3_UP}ConvStr2DynArray{$ELSE}ConvFail{$ENDIF},
+    ConvFail, ConvFail, ConvFail, ConvFail, ConvStr2Ord, ConvStr2DynArray,
     // tkUString, tkClassRef, tkPointer, tkProcedure, tkMRecord
-    ConvFail, ConvFail, ConvFail, ConvFail{$IFDEF DELPHI_XE103_UP}, ConvFail{$ENDIF}
+    ConvFail, ConvFail, ConvFail, ConvFail, ConvFail
     ),
     // tkClassRef
     (
@@ -2989,7 +2843,7 @@ const
     // tkVariant, tkArray, tkRecord, tkInterface, tkInt64, tkDynArray
     ConvFail, ConvFail, ConvFail, ConvFail, ConvFail, ConvFail,
     // tkUString, tkClassRef, tkPointer, tkProcedure, tkMRecord
-    ConvFail, ConvFail, ConvFail, ConvFail{$IFDEF DELPHI_XE103_UP}, ConvFail{$ENDIF}
+    ConvFail, ConvFail, ConvFail, ConvFail, ConvFail
     ),
     // tkPointer
     (
@@ -3000,7 +2854,7 @@ const
     // tkVariant, tkArray, tkRecord, tkInterface, tkInt64, tkDynArray
     ConvFail, ConvFail, ConvFail, ConvFail, ConvFail, ConvFail,
     // tkUString, tkClassRef, tkPointer, tkProcedure, tkMRecord
-    ConvFail, ConvFail, ConvFail, ConvFail{$IFDEF DELPHI_XE103_UP}, ConvFail{$ENDIF}
+    ConvFail, ConvFail, ConvFail, ConvFail, ConvFail
     ),
     // tkProcedure
     (
@@ -3011,9 +2865,8 @@ const
     // tkVariant, tkArray, tkRecord, tkInterface, tkInt64, tkDynArray
     ConvFail, ConvFail, ConvFail, ConvFail, ConvFail, ConvFail,
     // tkUString, tkClassRef, tkPointer, tkProcedure, tkMRecord
-    ConvFail, ConvFail, ConvFail, ConvFail{$IFDEF DELPHI_XE103_UP}, ConvFail{$ENDIF}
+    ConvFail, ConvFail, ConvFail, ConvFail, ConvFail
     )
-{$IFDEF DELPHI_XE103_UP}
     ,
     // tkMRecord
     (
@@ -3026,7 +2879,6 @@ const
     // tkUString, tkClassRef, tkPointer, tkProcedure, tkMRecord
     ConvFail, ConvFail, ConvFail, ConvFail, ConvFail
     )
-{$ENDIF}
     );
 {$ENDREGION}
 
@@ -3036,7 +2888,6 @@ var
   s : string;
 begin
   s := UTF8ToString(ATypeInfo.Name);
-{$IFNDEF NEXTGEN}
   i := Pos('<', s);
   if i > 0 then
   begin
@@ -3046,13 +2897,6 @@ begin
   begin
     Result := '';
   end;
-{$ELSE}
-  i := s.IndexOf('<');
-  if i > -1 then
-    Result := s.SubString(Succ(i), s.Length - (Succ(i) + 1))
-  else
-    Result := string.Empty;
-{$ENDIF}
 end;
 
 function FindType(const AName : string; out AType : TRttiType) : Boolean;
@@ -3153,43 +2997,6 @@ begin
   Result := ReplaceText(s, 'System.', '');
 end;
 
-{$IFDEF DELPHI_2010}
-function SplitString(const S : string; const Delimiters : string) : TStringDynArray;
-var
-  StartIdx : Integer;
-  FoundIdx : Integer;
-  SplitPoints : Integer;
-  CurrentSplit : Integer;
-  i : Integer;
-begin
-  Result := nil;
-
-  if S <> '' then
-  begin
-    SplitPoints := 0;
-    for i := 1 to Length(S) do
-      if IsDelimiter(Delimiters, S, i) then
-        Inc(SplitPoints);
-
-    SetLength(Result, SplitPoints + 1);
-
-    StartIdx := 1;
-    CurrentSplit := 0;
-    repeat
-      FoundIdx := FindDelimiter(Delimiters, S, StartIdx);
-      if FoundIdx <> 0 then
-      begin
-        Result[CurrentSplit] := Copy(S, StartIdx, FoundIdx - StartIdx);
-        Inc(CurrentSplit);
-        StartIdx := FoundIdx + 1;
-      end;
-    until CurrentSplit = SplitPoints;
-
-    Result[SplitPoints] := Copy(S, StartIdx, Length(S) - StartIdx + 1);
-  end;
-end;
-{$ENDIF}
-
 function Supports(const Instance : TValue; const IID : TGUID; out Intf) : Boolean; overload;
 begin
   if Instance.Kind in [tkClass, tkInterface] then
@@ -3206,15 +3013,15 @@ function CompareValue(const Left, Right : TValue) : Integer;
 begin
   if Left.IsOrdinal and Right.IsOrdinal then
   begin
-    Result := {$IFDEF USE_NS}System.Math.{$ENDIF}CompareValue(Left.AsOrdinal, Right.AsOrdinal);
+    Result := System.Math.CompareValue(Left.AsOrdinal, Right.AsOrdinal);
   end
   else if Left.IsFloat and Right.IsFloat then
   begin
-    Result := {$IFDEF USE_NS}System.Math.{$ENDIF}CompareValue(Left.AsFloat, Right.AsFloat);
+    Result := System.Math.CompareValue(Left.AsFloat, Right.AsFloat);
   end
   else if Left.IsString and Right.IsString then
   begin
-    Result := {$IFDEF USE_NS}System.SysUtils.{$ENDIF}CompareStr(Left.AsString, Right.AsString);
+    Result := System.SysUtils.CompareStr(Left.AsString, Right.AsString);
   end
   else
   begin
@@ -3234,72 +3041,72 @@ begin
       end
       else if Right.IsSingle then
       begin
-        Result := {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(Left.AsOrdinal, Right.AsSingle);
+        Result := System.Math.SameValue(Left.AsOrdinal, Right.AsSingle);
       end
       else if Right.IsDouble then
       begin
-        Result := {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(Left.AsOrdinal, Right.AsDouble);
+        Result := System.Math.SameValue(Left.AsOrdinal, Right.AsDouble);
       end
       else
       begin
-        Result := {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(Left.AsOrdinal, Right.AsExtended);
+        Result := System.Math.SameValue(Left.AsOrdinal, Right.AsExtended);
       end;
     end
     else if Left.IsSingle then
     begin
       if Right.IsOrdinal then
       begin
-        Result := {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(Left.AsSingle, Right.AsOrdinal);
+        Result := System.Math.SameValue(Left.AsSingle, Right.AsOrdinal);
       end
       else if Right.IsSingle then
       begin
-        Result := {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(Left.AsSingle, Right.AsSingle);
+        Result := System.Math.SameValue(Left.AsSingle, Right.AsSingle);
       end
       else if Right.IsDouble then
       begin
-        Result := {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(Left.AsSingle, Right.AsDouble);
+        Result := System.Math.SameValue(Left.AsSingle, Right.AsDouble);
       end
       else
       begin
-        Result := {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(Left.AsSingle, Right.AsExtended);
+        Result := System.Math.SameValue(Left.AsSingle, Right.AsExtended);
       end;
     end
     else if Left.IsDouble then
     begin
       if Right.IsOrdinal then
       begin
-        Result := {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(Left.AsDouble, Right.AsOrdinal);
+        Result := System.Math.SameValue(Left.AsDouble, Right.AsOrdinal);
       end
       else if Right.IsSingle then
       begin
-        Result := {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(Left.AsDouble, Right.AsSingle);
+        Result := System.Math.SameValue(Left.AsDouble, Right.AsSingle);
       end
       else if Right.IsDouble then
       begin
-        Result := {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(Left.AsDouble, Right.AsDouble);
+        Result := System.Math.SameValue(Left.AsDouble, Right.AsDouble);
       end
       else
       begin
-        Result := {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(Left.AsDouble, Right.AsExtended);
+        Result := System.Math.SameValue(Left.AsDouble, Right.AsExtended);
       end;
     end
     else
     begin
       if Right.IsOrdinal then
       begin
-        Result := {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(Left.AsExtended, Right.AsOrdinal);
+        Result := System.Math.SameValue(Left.AsExtended, Right.AsOrdinal);
       end
       else if Right.IsSingle then
       begin
-        Result := {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(Left.AsExtended, Right.AsSingle);
+        Result := System.Math.SameValue(Left.AsExtended, Right.AsSingle);
       end
       else if Right.IsDouble then
       begin
-        Result := {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(Left.AsExtended, Right.AsDouble);
+        Result := System.Math.SameValue(Left.AsExtended, Right.AsDouble);
       end
       else
       begin
-        Result := {$IFDEF USE_NS}System.Math.{$ENDIF}SameValue(Left.AsExtended, Right.AsExtended);
+        Result := System.Math.SameValue(Left.AsExtended, Right.AsExtended);
       end;
     end;
   end
@@ -3354,21 +3161,6 @@ begin
     end;
   end;
 end;
-
-{$IFDEF DELPHI_2010}
-class function TArrayHelper.ToArray<T>(Enumerable : TEnumerable<T>; Count : Integer) : TArray<T>;
-var
-  LItem : T;
-begin
-  SetLength(Result, Count);
-  Count := 0;
-  for LItem in Enumerable do
-  begin
-    Result[Count] := LItem;
-    Inc(Count);
-  end;
-end;
-{$ENDIF}
 
 class function TArrayHelper.Create<T>(const a, b : T) : TArray<T>;
 begin
@@ -3502,19 +3294,6 @@ begin
   Result := GetProperty(AName) <> nil;
 end;
 
-{$IF CompilerVersion < 23}
-class function TObjectHelper.QualifiedClassName : string;
-var
-  LUnitName : string;
-begin
-  LUnitName := UnitName;
-  if LUnitName = '' then
-    Result := ClassName
-  else
-    Result := LUnitName + '.' + ClassName;
-end;
-{$IFEND}
-
 function TObjectHelper.TryGetField(const AName : string;
   out AField : TRttiField) : Boolean;
 begin
@@ -3577,64 +3356,12 @@ end;
 
 { TRttiInstanceTypeHelper }
 
-{$IF CompilerVersion < 23}
-function TRttiInstanceTypeHelper.GetDeclaredImplementedInterfaces : TArray<TRttiInterfaceType>;
-var
-  LInterfaceTable : PInterfaceTable;
-  p : PPointer;
-  i : Integer;
-  LTypeInfo : PTypeInfo;
-begin
-  LInterfaceTable := PPointer(PByte(MetaclassType) + vmtIntfTable)^;
-
-  if Assigned(LInterfaceTable) then
-  begin
-    p := @LInterfaceTable.Entries[LInterfaceTable.EntryCount];
-    SetLength(Result, LInterfaceTable.EntryCount);
-
-    for i := 0 to LInterfaceTable.EntryCount - 1 do
-    begin
-      LTypeInfo := PPTypeInfo(p^)^;
-      Result[i] := GetRttiType(LTypeInfo) as TRttiInterfaceType;
-      Inc(p);
-    end;
-  end;
-end;
-
-function TRttiInstanceTypeHelper.GetImplementedInterfaces : TArray<TRttiInterfaceType>;
-var
-  LCount : Integer;
-  LInterfaces : TArray<TArray<TRttiInterfaceType>>;
-  LType : TRttiInstanceType;
-begin
-  LCount := 0;
-  LType := Self;
-  repeat
-    Inc(LCount);
-    LType := LType.BaseType.AsInstance;
-  until not Assigned(LType);
-
-  SetLength(LInterfaces, LCount);
-  LCount := 0;
-  LType := Self;
-  repeat
-    LInterfaces[LCount] := LType.GetDeclaredImplementedInterfaces;
-    Inc(LCount);
-    LType := LType.BaseType.AsInstance;
-  until not Assigned(LType);
-
-  Result := TArrayHelper.Concat<TRttiInterfaceType>(LInterfaces);
-end;
-{$IFEND}
-
 { TRttiInvokableTypeHelper }
 
-{$IFDEF DELPHI_XE2_UP}
 function TRttiInvokableTypeHelper.GetParameterCount : Integer;
 begin
   Result := Length(GetParameters());
 end;
-{$ENDIF}
 
 { TRttiMemberHelper }
 
@@ -3868,11 +3595,7 @@ begin
     s := QualifiedName
   else
     s := Name;
-{$IFNDEF NEXTGEN}
   Result := Copy(s, 1, Pos('<', s)) + MergeStrings(args, ',') + '>';
-{$ELSE}
-  Result := s.SubString(0, s.IndexOf('<') + 1) + MergeStrings(args, ',') + '>';
-{$ENDIF}
 end;
 
 function TRttiTypeHelper.GetIsInterface : Boolean;
@@ -4033,11 +3756,7 @@ var
   s : string;
 begin
   s := Name;
-{$IFNDEF NEXTGEN}
   Result := (Copy(s, 1, Succ(Length(BaseTypeName))) = (BaseTypeName + '<')) and (Copy(s, Length(s), 1) = '>');
-{$ELSE}
-  Result := (s.SubString(0, Succ(BaseTypeName.Length)) = (BaseTypeName + '<')) and (s.SubString(s.Length - 1, 1) = '>');
-{$ENDIF}
 end;
 
 function TRttiTypeHelper.IsInheritedFrom(const OtherTypeName : string) : Boolean;
@@ -4087,11 +3806,7 @@ begin
     args := SplitString(ExtractGenericArguments(Handle), ',');
     for i := Low(args) to High(args) do
       args[i] := Context.GetType(TypeArguments[i]).QualifiedName;
-{$IFNDEF NEXTGEN}
     s := Copy(QualifiedName, 1, Pos('<', QualifiedName)) + MergeStrings(args, ',') + '>';
-{$ELSE}
-    s := QualifiedName.SubString(0, QualifiedName.IndexOf('<') + 1) + MergeStrings(args, ',') + '>';
-{$ENDIF}
     Result := Context.FindType(s);
   end
   else
@@ -4323,33 +4038,21 @@ begin
   case Value.VType of
     vtInteger : Result := Value.VInteger;
     vtBoolean : Result := Value.VBoolean;
-{$IFNDEF NEXTGEN}
     vtChar : Result := string(Value.VChar);
-{$ENDIF}
     vtExtended : Result := Value.VExtended^;
-{$IFNDEF NEXTGEN}
     vtString : Result := string(Value.VString^);
-{$ENDIF}
     vtPointer : Result := TValue.From<Pointer>(Value.VPointer);
-{$IFNDEF NEXTGEN}
     vtPChar : Result := string(Value.VPChar);
-{$ENDIF}
     vtObject : Result := Value.VObject;
     vtClass : Result := Value.VClass;
     vtWideChar : Result := string(Value.VWideChar);
     vtPWideChar : Result := string(Value.VPWideChar);
-{$IFNDEF NEXTGEN}
     vtAnsiString : Result := string(AnsiString(Value.VAnsiString));
-{$ENDIF}
     vtCurrency : Result := Value.VCurrency^;
     vtVariant : Result := TValue.FromVariant(Value.VVariant^);
     vtInterface : Result := TValue.From<IInterface>(IInterface(Value.VInterface));
     vtWideString :
-{$IFNDEF NEXTGEN}
       Result := WideString(Value.VWideString);
-{$ELSE}
-      Result := string(Value.VWideString);
-{$ENDIF}
     vtInt64 : Result := Value.VInt64^;
     vtUnicodeString : Result := string(Value.VUnicodeString);
   end;
@@ -4529,13 +4232,11 @@ begin
         Result.VType := vtInteger;
         Result.VInteger := AsInteger;
       end;
-{$IFNDEF NEXTGEN}
     tkChar :
       begin
         Result.VType := vtChar;
         Result.VChar := AsType<AnsiChar>;
       end;
-{$ENDIF}
     tkWChar :
       begin
         Result.VType := vtWideChar;
@@ -4668,29 +4369,6 @@ begin
     begin
       case Kind of
         tkRecord : Result := ConvNullable2Any(Self, ATypeInfo, AResult);
-{$IFDEF VER210}
-        // workaround for bug in RTTI.pas (fixed in XE)
-        tkUnknown :
-          begin
-            case ATypeInfo.Kind of
-              tkInteger, tkEnumeration, tkChar, tkWChar, tkInt64 :
-                begin
-                  AResult := TValue.FromOrdinal(ATypeInfo, 0);
-                  Result := True;
-                end;
-              tkFloat :
-                begin
-                  AResult := TValue.From<Extended>(0);
-                  Result := True;
-                end;
-              tkUString :
-                begin
-                  AResult := TValue.FromString('');
-                  Result := True;
-                end;
-            end;
-          end;
-{$ENDIF}
       end;
       case ATypeInfo.Kind of
         tkRecord : Result := ConvAny2Nullable(Self, ATypeInfo, AResult);
@@ -4724,18 +4402,13 @@ type
 
   TRttiObjectAccess = class helper for TRttiObject
   public
-    procedure Init(Parent : TRttiType; PropInfo : {$IFDEF DELPHI_XE3_UP}PPropInfoExt{$ELSE}PPropInfo{$ENDIF});
+    procedure Init(Parent : TRttiType; PropInfo : PPropInfoExt);
   end;
 
-procedure TRttiObjectAccess.Init(Parent : TRttiType; PropInfo : {$IFDEF DELPHI_XE3_UP}PPropInfoExt{$ELSE}PPropInfo{$ENDIF});
+procedure TRttiObjectAccess.Init(Parent : TRttiType; PropInfo : PPropInfoExt);
 const
-{$IFDEF AUTOREFCOUNT}
-  FHANDLE_OFFSET    = (SizeOf(Pointer) * 2);
-  FPARENT_OFFSET    = (SizeOf(Pointer) * 3);
-{$ELSE}
   FHANDLE_OFFSET    = (SizeOf(Pointer) * 1);
   FPARENT_OFFSET    = (SizeOf(Pointer) * 2);
-{$ENDIF}
 begin
   //if TRttiObject.InstanceSize <> TRttiObjectFieldRef.InstanceSize then
   //  assert;
@@ -4743,7 +4416,6 @@ begin
   TRttiObjectFieldRef(Self).FHandle := PropInfo;
 end;
 
-{$IFDEF DELPHI_XE3_UP}
 { TPropInfoExt }
 
 function TPropInfoExt.NameFld : TTypeInfoFieldAccessor;
@@ -4755,7 +4427,6 @@ function TPropInfoExt.Tail : PPropInfoExt;
 begin
   Result := PPropInfoExt(NameFld.Tail);
 end;
-{$ENDIF}
 { TRttiPropertyExtension }
 
 class constructor TRttiPropertyExtension.Create;
@@ -4786,22 +4457,16 @@ begin
 end;
 
 constructor TRttiPropertyExtension.Create(Parent : PTypeInfo; const Name : string; PropertyType : PTypeInfo);
-{$IFDEF DELPHI_XE3_UP}
 var
   M : TMarshaller;
-{$ENDIF}
 begin
   inherited Create;
   FPropInfo.PropType := Pointer(NativeInt(PropertyType) - SizeOf(PTypeInfo));
-{$IFNDEF DELPHI_XE3_UP}
-  FPropInfo.Name := ShortString(Name);
-{$ELSE}
   if Name.Length > 255 then
     FPropInfo.NameLength := 255
   else
     FPropInfo.NameLength := Name.Length;
   Move(M.AsAnsi(Name).ToPointer^, FPropInfo.NameData[0], FPropInfo.NameLength);
-{$ENDIF}
   Init(GetRttiType(Parent), @FPropInfo);
 
   FRegister.Add(TPair<PTypeInfo, string>.Create(Parent, Name), Self);
@@ -4859,7 +4524,6 @@ var
   LProp : TRttiPropertyExtension;
 begin
   Result := nil;
-{$IFNDEF NEXTGEN}
   LScope := Copy(FullPropertyName, 1, LastDelimiter('.', FullPropertyName) - 1);
   LName := Copy(FullPropertyName, LastDelimiter('.', FullPropertyName) + 1);
   for LProp in FRegister.Values do
@@ -4871,19 +4535,6 @@ begin
       Break;
     end;
   end;
-{$ELSE}
-  LScope := FullPropertyName.SubString(0, FullPropertyName.LastDelimiter('.'));
-  LName := FullPropertyName.SubString(FullPropertyName.LastDelimiter('.') + 1);
-  for LProp in FRegister.Values do
-  begin
-    if (string.Compare(LProp.Name, LName, [coIgnoreCase]) = 0)
-      and LProp.Parent.AsInstance.MetaclassType.QualifiedClassName.EndsWith(LScope, True) then
-    begin
-      Result := LProp;
-      Break;
-    end;
-  end;
-{$ENDIF}
 end;
 
 function TRttiPropertyExtension.GetIsReadable : Boolean;
@@ -4950,13 +4601,6 @@ begin
 end;
 
 {TTimeSpanHelper}
-{$IFDEF DELPHI_2010}
-class function TTimeSpanHelper.Subtract(const D1, D2 : TDateTime) : TTimeSpan;
-begin
-  Result := TTimeSpan.Create(Trunc(TimeStampToMSecs(DateTimeToTimeStamp(D1)) - TimeStampToMSecs(DateTimeToTimeStamp(D2))) *
-    TicksPerMillisecond);
-end;
-{$ENDIF}
 
 class function TStrUtils.SplitString(const S, Delimiters : string) : TArray<string>;
 var
@@ -4968,7 +4612,6 @@ var
 begin
   Result := nil;
 
-{$IFNDEF NEXTGEN}
   if S <> '' then
   begin
     { Determine the length of the resulting array }
@@ -4995,34 +4638,6 @@ begin
     // copy the remaining part in case the string does not end in a delimiter
     Result[SplitPoints] := Copy(S, StartIdx, Length(S) - StartIdx + 1);
   end;
-{$ELSE}
-  if S <> string.Empty then
-  begin
-    { Determine the length of the resulting array }
-    SplitPoints := 0;
-    for I := 0 to S.Length - 1 do
-      if S.IsDelimiter(Delimiters, i) then
-        Inc(SplitPoints);
-
-    SetLength(Result, SplitPoints + 1);
-
-    { Split the string and fill the resulting array }
-    StartIdx := 0;
-    CurrentSplit := 0;
-    repeat
-      FoundIdx := S.IndexOfAny(Delimiters.ToCharArray, StartIdx);
-      if FoundIdx <> -1 then
-      begin
-        Result[CurrentSplit] := S.SubString(StartIdx, FoundIdx - StartIdx);
-        Inc(CurrentSplit);
-        StartIdx := FoundIdx + 1;
-      end;
-    until CurrentSplit = SplitPoints;
-
-    // copy the remaining part in case the string does not end in a delimiter
-    Result[SplitPoints] := S.SubString(StartIdx, S.Length - StartIdx + 1);
-  end;
-{$ENDIF}
 
 end;
 
@@ -5036,110 +4651,6 @@ begin
   for i := 0 to values.Count - 1 do
     result[i] := values[i];
 end;
-
-{$IFNDEF DELPHI_XE8_UP}
-
-//copied from System.Sysconst - can't use Sysconst as when compiling with runtime packages
-//it results in 'E2201 Need imported data reference ($G) to access...'
-resourcestring
-  SShortMonthNameJan = 'Jan';
-  SShortMonthNameFeb = 'Feb';
-  SShortMonthNameMar = 'Mar';
-  SShortMonthNameApr = 'Apr';
-  SShortMonthNameMay = 'May';
-  SShortMonthNameJun = 'Jun';
-  SShortMonthNameJul = 'Jul';
-  SShortMonthNameAug = 'Aug';
-  SShortMonthNameSep = 'Sep';
-  SShortMonthNameOct = 'Oct';
-  SShortMonthNameNov = 'Nov';
-  SShortMonthNameDec = 'Dec';
-
-  SLongMonthNameJan = 'January';
-  SLongMonthNameFeb = 'February';
-  SLongMonthNameMar = 'March';
-  SLongMonthNameApr = 'April';
-  SLongMonthNameMay = 'May';
-  SLongMonthNameJun = 'June';
-  SLongMonthNameJul = 'July';
-  SLongMonthNameAug = 'August';
-  SLongMonthNameSep = 'September';
-  SLongMonthNameOct = 'October';
-  SLongMonthNameNov = 'November';
-  SLongMonthNameDec = 'December';
-
-  SShortDayNameSun  = 'Sun';
-  SShortDayNameMon  = 'Mon';
-  SShortDayNameTue  = 'Tue';
-  SShortDayNameWed  = 'Wed';
-  SShortDayNameThu  = 'Thu';
-  SShortDayNameFri  = 'Fri';
-  SShortDayNameSat  = 'Sat';
-
-  SLongDayNameSun   = 'Sunday';
-  SLongDayNameMon   = 'Monday';
-  SLongDayNameTue   = 'Tuesday';
-  SLongDayNameWed   = 'Wednesday';
-  SLongDayNameThu   = 'Thursday';
-  SLongDayNameFri   = 'Friday';
-  SLongDayNameSat   = 'Saturday';
-
-var
-  DefShortMonthNames : array[1..12] of Pointer = (@SShortMonthNameJan,
-    @SShortMonthNameFeb, @SShortMonthNameMar, @SShortMonthNameApr,
-    @SShortMonthNameMay, @SShortMonthNameJun, @SShortMonthNameJul,
-    @SShortMonthNameAug, @SShortMonthNameSep, @SShortMonthNameOct,
-    @SShortMonthNameNov, @SShortMonthNameDec);
-
-  DefLongMonthNames : array[1..12] of Pointer = (@SLongMonthNameJan,
-    @SLongMonthNameFeb, @SLongMonthNameMar, @SLongMonthNameApr,
-    @SLongMonthNameMay, @SLongMonthNameJun, @SLongMonthNameJul,
-    @SLongMonthNameAug, @SLongMonthNameSep, @SLongMonthNameOct,
-    @SLongMonthNameNov, @SLongMonthNameDec);
-
-  DefShortDayNames : array[1..7] of Pointer = (@SShortDayNameSun,
-    @SShortDayNameMon, @SShortDayNameTue, @SShortDayNameWed,
-    @SShortDayNameThu, @SShortDayNameFri, @SShortDayNameSat);
-
-  DefLongDayNames : array[1..7] of Pointer = (@SLongDayNameSun,
-    @SLongDayNameMon, @SLongDayNameTue, @SLongDayNameWed,
-    @SLongDayNameThu, @SLongDayNameFri, @SLongDayNameSat);
-
-  { TFormatSettingsHelper }
-
-class function TFormatSettingsHelper.Invariant : TFormatSettings;
-var
-  I : Integer;
-begin
-  Result.CurrencyString := #$00A4;
-  Result.CurrencyFormat := 0;
-  Result.CurrencyDecimals := 2;
-  Result.DateSeparator := '/';
-  Result.TimeSeparator := ':';
-  Result.ListSeparator := ',';
-  Result.ShortDateFormat := 'MM/dd/yyyy';
-  Result.LongDateFormat := 'dddd, dd MMMMM yyyy HH:mm:ss';
-  Result.TimeAMString := 'AM';
-  Result.TimePMString := 'PM';
-  Result.ShortTimeFormat := 'HH:mm';
-  Result.LongTimeFormat := 'HH:mm:ss';
-  for I := Low(DefShortMonthNames) to High(DefShortMonthNames) do
-  begin
-    Result.ShortMonthNames[I] := LoadResString(DefShortMonthNames[I]);
-    Result.LongMonthNames[I] := LoadResString(DefLongMonthNames[I]);
-  end;
-  for I := Low(DefShortDayNames) to High(DefShortDayNames) do
-  begin
-    Result.ShortDayNames[I] := LoadResString(DefShortDayNames[I]);
-    Result.LongDayNames[I] := LoadResString(DefLongDayNames[I]);
-  end;
-  Result.ThousandSeparator := ',';
-  Result.DecimalSeparator := '.';
-  Result.TwoDigitYearCenturyWindow := 50;
-  Result.NegCurrFormat := 0;
-end;
-
-{$ENDIF}
 
 initialization
   Enumerations := TObjectDictionary<PTypeInfo, TStrings>.Create([doOwnsValues]);

@@ -86,7 +86,6 @@ type
     [TearDownFixture]
     procedure TearDownFixture;
 
-{$IFDEF DELPHI_XE_UP}
     /// <summary>
     ///   Proves a non-singleton implementation-class registration creates a new instance on every resolve.
     /// </summary>
@@ -98,7 +97,6 @@ type
     /// </summary>
     [Test]
     procedure Test_Implementation_Singleton;
-{$ENDIF}
 
     /// <summary>
     ///   Proves a non-singleton activator registration creates a new instance on every resolve.
@@ -176,11 +174,7 @@ begin
     begin
       result := TFoo.Create;
     end);
-
-{$IFDEF DELPHI_XE_UP}
-  //NOTE: DUnitX.ServiceLocator has details on why this is only available for XE up.
   FContainer.RegisterType<IFoo, TFoo>('test');
-{$ENDIF}
 
   //singletons
   FContainer.RegisterType<IFoo>(true,
@@ -189,11 +183,7 @@ begin
       result := TFoo.Create;
     end,
     'activator_singleton');
-
-{$IFDEF DELPHI_XE_UP}
-  //NOTE: DUnitX.ServiceLocator has details on why this is only available for XE up.
   FContainer.RegisterType<IFoo, TFoo>(true, 'impl_singleton');
-{$ENDIF}
 end;
 
 procedure TDUnitX_IoCTests.TearDownFixture;
@@ -220,16 +210,9 @@ begin
   foo1 := FContainer.Resolve<IFoo>('activator_singleton');
   foo2 := FContainer.Resolve<IFoo>('activator_singleton');
   Assert.AreSame(foo1, foo2);
-
-{$IFDEF DELPHI_XE_UP}
-  //NOTE: DUnitX.ServiceLocator has details on why this is only available for XE up.
   foo1 := FContainer.Resolve<IFoo>('impl_singleton');
   Assert.AreNotSame(foo1, foo2);
-{$ENDIF}
 end;
-
-{$IFDEF DELPHI_XE_UP}
-//NOTE: DUnitX.ServiceLocator has details on why this is only available for XE up.
 procedure TDUnitX_IoCTests.Test_Implementation_Non_Singleton;
 var
   foo1 : IFoo;
@@ -249,7 +232,6 @@ begin
   foo2 := FContainer.Resolve<IFoo>('impl_singleton');
   Assert.AreSame(foo1, foo2);
 end;
-{$ENDIF}
 
 procedure TDUnitX_IoCTests.Test_Nil_Activator_Raises_Resolution_Exception;
 var

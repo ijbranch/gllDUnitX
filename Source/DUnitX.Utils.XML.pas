@@ -74,11 +74,7 @@ function EscapeForXML(const value : string; const isAttribute : boolean = True; 
 implementation
 
 uses
-{$IFDEF USE_NS}
   System.SysUtils;
-{$ELSE}
-  SysUtils;
-{$ENDIF}
 
 function IsValidXMLChar(const wc : WideChar) : Boolean;
 begin
@@ -98,7 +94,6 @@ function StripInvalidXML(const s : string) : string;
 var
   i, count : Integer;
 begin
-{$IFNDEF NEXTGEN}
   count := Length(s);
   setLength(result, count);
   for i := 1 to Count do                // Iterate
@@ -108,29 +103,11 @@ begin
     else
       result[i] := ' ';
   end;                                  // for}
-{$ELSE}
-  count := s.Length;
-  SetLength(result, count);
-  for i := 0 to count - 1 do            // Iterate
-  begin
-    if IsValidXMLChar(s.Chars[i]) then
-    begin
-      result := result.Remove(i, 1);
-      result := result.Insert(i, s.Chars[i]);
-    end
-    else
-    begin
-      result := result.Remove(i, 1);
-      result := result.Insert(i, s.Chars[i]);
-    end;
-  end;                                  // for}
-{$ENDIF}
 end;
 
 function EscapeForXML(const value : string; const isAttribute : boolean = True; const isCDATASection : Boolean = False) : string;
 begin
   result := StripInvalidXML(value);
-{$IFNDEF NEXTGEN}
   if isCDATASection then
   begin
     //A CDATA section cannot contain ']]>', so the text is split there into two adjacent sections, which an XML
@@ -152,26 +129,6 @@ begin
     Result := StringReplace(result, '''', '&#39;', [rfReplaceAll]);
     Result := StringReplace(result, '"', '&quot;', [rfReplaceAll]);
   end;
-{$ELSE}
-  if isCDATASection then
-  begin
-    Result := Result.Replace(']]>', ']>', [rfReplaceAll]);
-    exit;
-  end;
-
-  //An existing "&amp;" is escaped like any other "&" (to "&amp;amp;"), so the text reads back exactly as given.
-  Result := Result.Replace('&amp;', '[[-xy-amp--]]', [rfReplaceAll]);
-  Result := Result.Replace('&', '&amp;', [rfReplaceAll]);
-  Result := Result.Replace('[[-xy-amp--]]', '&amp;amp;', [rfReplaceAll]);
-  Result := Result.Replace('<', '&lt;', [rfReplaceAll]);
-  Result := Result.Replace('>', '&gt;', [rfReplaceAll]);
-
-  if isAttribute then
-  begin
-    Result := Result.Replace('''', '&#39;', [rfReplaceAll]);
-    Result := Result.Replace('"', '&quot;', [rfReplaceAll]);
-  end;
-{$ENDIF}
 end;
 
 end.

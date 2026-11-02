@@ -32,11 +32,7 @@ interface
 {$I DUnitX.inc}
 
 uses
-{$IFDEF USE_NS}
   System.Classes,
-{$ELSE}
-  Classes,
-{$ENDIF}
   DUnitX.CommandLine.Options,
   DUnitX.CommandLine.OptionDef;
 
@@ -130,31 +126,14 @@ implementation
 
 uses
   DUnitX.ResStrs,
-{$IFDEF USE_NS}
   System.Generics.Collections,
   System.StrUtils,
   System.SysUtils;
-{$ELSE}
-  Generics.Collections,
-  StrUtils,
-  SysUtils;
-{$ENDIF}
 
 procedure StripQuotes(var value : string);
 var
   l : integer;
 begin
-{$IFDEF NEXTGEN}
-  l := value.Length - 1;
-  if l < 1 then
-    exit;
-
-  if CharInSet(value.Chars[0], ['''', '"']) and CharInSet(value.Chars[l], ['''', '"']) then
-  begin
-    value := value.Remove(l, 1);
-    value := value.Remove(0, 1);
-  end;
-{$ELSE}
   l := Length(value);
   if l < 2 then
     exit;
@@ -164,7 +143,6 @@ begin
     Delete(value, l, 1);
     Delete(value, 1, 1);
   end;
-{$ENDIF}
 end;
 
 //The registered option that names an options file, or nil if there is none.
@@ -205,24 +183,12 @@ var
 begin
   for i := 0 to values.Count - 1 do
   begin
-    j := {$IFDEF NEXTGEN} - 1{$ELSE}0{$ENDIF};
+    j := 0;
     option := nil;
     bTryValue := true;
     bUseKey := false;
     isAtFile := false;
     value := values.Strings[i];
-{$IFDEF NEXTGEN}
-    if value = string.Empty then
-      continue;
-    if value.StartsWith('--') then
-      value := value.Remove(0, 2)
-    else if value.StartsWith('-') then
-      value := value.Remove(0, 1)
-    else if value.StartsWith('/') then
-      value := value.Remove(0, 1)
-    else if value.StartsWith('@') then
-      value := value.Remove(0, 1)
-{$ELSE}
 
     if value = '' then
       continue;
@@ -241,7 +207,6 @@ begin
       bTryValue := false;
       isAtFile := true;
     end
-{$ENDIF}
     else if FUnamedIndex < TOptionsRegistry.RegisteredUnamedOptions.Count then
     begin
       option := TOptionsRegistry.RegisteredUnamedOptions.Items[FUnamedIndex];
@@ -256,19 +221,6 @@ begin
       continue;
     end;
 
-{$IFDEF NEXTGEN}
-    if bTryValue then
-      j := value.IndexOf(':');
-    if j > -1 then
-    begin
-      //separate out into key and value
-      key := value.SubString(0, j);
-      value := value.Remove(0, j + 1);
-      //it should already come in here without quotes when parsing paramstr(x).
-      //but it might have quotes if it came in from a parameter file;
-      StripQuotes(value);
-    end
-{$ELSE}
     if bTryValue then
       j := Pos(':', value);
     if j > 0 then
@@ -280,7 +232,6 @@ begin
       //but it might have quotes if it came in from a parameter file;
       StripQuotes(value);
     end
-{$ENDIF}
     else
     begin
       //no value just a key

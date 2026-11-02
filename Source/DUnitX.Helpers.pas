@@ -31,11 +31,7 @@ interface
 {$I DUnitX.inc}
 
 uses
-{$IFDEF USE_NS}
   System.TypInfo;
-{$ELSE}
-  TypInfo;
-{$ENDIF}
 
 type
   /// <summary>

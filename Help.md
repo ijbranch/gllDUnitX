@@ -210,7 +210,7 @@ The runtime package is `packages\RAD Studio 13.0\VSoft.DUnitXWinR.dpk` (`require
 | Unit | What you take from it |
 |---|---|
 | `DUnitX.TestFramework` | The one to `use`. Re-exports `Assert`, and declares `TDUnitX`, `ITestRunner`, `IRunResults`, `ITestLogger`, `TDUnitXOptions`, `EXIT_ERRORS`, and re-exports `DUnitX.Attributes` |
-| `DUnitX.Init` | Optional on Delphi 13. Its `initialization` wires `Assert.TestFailure`/`TestPass`/`TestIgnored` to the real exception classes and registers the fixture provider, but `DUnitX.TestFramework`'s own `initialization` already does both on every compiler except XE3 (`{$IFNDEF DELPHI_XE3}`), so listing it is harmless and redundant |
+| `DUnitX.Init` | Optional on Delphi 13. Its `initialization` wires `Assert.TestFailure`/`TestPass`/`TestIgnored` to the real exception classes and registers the fixture provider, but `DUnitX.TestFramework`'s own `initialization` already does both, so listing it is harmless and redundant |
 | `DUnitX.Loggers.Console` | `TDUnitXConsoleLogger.Create( quietMode : boolean = False )` |
 | `DUnitX.Loggers.XML.NUnit` | `TDUnitXXMLNUnitFileLogger.Create( AFilename : string = '' )` — empty means `dunitx-results.xml` beside the exe; a bare file name means the current folder (it raised `EInOutError` before this fork's 2026-09-29 fix, and still does upstream). `TDUnitXXMLNUnitLogger` takes a stream |
 | `DUnitX.Loggers.XML.JUnit` | `TDUnitXXMLJUnitFileLogger` / `TDUnitXXMLJUnitLogger`, same shape |
@@ -400,7 +400,6 @@ Parsed by `TDUnitX.CheckCommandLine`, which exits on an invalid option. A switch
 
 - `TRttiPropertyExtension` hard-codes virtual method table slot indices derived from an older `System.Rtti`. Delphi 13 inserted `TRttiPlaceMember` and `TRttiDataMember` into the hierarchy, so the map is very likely wrong. Nothing in DUnitX constructs one, so it is unreachable today; the code carries a warning to re-verify every index before using it.
 - Public members such as `ITestFixture.TestCount` return `Integer` while the underlying `TList<T>.Count` is `NativeInt`. The narrowing is harmless at realistic test counts and widening the public API would be breaking.
-- `DUnitX.inc` still carries the compiler-version ladder back to Delphi 2010. It is inert on Delphi 13 and has not been resolved away.
 - **Fixtures are constructed eagerly**, when the fixture list is built, even under `-r:` for a single test. A raising constructor is now contained to its own fixture, but lazy construction (build with a nil instance and construct in `ExecuteFixtures` only when a fixture has enabled tests) is deferred.
 - **A method-level `[Category]` replaces the fixture's category** rather than adding to it, so `-e:Integration` still runs a `[Category('Slow')]` method inside an `[Category('Integration')]` fixture. This is upstream's intent and changing it would change test selection in every suite, so it is left as is.
 - **`FailsOnNoAsserts` counts assertions per thread**: asserts made on another thread do not count. Durations use `Now()`, so a clock change can skew them.

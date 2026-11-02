@@ -33,11 +33,7 @@ interface
 
 uses
   DUnitX.TestFramework,
-{$IFDEF USE_NS}
   System.SysUtils;
-{$ELSE}
-  SysUtils;
-{$ENDIF}
 
 type
   /// <summary>
@@ -299,18 +295,10 @@ type
     /// <summary>Set by the constructor; asserted by ATest.</summary>
     FSetupCalled : boolean;
   public
-{$IFDEF DELPHI_XE_UP}
     /// <summary>
-    ///   Fixture setup by construction: records that it ran. (Delphi 2010 did not call the constructor, hence the
-    ///   AfterConstruction alternative.)
+    ///   Fixture setup by construction: records that it ran.
     /// </summary>
     constructor Create;
-{$ELSE}
-    /// <summary>
-    ///   Fixture setup on compilers that do not call the constructor: records that it ran.
-    /// </summary>
-    procedure AfterConstruction; override;
-{$ENDIF}
     /// <summary>
     ///   Fixture teardown by destruction; empty.
     /// </summary>
@@ -337,12 +325,7 @@ uses
   DUnitX.DUnitCompatibility,
   DUnitX.Exceptions,
   System.Diagnostics,
-{$IFDEF USE_NS}
   System.DateUtils;
-{$ELSE}
-  Diagnostics,
-  DateUtils;
-{$ENDIF}
 
 procedure TMyExampleTests.DontCallMe;
 begin
@@ -524,12 +507,8 @@ begin
   Assert.IsTrue(FSetupCalled);
 end;
 
-{$IFDEF DELPHI_XE_UP}
 constructor TExampleFixture3.Create;
 
-{$ELSE}
-procedure TExampleFixture3.AfterConstruction;
-{$ENDIF}
 begin
   FSetupCalled := True;
 end;

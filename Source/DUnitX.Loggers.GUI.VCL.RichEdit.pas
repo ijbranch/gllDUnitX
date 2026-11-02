@@ -32,15 +32,9 @@ interface
 {$I DUnitX.inc}
 
 uses
-{$IFDEF USE_NS}
   Vcl.ComCtrls,
   Vcl.Graphics,
   System.Generics.Collections,
-{$ELSE}
-  ComCtrls,
-  Graphics,
-  Generics.Collections,
-{$ENDIF}
   DUnitX.ConsoleWriter.Base,
   DUnitX.TestFramework;
 
@@ -204,11 +198,7 @@ type
 implementation
 
 uses
-{$IFDEF USE_NS}
   System.SysUtils,
-{$ELSE}
-  SysUtils,
-{$ENDIF}
   DUnitX.ResStrs;
 
 resourcestring

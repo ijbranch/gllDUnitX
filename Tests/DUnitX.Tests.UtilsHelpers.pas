@@ -118,13 +118,8 @@ type
 implementation
 
 uses
-{$IFDEF USE_NS}
   System.Generics.Collections,
   System.Rtti,
-{$ELSE}
-  Generics.Collections,
-  Rtti,
-{$ENDIF}
   DUnitX.Utils;
 
 { TUtilsHelpersTests }

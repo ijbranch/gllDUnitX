@@ -32,19 +32,11 @@ interface
 {$I DUnitX.inc}
 
 uses
-{$IFDEF USE_NS}   // since Delphi XE2
   Winapi.Windows,
   System.SysUtils,
   System.Classes,
   System.TimeSpan,
   System.Generics.Collections,
-{$ELSE}
-  Windows,
-  SysUtils,
-  Classes,
-  TimeSpan,
-  Generics.Collections,
-{$ENDIF}
   DUnitX.TestFramework,
   DUnitX.Loggers.Null;
 
@@ -453,11 +445,7 @@ end;
 constructor TDunitXTextFileLogger.Create(const fileName : string; const overwrite : Boolean; const encoding : TEncoding);
 
 type
-  {$IF Declared(TBufferedFileStream)}
-    TOutputStream = TBufferedFileStream;
-  {$ELSE}
-    TOutputStream = TFileStream;
-  {$IFEND}
+  TOutputStream = TBufferedFileStream;
 
 var
   outName : string;

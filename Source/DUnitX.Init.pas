@@ -27,46 +27,15 @@
 
 unit DUnitX.Init;
 
-// In order to workaround the Delphi XE3 Bug noted at
-// https://github.com/VSoftTechnologies/DUnitX/issues/117),
-// you need to add the unit DUnitX.Init to your test projects - all
-// other versions do this in the initialization of DUnitX.TestFramework.
-// This file is safe to include in ALL projects as it with IFDEF out
-// if not running under XE3.
+// Empty since the Delphi XE3 workaround it held ( https://github.com/VSoftTechnologies/DUnitX/issues/117 ) was
+// resolved away for this fork's Delphi 13 scope: DUnitX.TestFramework's initialization does its work.  Kept so that
+// a test project that still lists DUnitX.Init compiles.
 
 interface
 
 {$I DUnitX.inc}
 
-{$IFDEF DELPHI_XE3}
-
-uses
-  DUnitX.TestFramework,
-  DUnitX.FixtureProvider;
-
-{$ENDIF}
-
 implementation
-
-{$IFDEF DELPHI_XE3}
-
-uses
-  DUnitX.Exceptions,
-  DUnitX.ServiceLocator,
-  DUnitX.Extensibility;
-
-procedure InitAssert;
-begin
-  DUnitX.TestFramework.Assert.TestFailure := ETestFailure;
-  DUnitX.TestFramework.Assert.TestPass := ETestPass;
-  DUnitX.TestFramework.Assert.TestIgnored := ETestIgnored;
-end;
-
-initialization
-  InitAssert;
-  TDUnitXServiceLocator.DefaultContainer.RegisterType<IFixtureProvider, TDUnitXFixtureProvider>();
-
-{$ENDIF}
 
 end.
 

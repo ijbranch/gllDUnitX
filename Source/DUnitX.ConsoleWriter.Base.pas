@@ -31,11 +31,7 @@ interface
 {$I DUnitX.inc}
 
 uses
-{$IFDEF USE_NS}
   System.Classes;
-{$ELSE}
-  Classes;
-{$ENDIF}
 
 type
   /// <summary>
@@ -185,15 +181,9 @@ implementation
 { TDUnitXConsoleWriterBase }
 
 uses
-{$IFDEF USE_NS}
   System.Types,
   System.StrUtils,
   System.SysUtils;
-{$ELSE}
-  Types,
-  StrUtils,
-  SysUtils;
-{$ENDIF}
 
 const
   DEFAULT_CONSOLE_WIDTH = 80;
@@ -239,11 +229,7 @@ begin
     //Walk through the string list pulling of the console width of characters at a time.
     for line in slLines do
     begin
-{$IFDEF NEXTGEN}
-      len := line.Length;
-{$ELSE}
       len := Length(line);
-{$ENDIF}
 
       if (width > 0) and (len > width) then
       begin
@@ -251,11 +237,7 @@ begin
         while offset <= len do
         begin
           //Write a line as we have hit the limit of the console.
-{$IFDEF NEXTGEN}
-          Result.Add(line.Substring(offset - 1, width));
-{$ELSE}
           Result.Add(Copy(line, offset, width));
-{$ENDIF}
           Inc(offset, width);
         end;
       end

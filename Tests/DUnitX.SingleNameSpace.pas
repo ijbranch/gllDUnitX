@@ -26,21 +26,13 @@ type
 implementation
 
 uses
-{$IFDEF DELPHI_2010}
-  //D2010 doesn't have TThread.Sleep
-  Windows,
-{$ENDIF}
   System.Classes;
 
 { TSingleNamespaceTest }
 
 procedure TSingleNamespaceTest.ATest;
 begin
-{$IFDEF DELPHI_2010}
-  Windows.Sleep(50);                    // just so we can test duration output.
-{$ELSE}
   TThread.Sleep(50);
-{$ENDIF}
 
   Assert.IsTrue(true);
 end;

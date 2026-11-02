@@ -35,24 +35,13 @@ unit DUnitX.Types;
 interface
 
 uses
-{$IFDEF USE_NS}
   System.Rtti;
-{$ELSE}
-  Rtti;
-{$ENDIF}
 
 type
-{$IFDEF SUPPORTS_TARRAY}
   /// <summary>
   ///   Dynamic array of RTTI values; used for the argument lists that test cases pass to parameterised test methods.
   /// </summary>
   TValueArray = TArray<TValue>;
-{$ELSE}
-  /// <summary>
-  ///   Dynamic array of RTTI values; used for the argument lists that test cases pass to parameterised test methods.
-  /// </summary>
-  TValueArray = array of TValue;
-{$ENDIF}
 
   /// <summary>
   ///   How an expected exception class declared on a test (WillRaise attribute) is matched against the exception the

@@ -32,19 +32,11 @@ interface
 {$I DUnitX.inc}
 
 uses
-{$IFDEF USE_NS}
   System.Classes,
   System.SysUtils,
   System.Rtti,
   System.TypInfo,
   System.Generics.Collections,
-{$ELSE}
-  Classes,
-  SysUtils,
-  Rtti,
-  TypInfo,
-  Generics.Collections,
-{$ENDIF}
 
   DUnitX.CommandLine.Options;
 
@@ -218,11 +210,7 @@ implementation
 
 uses
   DUnitX.ResStrs,
-{$IFDEF USE_NS}
   System.StrUtils;
-{$ELSE}
-  StrUtils;
-{$ENDIF}
 
 { TOptionDefinition<T> }
 

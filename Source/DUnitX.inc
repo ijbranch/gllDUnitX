@@ -24,78 +24,26 @@
 {                                                                           }
 {***************************************************************************}
 
- //Basic Version of Compiler Supported
-{$IFDEF CONDITIONALEXPRESSIONS}  //Started being defined with D2009
-   {$IF CompilerVersion < 21.0} // Before RAD Studio 2010
-      {$DEFINE UNSUPPORTED_COMPILER_VERSION}
-   {$IFEND}
-  {$IF CompilerVersion > 24.0 } //XE4 or later
-    {$LEGACYIFEND ON}
-  {$IFEND}
-{$ELSE}
-  {$DEFINE UNSUPPORTED_COMPILER_VERSION}
-{$ENDIF}
-
-{$IFDEF UNSUPPORTED_COMPILER_VERSION}
-  Unsupported Compiler Version (Delphi 2010 or later required!)
-{$ENDIF}
-
-
-{$IF CompilerVersion = 21.0} // 2010
-  {$DEFINE DELPHI_2010}
+//Delphi 13 or later: this fork targets nothing older ( Delphi 13+, Win32 and Win64 ).
+{$IF CompilerVersion < 37.0}
+  {$MESSAGE FATAL 'gllDUnitX requires Delphi 13 or later'}
 {$IFEND}
+{$LEGACYIFEND ON}
 
-
-{$IF CompilerVersion > 21.0} // XE up
-  {$DEFINE DELPHI_XE_UP}
-  {$DEFINE SUPPORTS_TARRAY}
-{$IFEND}
-
-
-{$IF CompilerVersion > 22.0} // XE2 up
-  {$DEFINE DELPHI_XE2_UP}
-  {$DEFINE USE_NS}
-  {$DEFINE SUPPORTS_REGEX}
-{$IFEND}
-
-{$IF CompilerVersion < 23.0} // XE down
-  {$DEFINE CPUX86} //only defined in XE2 or later
-{$IFEND}
-
-{$IF CompilerVersion > 23.0 } //XE3 or later
-  {$DEFINE DELPHI_XE3_UP}
-{$IFEND}
-
-{$IF CompilerVersion = 24.0 }
-  {$DEFINE DELPHI_XE3}
-{$IFEND}
-
-{$IF CompilerVersion > 24.0} // XE4 up
-  {$DEFINE DELPHI_XE4_UP}
-{$IFEND}
-
-{$IF CompilerVersion > 26.0} // XE6 up
-  {$DEFINE DELPHI_XE6_UP}
-{$IFEND}
-
-
-
-{$IF CompilerVersion > 28.0} // XE8 up
-  {$DEFINE DELPHI_XE8_UP}
-{$IFEND}
-
-{$IF CompilerVErsion > 29.0}
-  {$DEFINE DELPHIX_SEATTLE_UP} //used in expert
-{$IFEND}
-
-{$IF CompilerVersion > 32.0} // 10.3 up
-  {$DEFINE DELPHI_XE103_UP}
-{$IFEND}
-
-{$IF CompilerVersion > 31.0} // 10.1 up
-  {$DEFINE DELPHI_XE101_UP}
-{$IFEND}
-
+//Always defined on Delphi 13.  gllDUnitX tests none of them any more; they are kept for code that includes this
+//file and does.
+{$DEFINE DELPHI_XE_UP}
+{$DEFINE SUPPORTS_TARRAY}
+{$DEFINE DELPHI_XE2_UP}
+{$DEFINE USE_NS}
+{$DEFINE SUPPORTS_REGEX}
+{$DEFINE DELPHI_XE3_UP}
+{$DEFINE DELPHI_XE4_UP}
+{$DEFINE DELPHI_XE6_UP}
+{$DEFINE DELPHI_XE8_UP}
+{$DEFINE DELPHIX_SEATTLE_UP}
+{$DEFINE DELPHI_XE101_UP}
+{$DEFINE DELPHI_XE103_UP}
 
 {$I DUnitX.Stacktrace.inc}
 {$I DUnitX.MemoryLeaks.inc}

@@ -65,11 +65,7 @@ type
 implementation
 
 uses
-{$IFDEF USE_NS}
   System.SysUtils,
-{$ELSE}
-  System.SysUtils,
-{$ENDIF}
   DUnitX.TestNameParser;
 
 // A trailing ',' is a separator, not part of the name.

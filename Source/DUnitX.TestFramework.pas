@@ -36,7 +36,6 @@ interface
 {$I DUnitX.inc}
 
 uses
-{$IFDEF USE_NS}
   System.Classes,
   System.SysUtils,
   System.SyncObjs,
@@ -44,15 +43,6 @@ uses
   System.Rtti,
   System.TimeSpan,
   System.Generics.Collections,
-{$ELSE}
-  Classes,
-  SysUtils,
-  SyncObjs,
-  TypInfo,
-  Rtti,
-  TimeSpan,
-  Generics.Collections,
-{$ENDIF}
   DUnitX.Assert,
   DUnitX.Assert.Ex,
   DUnitX.Attributes,
@@ -158,11 +148,6 @@ type
   /// </summary>
   TLogMessageArray = array of TLogMessage;
 
-{$IFDEF DELPHI_2010}
-  /// <summary>Thread identifier type, missing from Delphi 2010's RTL.</summary>
-  TThreadID = Cardinal;
-{$ENDIF}
-
 const
   /// <summary>Short display text for each log level.</summary>
   TLogLevelDesc     : array[TLogLevel] of string = ('Info', 'Warn', 'Err');
@@ -173,7 +158,6 @@ const
   exDescendant      = DUnitX.Types.exDescendant;
 
 type
-{$IFDEF DELPHI_XE2_UP}
   /// <summary>
   ///   Class helper that redirects <c>Log</c>, <c>Status</c> and <c>WriteLn</c> called inside a test fixture to the
   ///   test runner active on the calling thread, so the output is logged against the running test.
@@ -216,7 +200,6 @@ type
     /// </summary>
     procedure WriteLn; overload;
   end;
-{$ENDIF}
 
   /// <summary>
   ///   The assertion class tests call (<c>Assert.AreEqual</c>, <c>Assert.IsTrue</c>, <c>Assert.WillRaise</c> and the
@@ -1671,20 +1654,12 @@ const
 implementation
 
 uses
-{$IFDEF USE_NS}
   System.Variants,
   System.Math,
   System.StrUtils,
   System.Types,
   System.RegularExpressions,
   System.Generics.Defaults,
-{$ELSE}
-  Variants,
-  Math,
-  StrUtils,
-  Types,
-  Generics.Defaults,
-{$ENDIF}
   DUnitX.ResStrs,
   DUnitX.ConsoleWriter.Base,
   DUnitX.Banner,
@@ -1698,9 +1673,6 @@ uses
   DUnitX.FilterBuilder,
   DUnitX.WeakReference,
   DUnitX.TestDataProvider
-  {$IFDEF DELPHI_XE3}
-  ,DUnitX.Init
-  {$ENDIF}
   ;
 
 { TDUnitXOptions }
@@ -1911,8 +1883,6 @@ begin
     RegisteredFixtures.Add(AClass, sName);
 end;
 
-{$IFDEF DELPHI_XE2_UP}
-
 { TTestFixtureHelper }
 
 procedure TTestFixtureHelper.Log(const msg : string);
@@ -1946,7 +1916,6 @@ procedure TTestFixtureHelper.WriteLn(const msg : string);
 begin
   Self.Log(TLogLevel.Information, msg);
 end;
-{$ENDIF}
 
 procedure InitAssert;
 begin
@@ -1955,15 +1924,11 @@ begin
   Assert.TestIgnored := ETestIgnored;
 end;
 
-{$IFNDEF DELPHI_XE3}
-
 initialization
   InitAssert;
   TDUnitXServiceLocator.DefaultContainer.RegisterType<IFixtureProvider, TDUnitXFixtureProvider>();
 
 finalization
-
-{$ENDIF}
 
 end.
 

@@ -32,15 +32,9 @@ interface
 {$I DUnitX.inc}
 
 uses
-{$IFDEF USE_NS}
   System.Generics.Collections,
   System.Rtti,
   System.SysUtils,
-{$ELSE}
-  Generics.Collections,
-  Rtti,
-  SysUtils,
-{$ENDIF}
   DUnitX.Types,
   DUnitX.Attributes,
   DUnitX.TestFramework,
@@ -606,13 +600,8 @@ type
 implementation
 
 uses
-{$IFDEF USE_NS}
   System.TypInfo,
   System.Generics.Defaults,
-{$ELSE}
-  TypInfo,
-  Generics.Defaults,
-{$ENDIF}
   DUnitX.Test,
   DUnitX.Utils;
 
@@ -920,9 +909,7 @@ end;
 procedure TDUnitXTestFixture.InternalInitFixtureInstance(const isConstructing : boolean);
 var
   test : ITest;
-{$IFDEF DELPHI_XE_UP}
   method : TRttiMethod;
-{$ENDIF}
 
 begin
   if FFixtureInstance = nil then
@@ -935,8 +922,6 @@ begin
     end;
 
     FIgnoreFixtureSetup := false;
-{$IFDEF DELPHI_XE_UP}
-    //NOTE: Causes Delphi 2010 to be inconsistent with produced exe. Will sometimes crash with AV when generating fixtures.
     //If there is a parameterless constructor declared then we will use that as the
     //fixture Setup method.
     if FFixtureType.TryGetConstructor(method) then
@@ -945,7 +930,6 @@ begin
       FFixtureInstance := method.Invoke(TRttiInstanceType(FFixtureType).MetaclassType, []).AsObject;
     end
     else
-{$ENDIF}
       FFixtureInstance := FTestClass.Create;
 
     //Don't do this if we are called from the constructor as it's not needed.

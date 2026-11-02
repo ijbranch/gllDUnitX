@@ -32,18 +32,11 @@ interface
 {$I DUnitX.inc}
 
 uses
-{$IFDEF USE_NS}
   System.Generics.Collections,
   System.TimeSpan,
   System.Rtti,
   System.SysUtils,
   System.TypInfo,
-{$ELSE}
-  Generics.Collections,
-  TimeSpan,
-  Rtti,
-  SysUtils,
-{$ENDIF}
   DUnitX.Types,
   DUnitX.Extensibility,
   DUnitX.InternalInterfaces,
@@ -541,13 +534,8 @@ type
 implementation
 
 uses
-{$IFDEF USE_NS}
   System.Generics.Defaults,
   System.StrUtils,
-{$ELSE}
-  Generics.Defaults,
-  StrUtils,
-{$ENDIF}
   DUnitX.Timeout,
   DUnitX.ResStrs,
   DUnitX.Exceptions,

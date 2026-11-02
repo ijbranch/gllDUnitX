@@ -401,7 +401,6 @@ type
     [Test]
     procedure AreEqual_TStrings_Throws_ETestFailure_When_Strings_Are_NotEqual;
 
-{$IFDEF DELPHI_XE2_UP}
     /// <summary>
     ///   Proves AreEqual&lt;IInterface&gt; passes for the same interface reference.
     /// </summary>
@@ -451,8 +450,6 @@ type
     /// </summary>
     [Test]
     procedure AreEqual_Array_T_Throws_ETestFailure_When_Arrays_Are_Not_Equal;
-
-{$ENDIF}
 
     /// <summary>
     ///   Proves AreEqualMemory passes when both pointers address the same memory.
@@ -623,7 +620,6 @@ type
     [Test]
     procedure Test_AreNotSameOnSameObjectWithDifferentInterfaces_Throws_Exception;
 
-{$IFDEF DELPHI_XE_UP}
     /// <summary>
     ///   Proves Contains&lt;T&gt;( array ) passes when the value is in the array.
     /// </summary>
@@ -647,7 +643,6 @@ type
     /// </summary>
     [Test]
     procedure DoesNotContain_ArrayOfT_Throws_Exception_When_Value_In_Array;
-{$ENDIF}
 
     /// <summary>
     ///   Proves StartsWith passes when the substring begins the string, with and without case sensitivity.
@@ -743,7 +738,6 @@ type
     [Test]
     procedure IgnoreCaseDefault;
 
-{$IFDEF SUPPORTS_REGEX}
     /// <summary>
     ///   Proves IsMatch passes when the string matches the regular expression (a GUID with or without dashes).
     /// </summary>
@@ -778,7 +772,6 @@ type
     /// </summary>
     [Test]
     procedure WillRaiseWithMessageRegex;
-{$ENDIF}
 
     /// <summary>
     ///   Proves WillNotRaiseWithMessage with no class and no message fails for any exception. (Published, so a test
@@ -975,18 +968,11 @@ type
 implementation
 
 uses
-{$IFDEF USE_NS}
   System.SysUtils,
   System.Classes,
   System.Generics.Collections,
   System.Math,
   System.Variants,
-{$ELSE}
-  SysUtils,
-  Classes,
-  Math,
-  Variants,
-{$ENDIF}
   DUnitX.Exceptions,
   DUnitX.Assert;
 
@@ -2090,7 +2076,6 @@ begin
   end;
 end;
 
-{$IFDEF DELPHI_XE2_UP}
 procedure TTestsAssert.AreEqual_T_Throws_ETestFailure_When_Interfaces_Are_NotEqual;
 var
   mock : IInterface;
@@ -2233,7 +2218,6 @@ begin
       Assert.AreEqual<real>(TArray<real>.Create(3.14, 3.15), TArray<real>.Create(3.14, 3.15));
     end, ETestFailure);
 end;
-{$ENDIF}
 
 procedure TTestsAssert.Test_AreSameOnSameObjectWithDifferentInterfaces_No_Exception;
 var
@@ -2333,7 +2317,6 @@ begin
     end, ETestFailure);
 end;
 
-{$IFDEF DELPHI_XE_UP}
 procedure TTestsAssert.Contains_ArrayOfT_Throws_No_Exception_When_Value_In_Array;
 begin
   Assert.WillNotRaise(
@@ -2369,7 +2352,6 @@ begin
       Assert.DoesNotContain<string>(['x', 'y', 'z'], 'x');
     end, ETestFailure);
 end;
-{$ENDIF}
 
 procedure TTestsAssert.StartsWith_SubString_Is_At_The_Start_Of_String(const subString, theString : string; caseSensitive : boolean);
 begin
@@ -2407,7 +2389,6 @@ begin
     end, ETestFailure);
 end;
 
-{$IFDEF SUPPORTS_REGEX}
 procedure TTestsAssert.IsMatch_True_Will_Not_Raise(const regexPattern, theString : string);
 begin
   Assert.WillNotRaiseAny(
@@ -2461,8 +2442,6 @@ begin
     end,
     ETestFailure);
 end;
-
-{$ENDIF}
 
 procedure TTestsAssert.IsEmpty_Variant_Fails_Only_When_Value_Is_Assigned;
 var
@@ -2552,13 +2531,11 @@ begin
     begin
       Assert.WillRaiseWithMessage(procedure begin Assert.Fail(INNER_MSG) end);
     end, ETestFailure, INNER_MSG, 'WillRaiseWithMessage swallowed a failed assertion');
-{$IFDEF SUPPORTS_REGEX}
   Assert.WillRaiseWithMessage(
     procedure
     begin
       Assert.WillRaiseWithMessageRegex(procedure begin Assert.Fail(INNER_MSG) end);
     end, ETestFailure, INNER_MSG, 'WillRaiseWithMessageRegex swallowed a failed assertion');
-{$ENDIF}
 end;
 
 procedure TTestsAssert.WillRaise_Family_Does_Not_Swallow_Pass_Or_Ignore;

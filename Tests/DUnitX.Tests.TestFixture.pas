@@ -566,28 +566,16 @@ type
 implementation
 
 uses
-{$IFDEF USE_NS}
   Winapi.Windows,
   System.Math,
   System.SysUtils,
   System.Rtti,
   System.Generics.Collections,
-{$ELSE}
-  Winapi.Windows,
-  System.Math,
-  System.SysUtils,
-  System.Rtti,
-  System.Generics.Collections,
-{$ENDIF}
   DUnitX.Types,
   DUnitX.Extensibility,
   DUnitX.InternalInterfaces,
   DUnitX.TestRunner,
-{$IFDEF USE_NS}
   System.Classes,
-{$ELSE}
-  System.Classes,
-{$ENDIF}
   DUnitX.Exceptions,
   DUnitX.FixtureProvider,
   DUnitX.RunResults,

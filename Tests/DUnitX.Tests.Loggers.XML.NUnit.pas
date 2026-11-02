@@ -32,11 +32,7 @@ interface
 {$I DUnitX.inc}
 
 uses
-{$IFDEF USE_NS}
   System.Classes,
-{$ELSE}
-  Classes,
-{$ENDIF}
   DUnitX.TestFramework,
   DUnitX.Loggers.XML.NUnit;
 
@@ -57,7 +53,6 @@ type
     procedure OnTestingStarts_Fills_The_Start_Of_The_Stream_With_Header_Info;
     //  [Test(false)]
   //    procedure OnTestingEnds_Fills_The_End_Of_The_Stream_With_Testing_Result_Info;
-{$IFDEF DELPHI_XE2_UP}
     /// <summary>
     ///   Disabled upstream, and it cannot be enabled as it stands: it never reports a warning (ITestLogger has no
     ///   warning callback, and the XML loggers have no warning output), so 'WARNING: test: message' is never written.
@@ -71,10 +66,8 @@ type
     /// </summary>
     [Test]
     procedure OnTestingEnds_Reports_Errors_And_Leaks_Consistently;
-{$ENDIF}
   end;
 
-{$IFDEF DELPHI_XE2_UP}
   /// <summary>
   ///   Tests for the plain-text results logger's end-of-run issue list.
   /// </summary>
@@ -88,25 +81,15 @@ type
     [Test]
     procedure Issue_List_Keeps_Names_With_Equals_And_Empty_Messages;
   end;
-{$ENDIF}
 
 implementation
 
 uses
-{$IFDEF USE_NS}
   System.Rtti,
   System.SysUtils,
   System.TimeSpan,
   System.DateUtils,
-{$ELSE}
-  Rtti,
-  SysUtils,
-  TimeSpan,
-  DateUtils,
-{$ENDIF}
-{$IFDEF DELPHI_XE2_UP}
   Delphi.Mocks,
-{$ENDIF}
   System.Generics.Collections,
   DUnitX.Generics,
   DUnitX.FixtureResult,
@@ -225,7 +208,6 @@ begin
   Assert.AreEqual(sAppName, sExpectedAppName);
 end;
 
-{$IFDEF DELPHI_XE2_UP}
 procedure TDUnitX_LoggerXMLNUnitTests.OnTestingEnds_Reports_Errors_And_Leaks_Consistently;
 var
   logger : ITestLogger;
@@ -354,9 +336,6 @@ begin
   Assert.AreEqual(Copy(mockStream.DataString, iPositionOfWarning, Length(sExceptedWarning)), sExceptedWarning);
 end;
 
-{$ENDIF}
-
-{$IFDEF DELPHI_XE2_UP}
 procedure TDUnitX_LoggerTextTests.Issue_List_Keeps_Names_With_Equals_And_Empty_Messages;
 var
   logger : ITestLogger;
@@ -397,12 +376,9 @@ begin
     stream.Free;
   end;
 end;
-{$ENDIF}
 
 initialization
   TDUnitX.RegisterTestFixture(TDUnitX_LoggerXMLNUnitTests);
-{$IFDEF DELPHI_XE2_UP}
   TDUnitX.RegisterTestFixture(TDUnitX_LoggerTextTests);
-{$ENDIF}
 end.
 
