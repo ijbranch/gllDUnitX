@@ -387,6 +387,9 @@ Batch 13 merged on 2026-11-02.  **Batch 14**, the runner changes, one PR at a ti
 | 5.1 misspelt `DELPHI_SEATTLE_UP` (C++ entry makes a Delphi project) | [#570](https://github.com/VSoftTechnologies/DUnitX/issues/570) | [#575](https://github.com/VSoftTechnologies/DUnitX/pull/575) |
 | 5.2 / 5.3 Cancel still creates the project; nil active project | [#571](https://github.com/VSoftTechnologies/DUnitX/issues/571) | [#576](https://github.com/VSoftTechnologies/DUnitX/pull/576) |
 | 5.4 fixture class names that do not compile | [#572](https://github.com/VSoftTechnologies/DUnitX/issues/572) | [#577](https://github.com/VSoftTechnologies/DUnitX/pull/577) |
+| 3.3 `AreSame(TObject)` uses `Equals` (re-offered for 2.0.0) | [#414](https://github.com/VSoftTechnologies/DUnitX/issues/414) | [#579](https://github.com/VSoftTechnologies/DUnitX/pull/579) |
+
+All of batch 14 except #579 merged on 2026-11-02; every item on the #398 list has been sent and merged.
 
 **Outside the batches: [#372](https://github.com/VSoftTechnologies/DUnitX/issues/372) (bitmask exit codes) ->
 [PR #411](https://github.com/VSoftTechnologies/DUnitX/pull/411)**, branch `feature/bitmask-exit-codes`, posted

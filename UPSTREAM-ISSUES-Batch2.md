@@ -18,8 +18,10 @@ fix. "Allow edits by maintainers" is on for every PR.
 ## Outcome (2026-10-13)
 
 - **Merged:** #413, #419, #417, #421, #423 (5 of 6). Upstream `master` @ `fa41545` after the last of them.
-- **Not taken:** #415 (`AreSame` identity) and its issue #414, closed unmerged without comment after Vincent raised a
-  behaviour-change reservation and we replied. gllDUnitX keeps the fix.
+- **Not taken:** #415 (`AreSame` identity), closed unmerged without comment after Vincent raised a behaviour-change
+  reservation and we replied (offering to close it). gllDUnitX keeps the fix.  **Corrected 2026-11-02:** the issue
+  #414 was NOT closed; it is still open.  Re-offered the same day as a fresh PR on 2.0.0's `master`, with a
+  `BREAKINGCHANGES.md` entry, now that Vincent is collecting behaviour changes for 2.0.0 (see `UPSTREAM-ISSUES-Batch14.md`).
 - **Follow-up regression, fixed:** [#424](https://github.com/VSoftTechnologies/DUnitX/issues/424) (luebbe): batch 1's
   #407 `ValuesEqual<T>` raised an AV for a type without RTTI (`TypeInfo` nil, e.g. an enum with explicit ordinals).
   Fixed by [#425](https://github.com/VSoftTechnologies/DUnitX/pull/425) (nil guard plus test), merged; upstream

@@ -5,11 +5,12 @@ The runner changes from the #398 list ("happy for all of the above to be address
 | # | Defect | Issue | PR | Branch | Head | Merged |
 |---|---|---|---|---|---|---|
 | 1 | One fixture whose constructor raises aborts the whole run (report 2.3 (a)) | [#567](https://github.com/VSoftTechnologies/DUnitX/issues/567) | [#568](https://github.com/VSoftTechnologies/DUnitX/pull/568) | `fix/fixture-constructor-raises` | `fc8d29b` | 2026-11-02 `8224015` |
-| 2 | False leak reports: `Assert.Pass`, `Log` / `Status`, memory freed between phases (report 2.5 (a), (b), A, B) | [#573](https://github.com/VSoftTechnologies/DUnitX/issues/573) | [#578](https://github.com/VSoftTechnologies/DUnitX/pull/578) | `fix/false-leak-reports` | `d5f32a3` | |
-| 3 | The D13 IDE expert does not compile for Win64 (found checking the expert items) | [#569](https://github.com/VSoftTechnologies/DUnitX/issues/569) | [#574](https://github.com/VSoftTechnologies/DUnitX/pull/574) | `fix/expert-d13-win64-build` | `8b04f75` | |
-| 4 | Misspelt `DELPHI_SEATTLE_UP`: the C++Builder gallery entry makes a Delphi project (report 5.1) | [#570](https://github.com/VSoftTechnologies/DUnitX/issues/570) | [#575](https://github.com/VSoftTechnologies/DUnitX/pull/575) | `fix/expert-seattle-conditional` | `e5ca9f3` | |
-| 5 | Cancel on the save prompt still creates the project; nil active project (report 5.2, 5.3) | [#571](https://github.com/VSoftTechnologies/DUnitX/issues/571) | [#576](https://github.com/VSoftTechnologies/DUnitX/pull/576) | `fix/expert-cancel-save` | `078d681` | |
-| 6 | Fixture class names that do not compile are accepted (report 5.4) | [#572](https://github.com/VSoftTechnologies/DUnitX/issues/572) | [#577](https://github.com/VSoftTechnologies/DUnitX/pull/577) | `fix/expert-fixture-name-ident` | `079f481` | |
+| 2 | False leak reports: `Assert.Pass`, `Log` / `Status`, memory freed between phases (report 2.5 (a), (b), A, B) | [#573](https://github.com/VSoftTechnologies/DUnitX/issues/573) | [#578](https://github.com/VSoftTechnologies/DUnitX/pull/578) | `fix/false-leak-reports` | `d5f32a3` | 2026-11-02 `2299609` |
+| 3 | The D13 IDE expert does not compile for Win64 (found checking the expert items) | [#569](https://github.com/VSoftTechnologies/DUnitX/issues/569) | [#574](https://github.com/VSoftTechnologies/DUnitX/pull/574) | `fix/expert-d13-win64-build` | `8b04f75` | 2026-11-02 `7f1b3d8` |
+| 4 | Misspelt `DELPHI_SEATTLE_UP`: the C++Builder gallery entry makes a Delphi project (report 5.1) | [#570](https://github.com/VSoftTechnologies/DUnitX/issues/570) | [#575](https://github.com/VSoftTechnologies/DUnitX/pull/575) | `fix/expert-seattle-conditional` | `e5ca9f3` | 2026-11-02 `52b429c` |
+| 5 | Cancel on the save prompt still creates the project; nil active project (report 5.2, 5.3) | [#571](https://github.com/VSoftTechnologies/DUnitX/issues/571) | [#576](https://github.com/VSoftTechnologies/DUnitX/pull/576) | `fix/expert-cancel-save` | `078d681` | 2026-11-02 `a87c1c6` |
+| 6 | Fixture class names that do not compile are accepted (report 5.4) | [#572](https://github.com/VSoftTechnologies/DUnitX/issues/572) | [#577](https://github.com/VSoftTechnologies/DUnitX/pull/577) | `fix/expert-fixture-name-ident` | `079f481` | 2026-11-02 `f4b9811` |
+| 7 | `Assert.AreSame` / `AreNotSame(TObject)` call `Equals`, not identity (#414, re-offered; #415 was closed in batch 2) | [#414](https://github.com/VSoftTechnologies/DUnitX/issues/414) | [#579](https://github.com/VSoftTechnologies/DUnitX/pull/579) | `fix/aresame-identity-2` | `0521642` | |
 
 ## 1. A raising fixture constructor (posted 16:25 +11, Ian: "Approved to publish")
 
@@ -34,6 +35,12 @@ Built on `f5ab75a` (touch only `Expert\`; clean on `8224015` and with each other
 - **#575 is more than the spelling:** the now-live `TNewProjectEx` path needed its platform list filtered by `PlatformAvailable` and its C++ settings limited to C++ projects; the C++ result is reasoned, not seen (no C++Builder personality here).
 - **Reviews:** one fresh subagent for all four: #574 none; #575 5 (3 fixed); #576 1 (fixed: the XE2-XE8 wizard had the same bugs); #577 5 (2 fixed).
 
+**Outcome (2026-11-02):** #574-#578 all merged by 17:14, each unchanged (#577's patch-id differs only by context; its changed lines are identical).  Vincent did not answer #578's cost question, so upstream's default is the whole-test leak measurement.  Then a wrap-up on #398 ([comment](https://github.com/VSoftTechnologies/DUnitX/issues/398#issuecomment-6570636335), Ian asked): everything sent and merged, #414 the last.
+
+## 7. `AreSame` identity, re-offered (posted 17:30 +11, Ian: "Approved to publish")
+
+#414 was still open (batch 2's record said closed; corrected).  #415 had been closed after Vincent's "This is a behavior change - not sure about this"; with 2.0.0 collecting behaviour changes it went again on `2299609` with a `BREAKINGCHANGES.md` section.  The `TObject` overloads compare references; a nil shows as `nil` in the message instead of an access violation.  Seven tests red on `2299609`; four mutants killed; review 4 findings, all fixed (doc accuracy, a nil-message test).  Not changed, reported: the DUnit-compatibility `CheckSame(TObject)` goes through `AreEqual<TObject>` (so `Equals`), the same flaw; this fork fixed its own copy in October.
+
 ## This fork
 
-This fork contains a raising constructor in its own way (`ExecuteFixtures` catches `InitFixtureInstance`); compare with #568 when it merges.
+Upstream's tests for #568 and #578 were ported here as guards on 2026-11-02 (`30a2871`): every case passes except the parallel one (no parallel runner here); porting #578's logger case found one real gap here, fixed test-first.  The constructor is still called twice here, once upstream (Help.md §10).  The expert's `TestFixtureAttribute` name came from #577 (`481d6b5`); #574-#576 were already here.
