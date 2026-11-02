@@ -377,6 +377,12 @@ All of batches 11 and 12 merged on 2026-11-02.  **Batch 13**, posted the same da
 | A 64-bit hex `[TestCase]` value converts to an `Integer` or smaller type (found porting #551) | [#564](https://github.com/VSoftTechnologies/DUnitX/issues/564) | [#565](https://github.com/VSoftTechnologies/DUnitX/pull/565) |
 | `Assert.IsType<T>` always fails (#558, option 2) | [#558](https://github.com/VSoftTechnologies/DUnitX/issues/558) | [#566](https://github.com/VSoftTechnologies/DUnitX/pull/566) |
 
+Batch 13 merged on 2026-11-02.  **Batch 14**, the runner changes, one PR at a time: record `UPSTREAM-ISSUES-Batch14.md`.
+
+| Item | Issue | PR |
+|---|---|---|
+| 2.3 (a) one raising fixture constructor aborts the whole run | [#567](https://github.com/VSoftTechnologies/DUnitX/issues/567) | [#568](https://github.com/VSoftTechnologies/DUnitX/pull/568) |
+
 **Outside the batches: [#372](https://github.com/VSoftTechnologies/DUnitX/issues/372) (bitmask exit codes) ->
 [PR #411](https://github.com/VSoftTechnologies/DUnitX/pull/411)**, branch `feature/bitmask-exit-codes`, posted
 2026-10-12 after a reviewer pointed at it from #404. It is someone else's feature request, which upstream had
