@@ -425,6 +425,24 @@ type
     procedure Hex_Integer_Is_Read_As_A_Bit_Pattern_Of_Its_Type;
 
     /// <summary>
+    ///   Proves a [TestCase] value for Int64, UInt64, NativeInt or an Int64 subrange that does not parse, or does not
+    ///   fit, errors instead of converting ('abc', '', a tab before the digits, '-1' for UInt64, one past either end),
+    ///   and that the extremes and a UInt64 above High(Int64) still convert.  Its subrange check catches a hex value
+    ///   with bit 63 set, which TryStrToInt64 reads as a negative number inside the range.  Upstream #551.
+    /// </summary>
+    [Test]
+    procedure Unparseable_Or_Out_Of_Range_Int64_Does_Not_Convert;
+
+    /// <summary>
+    ///   Proves a hex value that fits 64 bits is its bit pattern for Int64 and UInt64, as in code
+    ///   ('$FFFFFFFFFFFFFFFF' is the Int64 -1), that a negative hex value is refused when TryStrToInt64 flips its sign
+    ///   ('-$FFFFFFFFFFFFFFFF' came back as +1), and that an Int64 subrange only range-checks its hex values, even one
+    ///   that reaches Low(Int64); '-$0' and '$0' still convert.  Upstream #551, plus this fork's boundary cases.
+    /// </summary>
+    [Test]
+    procedure Hex_Int64_Is_Read_As_A_Bit_Pattern_Of_Its_Type;
+
+    /// <summary>
     ///   Proves ToVarRec gives a TVarRec whose VType matches the value and whose pointers read back the value: Int64
     ///   is handled, a float other than Extended is not read as 10 bytes, and strings point into the caller's
     ///   storage, not at a freed temporary. Issue #398 item 2.
@@ -579,6 +597,10 @@ end;
 type
   //A signed type that does not cover its whole width
   TSignedSubrange = -10..10;
+  //An Int64 subrange: wider than 32 bits, but not the whole 64
+  TInt64Subrange = -$1FFFFFFFF..$1FFFFFFFF;
+  //An Int64 subrange that reaches Low(Int64) but not High(Int64)
+  TInt64LowHalf = Low(Int64)..0;
 
 procedure TValueHelperTests.Hex_Integer_Is_Read_As_A_Bit_Pattern_Of_Its_Type;
 var
@@ -609,6 +631,66 @@ begin
   Assert.AreEqual(10, asTValue.AsInteger, '''$A'' to -10..10');
   Assert.IsFalse(TValue.From<string>('$FF').TryConvert<TSignedSubrange>(asTValue), '''$FF'' to -10..10');
   Assert.IsFalse(TValue.From<string>('11').TryConvert<TSignedSubrange>(asTValue), '''11'' to -10..10');
+end;
+
+procedure TValueHelperTests.Unparseable_Or_Out_Of_Range_Int64_Does_Not_Convert;
+var
+  asTValue : TValue;
+begin
+  Assert.IsFalse(TValue.From<string>('abc').TryConvert<Int64>(asTValue), '''abc'' to Int64');
+  Assert.IsFalse(TValue.From<string>('abc').TryConvert<UInt64>(asTValue), '''abc'' to UInt64');
+  Assert.IsFalse(TValue.From<string>('abc').TryConvert<NativeInt>(asTValue), '''abc'' to NativeInt');
+  Assert.IsFalse(TValue.From<string>('').TryConvert<UInt64>(asTValue), ''''' to UInt64');
+  Assert.IsFalse(TValue.From<string>(#9'5').TryConvert<UInt64>(asTValue), '#9''5'' to UInt64');
+  Assert.IsFalse(TValue.From<string>('-1').TryConvert<UInt64>(asTValue), '''-1'' to UInt64');
+  Assert.IsFalse(TValue.From<string>('9223372036854775808').TryConvert<Int64>(asTValue), '''9223372036854775808'' to Int64');
+  Assert.IsFalse(TValue.From<string>('18446744073709551616').TryConvert<UInt64>(asTValue), '''18446744073709551616'' to UInt64');
+  Assert.IsFalse(TValue.From<string>('8589934592').TryConvert<TInt64Subrange>(asTValue), '''8589934592'' to -$1FFFFFFFF..$1FFFFFFFF');
+  Assert.IsFalse(TValue.From<string>('$FFFFFFFFFFFFFFFF').TryConvert<TInt64Subrange>(asTValue), '''$FFFFFFFFFFFFFFFF'' to -$1FFFFFFFF..$1FFFFFFFF');
+
+  Assert.IsTrue(TValue.From<string>('9223372036854775807').TryConvert<Int64>(asTValue), '''9223372036854775807'' to Int64');
+  Assert.AreEqual(High(Int64), asTValue.AsInt64, '''9223372036854775807'' to Int64');
+  Assert.IsTrue(TValue.From<string>('-9223372036854775808').TryConvert<Int64>(asTValue), '''-9223372036854775808'' to Int64');
+  Assert.AreEqual(Low(Int64), asTValue.AsInt64, '''-9223372036854775808'' to Int64');
+  Assert.IsTrue(TValue.From<string>('-5').TryConvert<NativeInt>(asTValue), '''-5'' to NativeInt');
+  Assert.AreEqual(Int64(-5), asTValue.AsInt64, '''-5'' to NativeInt');
+  Assert.IsTrue(TValue.From<string>('8589934591').TryConvert<TInt64Subrange>(asTValue), '''8589934591'' to -$1FFFFFFFF..$1FFFFFFFF');
+  Assert.AreEqual(Int64(8589934591), asTValue.AsInt64, '''8589934591'' to -$1FFFFFFFF..$1FFFFFFFF');
+  //Above High(Int64), which a signed parse cannot read
+  Assert.IsTrue(TValue.From<string>('18446744073709551615').TryConvert<UInt64>(asTValue), '''18446744073709551615'' to UInt64');
+  Assert.AreEqual<UInt64>(High(UInt64), asTValue.AsType<UInt64>, '''18446744073709551615'' to UInt64');
+  Assert.IsTrue(TValue.From<string>('+9223372036854775808').TryConvert<UInt64>(asTValue), '''+9223372036854775808'' to UInt64');
+  Assert.AreEqual<UInt64>(UInt64(High(Int64)) + 1, asTValue.AsType<UInt64>, '''+9223372036854775808'' to UInt64');
+end;
+
+procedure TValueHelperTests.Hex_Int64_Is_Read_As_A_Bit_Pattern_Of_Its_Type;
+var
+  asTValue : TValue;
+begin
+  //As in code: a hex value that fits 64 bits is its bit pattern
+  Assert.IsTrue(TValue.From<string>('$FFFFFFFFFFFFFFFF').TryConvert<Int64>(asTValue), '''$FFFFFFFFFFFFFFFF'' to Int64');
+  Assert.AreEqual(Int64(-1), asTValue.AsInt64, '''$FFFFFFFFFFFFFFFF'' to Int64');
+  Assert.IsTrue(TValue.From<string>('0x8000000000000000').TryConvert<Int64>(asTValue), '''0x8000000000000000'' to Int64');
+  Assert.AreEqual(Low(Int64), asTValue.AsInt64, '''0x8000000000000000'' to Int64');
+  Assert.IsTrue(TValue.From<string>('$FFFFFFFF').TryConvert<Int64>(asTValue), '''$FFFFFFFF'' to Int64');
+  Assert.AreEqual(Int64(4294967295), asTValue.AsInt64, '''$FFFFFFFF'' to Int64');
+  Assert.IsTrue(TValue.From<string>('$FFFFFFFFFFFFFFFF').TryConvert<UInt64>(asTValue), '''$FFFFFFFFFFFFFFFF'' to UInt64');
+  Assert.AreEqual<UInt64>(High(UInt64), asTValue.AsType<UInt64>, '''$FFFFFFFFFFFFFFFF'' to UInt64');
+  Assert.IsFalse(TValue.From<string>('-$FFFFFFFFFFFFFFFF').TryConvert<Int64>(asTValue), '''-$FFFFFFFFFFFFFFFF'' to Int64');
+  Assert.IsTrue(TValue.From<string>('-$1').TryConvert<Int64>(asTValue), '''-$1'' to Int64');
+  Assert.AreEqual(Int64(-1), asTValue.AsInt64, '''-$1'' to Int64');
+  Assert.IsFalse(TValue.From<string>('$10000000000000000').TryConvert<UInt64>(asTValue), '''$10000000000000000'' to UInt64');
+  //A subrange does not cover its type's width, so its hex values are only range-checked
+  Assert.IsTrue(TValue.From<string>('$1FFFFFFFF').TryConvert<TInt64Subrange>(asTValue), '''$1FFFFFFFF'' to -$1FFFFFFFF..$1FFFFFFFF');
+  Assert.AreEqual(Int64(8589934591), asTValue.AsInt64, '''$1FFFFFFFF'' to -$1FFFFFFFF..$1FFFFFFFF');
+  //This fork's own: zero is not caught by either sign guard, and a subrange that reaches only one end of Int64 is still
+  //a subrange, so bit 63 set is above it
+  Assert.IsTrue(TValue.From<string>('-$0').TryConvert<Int64>(asTValue), '''-$0'' to Int64');
+  Assert.AreEqual(Int64(0), asTValue.AsInt64, '''-$0'' to Int64');
+  Assert.IsTrue(TValue.From<string>('$0').TryConvert<TInt64Subrange>(asTValue), '''$0'' to -$1FFFFFFFF..$1FFFFFFFF');
+  Assert.AreEqual(Int64(0), asTValue.AsInt64, '''$0'' to -$1FFFFFFFF..$1FFFFFFFF');
+  Assert.IsFalse(TValue.From<string>('$8000000000000000').TryConvert<TInt64LowHalf>(asTValue), '''$8000000000000000'' to Low(Int64)..0');
+  Assert.IsTrue(TValue.From<string>('-5').TryConvert<TInt64LowHalf>(asTValue), '''-5'' to Low(Int64)..0');
 end;
 
 procedure TValueHelperTests.TryConvert_Accepts_Valid_Values_In_Any_Locale;

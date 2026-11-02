@@ -2801,6 +2801,7 @@ var
   LTypeData : PTypeData;
   LValue : Int64;
   LUValue : UInt64;
+  LText : string;
 begin
   LTypeData := GetTypeData(ATarget);
   // An unsigned 64-bit type stores its range as signed values, so Min > Max.
@@ -2811,8 +2812,18 @@ begin
       AResult := TValue.FromOrdinal(ATarget, Int64(LUValue));
     Exit;
   end;
-  Result := TryStrToInt64(ASource.AsString, LValue)
-    and (LValue >= LTypeData.MinInt64Value) and (LValue <= LTypeData.MaxInt64Value);
+  if not TryStrToInt64(ASource.AsString, LValue) then
+    Exit(False);
+  LText := Trim(ASource.AsString);
+  // TryStrToInt64 negates a hex value without checking the sign: '-$FFFFFFFFFFFFFFFF' comes back as 1 (upstream #551).
+  if (LValue > 0) and (LText <> '') and (LText[1] = '-') and IsHexLiteral(Copy(LText, 2, MaxInt)) then
+    Exit(False);
+  // A hex value above $7FFFFFFFFFFFFFFF comes back as its bit pattern, a negative number.  That is right for a type that
+  // covers the whole width, as in code; for a subrange the value is above its range (upstream #551).
+  if (LValue < 0) and IsHexLiteral(LText)
+    and ((LTypeData.MinInt64Value <> Low(Int64)) or (LTypeData.MaxInt64Value <> High(Int64))) then
+    Exit(False);
+  Result := (LValue >= LTypeData.MinInt64Value) and (LValue <= LTypeData.MaxInt64Value);
   if Result then
     AResult := TValue.FromOrdinal(ATarget, LValue);
 end;
