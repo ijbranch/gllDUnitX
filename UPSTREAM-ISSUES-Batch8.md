@@ -66,7 +66,8 @@ Each branch has a commit with the failing test, then the fix. "Allow edits by ma
         ignored), and this fork's fix also changes when a parent's fixture setup runs for `[RepeatTest]` children,
         the area of #116.
     20. Fixtures run in heap-address order (`ITestFixtureList.Sort` is the generic list's default interface
-        comparer): sorting by name changes the run order every suite sees.
+        comparer): sorting by name changes the run order every suite sees.  **Wrong (corrected 2026-11-02):** the
+        interface call reached `TTestFixtureList`'s private name sort, so the order was already by name.
     21. A relative options-file name inside an options file is resolved against the current directory: arguably
         intended (it is how the command line resolves it), and it would change the routine #5 changes; a candidate
         for a later batch.
