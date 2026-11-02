@@ -465,6 +465,15 @@ type
     [Test]
     procedure EmptyTestCaseProviderIsAnError;
     /// <summary>
+    ///   Proves [SetupFixture] and [TearDownFixture] run only when a test of the fixture will execute, counting the
+    ///   repetitions of a [RepeatTest] method, which run on the fixture's instance: not for all-ignored tests, nor when
+    ///   a filter leaves only ignored ones; once for one runnable test; and once when only a repeated test runs,
+    ///   beside ignored ones or alone.  Upstream #561's cases; here repetitions are the fixture's own tests (upstream
+    ///   puts them in a child fixture), so the repeat cases guard that layout rather than #561's child-fixture fix.
+    /// </summary>
+    [Test]
+    procedure FixtureSetupRunsOnlyWhenATestWillExecute;
+    /// <summary>
     ///   Proves that a method's [Category] adds to its fixture's categories instead of replacing them, each held once
     ///   (trimmed, compared without case, as the filters compare them, in the order first written).  Upstream #560.
     /// </summary>
@@ -2628,6 +2637,123 @@ begin
   results := RunFixture(BuildFixture(TRunnerUnknownProvider));
   Assert.AreEqual(1, results.TestCount, 'one result for the method');
   CheckResult(results, 'UsesAnUnregisteredProvider', TTestResultType.Error, 'DUnitX.Tests.NoSuchProvider');
+end;
+
+type
+  //Not fixtures: FixtureSetupRunsOnlyWhenATestWillExecute runs their tests and counts the fixture setups and
+  //teardowns that ran.
+  TCountsFixtureSetup = class
+  public
+    [SetupFixture]
+    procedure SetupFixture;
+    [TearDownFixture]
+    procedure TearDownFixture;
+  end;
+
+  TSetupAllIgnored = class(TCountsFixtureSetup)
+  public
+    [Test]
+    [Ignore('not today')]
+    procedure IgnoredOne;
+    [Test]
+    [Ignore('not today')]
+    procedure IgnoredTwo;
+  end;
+
+  TSetupOneRunnable = class(TCountsFixtureSetup)
+  public
+    [Test]
+    [Ignore('not today')]
+    procedure Ignored;
+    [Test]
+    procedure Runs;
+  end;
+
+  TSetupOnlyARepeatRunnable = class(TCountsFixtureSetup)
+  public
+    [Test]
+    [Ignore('not today')]
+    procedure Ignored;
+    [Test]
+    [RepeatTest(2)]
+    procedure Repeated;
+  end;
+
+  TSetupOnlyARepeat = class(TCountsFixtureSetup)
+  public
+    [Test]
+    [RepeatTest(2)]
+    procedure Repeated;
+  end;
+
+var
+  //The [SetupFixture] and [TearDownFixture] calls of the TCountsFixtureSetup descendants
+  GFixtureSetups : Integer;
+  GFixtureTearDowns : Integer;
+
+procedure TCountsFixtureSetup.SetupFixture;
+begin
+  Inc(GFixtureSetups);
+end;
+
+procedure TCountsFixtureSetup.TearDownFixture;
+begin
+  Inc(GFixtureTearDowns);
+end;
+
+procedure TSetupAllIgnored.IgnoredOne;
+begin
+end;
+
+procedure TSetupAllIgnored.IgnoredTwo;
+begin
+end;
+
+procedure TSetupOneRunnable.Ignored;
+begin
+end;
+
+procedure TSetupOneRunnable.Runs;
+begin
+end;
+
+procedure TSetupOnlyARepeatRunnable.Ignored;
+begin
+end;
+
+procedure TSetupOnlyARepeatRunnable.Repeated;
+begin
+end;
+
+procedure TSetupOnlyARepeat.Repeated;
+begin
+end;
+
+//Builds AClass's fixture, disables the tests named in ADisabled (',name,') as a filter that leaves them out does, and
+//runs it.  Returns the fixture setups and teardowns that ran, and the results, as 'setups/teardowns/results'.
+function RunCountingFixture(const AClass : TClass; const ADisabled : string) : string;
+var
+  fixture : ITestFixture;
+  test : ITest;
+  results : IRunResults;
+begin
+  fixture := BuildFixture(AClass);
+  for test in fixture.Tests do
+    if Pos(',' + test.Name + ',', ADisabled) > 0 then
+      test.Enabled := False;
+  GFixtureSetups := 0;
+  GFixtureTearDowns := 0;
+  results := RunFixture(fixture);
+  Result := Format('%d/%d/%d', [GFixtureSetups, GFixtureTearDowns, results.TestCount]);
+end;
+
+procedure TRunnerBehaviourTests.FixtureSetupRunsOnlyWhenATestWillExecute;
+begin
+  Assert.AreEqual('0/0/2', RunCountingFixture(TSetupAllIgnored, ''), 'every test ignored');
+  Assert.AreEqual('1/1/2', RunCountingFixture(TSetupOneRunnable, ''), 'one runnable test');
+  Assert.AreEqual('0/0/1', RunCountingFixture(TSetupOneRunnable, ',Runs,'), 'the runnable test filtered out');
+  Assert.AreEqual('1/1/3', RunCountingFixture(TSetupOnlyARepeatRunnable, ''), 'a repeated test beside ignored ones');
+  Assert.AreEqual('1/1/2', RunCountingFixture(TSetupOnlyARepeat, ''), 'only a repeated test');
 end;
 
 procedure TRunnerBehaviourTests.EmptyTestCaseProviderIsAnError;
