@@ -126,9 +126,9 @@ resourcestring
   /// <summary>Command-line error: a bare argument that is not an .xml file name. Arg: the argument.</summary>
   SBareArgumentNotXmlFile = '"%s" is not an .xml file name. A bare argument names the XML output file; to run ' +
     'particular tests use --run:<name>.';
-  /// <summary>Failure raised by Assert.IsType&lt;T&gt;, which can never fail, steering the caller to InheritsFrom or Implements.</summary>
-  SIsTypeCannotCheck = 'Assert.IsType<T> compares a value with its own declared type, so it cannot fail and checks ' +
-    'nothing. Use Assert.InheritsFrom or Assert.Implements.';
+  /// <summary>Failure raised by Assert.IsType&lt;T&gt;, which can never fail, steering the caller to InheritsFrom or Implements. Arg: caller message.</summary>
+  SIsTypeCannotCheck = 'Assert.IsType<T> cannot check anything: a value of type T is always of type T. ' +
+    'Use Assert.InheritsFrom or Assert.Implements. %s';
   /// <summary>WillNotRaise/WillNotRaiseAny failure: the method raised an Exception. Args: class, exception message (caller message appended).</summary>
   SUnexpectedException = 'Method raised [%s] was expecting not to raise Any exception. %s';
   /// <summary>Assert.WillNotRaiseAny failure for a raised object not derived from Exception. Arg: class (caller message appended).</summary>

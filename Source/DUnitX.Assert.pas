@@ -2766,7 +2766,7 @@ begin
   //A value of type T is always of type T, so this used to pass whatever was tested. It fails instead, so a test
   //that relies on it is not reported as a pass.
   DoAssert;
-  Fail(SIsTypeCannotCheck, ReturnAddress);
+  FailFmt(SIsTypeCannotCheck, [message], ReturnAddress);
 end;
 
 class procedure Assert.WillNotRaise(const AMethod : TTestMethod; const exceptionClass : ExceptClass; const msg : string);

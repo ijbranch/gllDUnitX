@@ -75,7 +75,8 @@ type
 
     /// <summary>
     ///   Proves the deprecated IsType&lt;T&gt; fails rather than passing whatever it is given: a value of type T is
-    ///   always of type T, so it checked nothing.
+    ///   always of type T, so it checked nothing.  Its failure names Assert.InheritsFrom and Assert.Implements and
+    ///   carries the caller's message (upstream #566).
     /// </summary>
     [Test]
     procedure IsType_Fails_Because_It_Cannot_Check;
@@ -1210,11 +1211,9 @@ begin
     end, ETestPass, EXPECTED_EXCEPTION_MSG, 'The pass message did not reach the exception');
 end;
 
-//  Assert.Ignore is the runtime counterpart of the [Ignore] attribute: it
-//  stops a test whose PRECONDITION turned out to be absent and reports it
-//  as ignored rather than passed. Without it the only ways to skip are
-//  Assert.Pass, which lies, and doing nothing, which lies more quietly.
 procedure TTestsAssert.IsType_Fails_Because_It_Cannot_Check;
+var
+  failure : string;
 begin
   Assert.WillRaise(
     procedure
@@ -1223,8 +1222,25 @@ begin
       Assert.IsType<Integer>(1);
 {$WARN SYMBOL_DEPRECATED ON}
     end, ETestFailure);
+  //The failure points to the asserts that can check, and carries the caller's message, as upstream #566 has it.
+  failure := '';
+  try
+{$WARN SYMBOL_DEPRECATED OFF}
+    Assert.IsType<Integer>(1, 'caller reason');
+{$WARN SYMBOL_DEPRECATED ON}
+  except
+    on E : ETestFailure do
+      failure := E.Message;
+  end;
+  Assert.Contains(failure, 'Assert.InheritsFrom', false, 'points to InheritsFrom');
+  Assert.Contains(failure, 'Assert.Implements', false, 'points to Implements');
+  Assert.Contains(failure, 'caller reason', false, 'carries the caller''s message');
 end;
 
+//  Assert.Ignore is the runtime counterpart of the [Ignore] attribute: it
+//  stops a test whose PRECONDITION turned out to be absent and reports it
+//  as ignored rather than passed. Without it the only ways to skip are
+//  Assert.Pass, which lies, and doing nothing, which lies more quietly.
 procedure TTestsAssert.Ignore_Throws_ETestIgnored_Exception;
 begin
   Assert.WillRaise(
