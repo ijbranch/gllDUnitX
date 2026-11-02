@@ -359,6 +359,17 @@ upstream. **All six merged the same day** (`upstream/master` @ `fbad5c9`). The f
 | `[TestCase]` 'abc' becomes 0 for `Int64` / `UInt64` (`NativeInt` on Win64) | [#548](https://github.com/VSoftTechnologies/DUnitX/issues/548) | [#551](https://github.com/VSoftTechnologies/DUnitX/pull/551) |
 | 3.9 rest: the exe path unescaped in NUnit / JUnit XML attributes | [#549](https://github.com/VSoftTechnologies/DUnitX/issues/549) | [#552](https://github.com/VSoftTechnologies/DUnitX/pull/552) |
 
+**Batch 12**, posted 2026-11-02 against `97d8c35` (Ian: "Approved to publish"): the behaviour changes from the same list, each with a `BREAKINGCHANGES.md` section.  Record: `UPSTREAM-ISSUES-Batch12.md`.  The list's "fixtures run in memory-address order" was wrong for upstream (`BuildFixtures` sorts by `FullName`, since 2020) and was corrected on #398.
+
+| Item | Issue | PR |
+|---|---|---|
+| 2.9 misspelt or unregistered `[TestCaseProvider]` gives no tests | [#553](https://github.com/VSoftTechnologies/DUnitX/issues/553) | [#559](https://github.com/VSoftTechnologies/DUnitX/pull/559) |
+| 2.8 a method's `[Category]` replaces the fixture's | [#554](https://github.com/VSoftTechnologies/DUnitX/issues/554) | [#560](https://github.com/VSoftTechnologies/DUnitX/pull/560) |
+| `[SetupFixture]` runs when a filter leaves only ignored tests; skipped for repetitions | [#555](https://github.com/VSoftTechnologies/DUnitX/issues/555) | [#561](https://github.com/VSoftTechnologies/DUnitX/pull/561) |
+| `--run` prefix matching | [#556](https://github.com/VSoftTechnologies/DUnitX/issues/556) | [#562](https://github.com/VSoftTechnologies/DUnitX/pull/562) |
+| A bare argument is taken as the XML output file | [#557](https://github.com/VSoftTechnologies/DUnitX/issues/557) | [#563](https://github.com/VSoftTechnologies/DUnitX/pull/563) |
+| `Assert.IsType<T>` can never fail (question) | [#558](https://github.com/VSoftTechnologies/DUnitX/issues/558) | - |
+
 **Outside the batches: [#372](https://github.com/VSoftTechnologies/DUnitX/issues/372) (bitmask exit codes) ->
 [PR #411](https://github.com/VSoftTechnologies/DUnitX/pull/411)**, branch `feature/bitmask-exit-codes`, posted
 2026-10-12 after a reviewer pointed at it from #404. It is someone else's feature request, which upstream had
