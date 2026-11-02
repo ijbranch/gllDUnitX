@@ -351,6 +351,14 @@ upstream. **All six merged the same day** (`upstream/master` @ `fbad5c9`). The f
 | `WillNotRaise` swallows an exception of another class (question, PR ready) | [#525](https://github.com/VSoftTechnologies/DUnitX/issues/525) | [#526](https://github.com/VSoftTechnologies/DUnitX/pull/526) |
 | 1.6 dates: locale-dependent, misread, unparseable becomes 30/12/1899 (held back, reworked with a strict ISO 8601 reader, posted the same day) | [#527](https://github.com/VSoftTechnologies/DUnitX/issues/527) | [#528](https://github.com/VSoftTechnologies/DUnitX/pull/528) |
 
+**Batch 11**, posted 2026-11-02 against `97d8c35` (Ian: "Approved to publish"): the three small fixes from the list of what remained, which Vincent answered on #398 ("happy for all of the above to be addressed").  Record: `UPSTREAM-ISSUES-Batch11.md`.  The behaviour changes, the runner changes and the IDE expert items on that list follow in later batches.
+
+| Item | Issue | PR |
+|---|---|---|
+| JUnit logger: suite name loses the first `.Name`; `<failure>` body repeats the message | [#547](https://github.com/VSoftTechnologies/DUnitX/issues/547) | [#550](https://github.com/VSoftTechnologies/DUnitX/pull/550) |
+| `[TestCase]` 'abc' becomes 0 for `Int64` / `UInt64` (`NativeInt` on Win64) | [#548](https://github.com/VSoftTechnologies/DUnitX/issues/548) | [#551](https://github.com/VSoftTechnologies/DUnitX/pull/551) |
+| 3.9 rest: the exe path unescaped in NUnit / JUnit XML attributes | [#549](https://github.com/VSoftTechnologies/DUnitX/issues/549) | [#552](https://github.com/VSoftTechnologies/DUnitX/pull/552) |
+
 **Outside the batches: [#372](https://github.com/VSoftTechnologies/DUnitX/issues/372) (bitmask exit codes) ->
 [PR #411](https://github.com/VSoftTechnologies/DUnitX/pull/411)**, branch `feature/bitmask-exit-codes`, posted
 2026-10-12 after a reviewer pointed at it from #404. It is someone else's feature request, which upstream had
