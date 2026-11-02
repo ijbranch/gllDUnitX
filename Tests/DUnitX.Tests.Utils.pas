@@ -461,6 +461,7 @@ implementation
 uses
 
   System.DateUtils,
+  System.RegularExpressions,
   System.Rtti,
   System.TypInfo,
   Winapi.Windows,
@@ -681,6 +682,10 @@ var
 begin
   expected := EncodeDateTime(2020, 6, 22, 18, 36, 0, 0);
   setFormatSettings(locale);
+  //A user who picked a two-digit year for the machine's own locale writes dates that, by design, do not read back
+  //(a date needs its year in full), so the round trip is tested with the year in full.
+  if Pos('YYYY', UpperCase(FormatSettings.ShortDateFormat)) = 0 then
+    FormatSettings.ShortDateFormat := TRegEx.Replace(FormatSettings.ShortDateFormat, '[yY]+', 'yyyy');
   Assert.IsTrue(TValue.From(DateTimeToStr(expected)).TryConvert<TDateTime>(asTValue), DateTimeToStr(expected));
   Assert.IsSameDateTime(expected, asTValue.AsType<TDateTime>(), DateTimeToStr(expected));
   Assert.IsTrue(TValue.From(DateToStr(expected)).TryConvert<TDate>(asTValue), DateToStr(expected));

@@ -276,6 +276,13 @@ type
     /// </summary>
     [Test]
     procedure A_Caught_Interruption_The_Test_Ignores_Is_Ignored;
+    /// <summary>
+    ///   Proves a [TestCase] case still running at its [MaxTime] is interrupted and fails with the timeout, as a plain
+    ///   test is: the case is built by the fixture provider from its attributes, and the timeout is started by the
+    ///   Execute it inherits.  Upstream's TDUnitXTestCase replaces Execute and never starts one (#544).
+    /// </summary>
+    [Test]
+    procedure A_TestCase_Overrun_Is_Interrupted_And_Fails;
   end;
 {$M-}
 
@@ -3008,6 +3015,15 @@ type
     procedure CatchesTheInterruptionAndIgnores;
   end;
 
+  //Not a fixture: a [TestCase] case that loops until it is interrupted, built through the fixture provider.
+  TMaxTimeInterruptCaseClass = class
+  public
+    [Test]
+    [TestCase('1')]
+    [MaxTime(INTERRUPT_MAX_TIME)]
+    procedure BusyLoopCase(const AValue : Integer);
+  end;
+
 var
   GInterruptCaught : Integer;
 
@@ -3097,6 +3113,15 @@ begin
     on ETimedOut do
       Assert.Ignore('too slow here');
   end;
+end;
+
+{ TMaxTimeInterruptCaseClass }
+
+//Loops until the safety net ends it, so only an interruption stops it promptly.
+procedure TMaxTimeInterruptCaseClass.BusyLoopCase(const AValue : Integer);
+begin
+  LoopUntilStopped;
+  GInterruptRanToTheEnd := True;
 end;
 
 //A fixture of the named methods of TMaxTimeInterruptClass, in order, each with the [MaxTime] at the same index and, if
@@ -3297,6 +3322,16 @@ begin
   Assert.AreEqual(1, results.TestCount, 'the number of tests');
   Assert.AreEqual(1, results.IgnoredCount, 'a test that ignored itself was not reported ignored');
   Assert.AreEqual(0, results.FailureCount, 'a test that ignored itself was reported as failing');
+end;
+
+procedure TMaxTimeInterruptTests.A_TestCase_Overrun_Is_Interrupted_And_Fails;
+var
+  results : IRunResults;
+  elapsed : Cardinal;
+begin
+  GInterruptRanToTheEnd := False;
+  elapsed := RunInterruptFixture(BuildFixture(TMaxTimeInterruptCaseClass), results);
+  CheckInterrupted(results, elapsed);
 end;
 
 initialization

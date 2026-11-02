@@ -176,7 +176,7 @@ Since 2026-11-01 (see §1) `[MaxTime]` works two ways. A watchdog thread interru
 
 Between 2026-10-12 and 2026-11-01 only the stopwatch ran, so a test that never returned was not stopped. That was the design first offered upstream (#537); Vincent relies on `[MaxTime]` stopping a test whose server connection hangs, which led to this one.
 
-`[MaxTime]` covers every `[TestCase]` / `[NamedTestCase]` case as well: the timeout is started in `TDUnitXTest.Execute`, and `TDUnitXTestCase` overrides only `ExecuteMethod`.  Upstream's `TDUnitXTestCase` replaces `Execute` and never starts one, so there `[MaxTime]` has no effect on a case (offered as question #544, 2026-11-02, unanswered).  No test here proves the case path yet.
+`[MaxTime]` covers every `[TestCase]` / `[NamedTestCase]` case as well: the timeout is started in `TDUnitXTest.Execute`, which `TDUnitXTestCase` does not override.  Upstream's `TDUnitXTestCase` replaces `Execute` and never starts one, so there `[MaxTime]` has no effect on a case (offered as question #544, 2026-11-02, unanswered).  `TMaxTimeInterruptTests.A_TestCase_Overrun_Is_Interrupted_And_Fails` proves a case is interrupted, and `TRunnerBehaviourTests.TestCasesKeepWillRaiseAndMaxTime` that a case sleeping past its `[MaxTime]` fails (without checking which of the two stopped it).
 
 ### Runner behaviours changed on 2026-10-12 (fork fixes, offered upstream in #398; see §1 for the issues and PRs)
 
