@@ -176,6 +176,8 @@ Since 2026-11-01 (see §1) `[MaxTime]` works two ways. A watchdog thread interru
 
 Between 2026-10-12 and 2026-11-01 only the stopwatch ran, so a test that never returned was not stopped. That was the design first offered upstream (#537); Vincent relies on `[MaxTime]` stopping a test whose server connection hangs, which led to this one.
 
+`[MaxTime]` covers every `[TestCase]` / `[NamedTestCase]` case as well: the timeout is started in `TDUnitXTest.Execute`, and `TDUnitXTestCase` overrides only `ExecuteMethod`.  Upstream's `TDUnitXTestCase` replaces `Execute` and never starts one, so there `[MaxTime]` has no effect on a case (offered as question #544, 2026-11-02, unanswered).  No test here proves the case path yet.
+
 ### Runner behaviours changed on 2026-10-12 (fork fixes, offered upstream in #398; see §1 for the issues and PRs)
 
 **Checked against the estate the same day:** all 28 other registered suites, plus GITLAKLib's, were rebuilt against these changes. Every one linked this fork (`grep -a TestIgnored`) and built with no hints or warnings. Only gllTaurusTLS needed changes: seven of its `[TestCase]` values had never converted (a stray space before an enum name, and fields in the wrong order), so those cases had always run with the wrong arguments. They are now errors, and their data was fixed.
