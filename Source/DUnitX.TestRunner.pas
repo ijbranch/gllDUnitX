@@ -94,6 +94,17 @@ type
     /// <summary>Bytes the runner itself kept during the current test, subtracted from the leak total.</summary>
     FRunnerAllocated : Int64;
     /// <summary>
+    ///   Net bytes the loggers' per-test callbacks allocated during the current test, freed memory included (and what
+    ///   a callback logs, whose bracket is nested inside the callback's).  The leak check discounts it only when
+    ///   positive, so a logger that frees state it kept earlier in the span cannot hide a real leak, as discounting
+    ///   each callback's growth alone did.  A net free is not credited: it is taken to be the test's own memory that a
+    ///   logger released.  Two blind spots remain, as upstream (which nets the runner's whole total) has them: a logger
+    ///   that frees the test's memory in one callback and keeps its own in another nets to nothing, so its own state
+    ///   reads as a leak; and one that frees state it kept before the span opened (OnBeginTest, OnSetupTest, an
+    ///   earlier test) lowers the span and can hide a leak of that size.
+    /// </summary>
+    FLoggerCallbackAllocated : Int64;
+    /// <summary>
     ///   Measures the whole span from the start of setup (or the test) to the end of teardown (or the test), so
     ///   memory freed between the phases is not a leak. nil when the monitor is a singleton; the leak check then
     ///   sums the phases.
@@ -111,11 +122,11 @@ type
     /// <summary>
     ///   Closes a runner-allocation bracket and, at the outermost level, adds what it allocated to the runner's total.
     /// </summary>
-    /// <param name="onlyGrowth">
-    ///   When True, memory freed inside the bracket is not credited to the runner. Used around logger callbacks,
-    ///   which may release what the test or Setup allocated (the test's own memory going, not the runner's).
+    /// <param name="isLoggerCallback">
+    ///   When True, the bracket is a logger's per-test callback, and what it allocated (or freed) adds to
+    ///   FLoggerCallbackAllocated instead of FRunnerAllocated.
     /// </param>
-    procedure EndRunnerAllocation(const onlyGrowth : boolean = False);
+    procedure EndRunnerAllocation(const isLoggerCallback : boolean = False);
     /// <summary>
     ///   Starts the whole-span leak measurement for the current test, once, when a separate span monitor exists.
     /// </summary>
@@ -1096,6 +1107,7 @@ var
   LTearDownMemoryAllocated : Int64;
   LTestMemoryAllocated : Int64;
   LLeaked : Int64;
+  LLoggerKept : Int64;
   LMsg : string;
   LMemoryAllocationProvider2 : IMemoryLeakMonitor2;
   testInfo : ITestInfo;
@@ -1114,10 +1126,14 @@ begin
   //memory allocated before it started has a negative delta. The whole span is measured where it can be,
   //because memory can be freed between the phases (the runner releasing references, another thread
   //finishing), which the sum of the phases would count as leaked.
+  //What the loggers' callbacks kept is discounted net of what they freed, and never below nothing.
+  LLoggerKept := FLoggerCallbackAllocated;
+  if LLoggerKept < 0 then
+    LLoggerKept := 0;
   if FLeakSpanStarted then
-    LLeaked := FLeakSpanMonitor.TestMemoryAllocated - FRunnerAllocated
+    LLeaked := FLeakSpanMonitor.TestMemoryAllocated - FRunnerAllocated - LLoggerKept
   else
-    LLeaked := LSetUpMemoryAllocated + LTestMemoryAllocated + LTearDownMemoryAllocated - FRunnerAllocated;
+    LLeaked := LSetUpMemoryAllocated + LTestMemoryAllocated + LTearDownMemoryAllocated - FRunnerAllocated - LLoggerKept;
   if (LLeaked <= 0) then
     Exit(True);
 
@@ -1610,8 +1626,8 @@ begin
     BeginLeakSpan;
     FCurrentTestName := test.Name;
     try
-      //Loggers run inside the leak span; what they keep is the runner's memory, not the test's, and what they free
-      //(test memory they released) is not credited to the runner.
+      //Loggers run inside the leak span; what they keep, net of what they free, is the runner's memory, not the
+      //test's (see FLoggerCallbackAllocated).
       BeginRunnerAllocation;
       try
         Self.Loggers_ExecuteTest(threadId, test as ITestInfo);
@@ -1707,6 +1723,7 @@ begin
     if FRunnerAllocationMonitor = memoryAllocationProvider then
       FRunnerAllocationMonitor := nil;
     FRunnerAllocated := 0;
+    FLoggerCallbackAllocated := 0;
     FRunnerAllocationDepth := 0;
     FLeakSpanMonitor := TDUnitXServiceLocator.DefaultContainer.Resolve<IMemoryLeakMonitor>();
     if (FLeakSpanMonitor = memoryAllocationProvider) or (FLeakSpanMonitor = FRunnerAllocationMonitor) then
@@ -2017,7 +2034,7 @@ begin
     FRunnerAllocationMonitor.PreTest;
 end;
 
-procedure TDUnitXTestRunner.EndRunnerAllocation(const onlyGrowth : boolean);
+procedure TDUnitXTestRunner.EndRunnerAllocation(const isLoggerCallback : boolean);
 var
   allocated : Int64;
 begin
@@ -2026,7 +2043,9 @@ begin
   begin
     FRunnerAllocationMonitor.PostTest;
     allocated := FRunnerAllocationMonitor.TestMemoryAllocated;
-    if (allocated > 0) or (not onlyGrowth) then
+    if isLoggerCallback then
+      Inc(FLoggerCallbackAllocated, allocated)
+    else
       Inc(FRunnerAllocated, allocated);
   end;
 end;

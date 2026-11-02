@@ -549,6 +549,22 @@ type
     [Test]
     procedure LoggerStateIsNotATestLeak;
     /// <summary>
+    ///   Proves that a logger which keeps state in its per-test callbacks and frees some of it again (40 bytes kept as
+    ///   setup ends, 40 as the test starts, those 40 freed as teardown starts) neither makes a passing test leak nor
+    ///   hides a real one: the 32 bytes a test keeps are still reported, exactly, with setup and teardown present.
+    ///   Upstream #578's Logger_State_Is_Not_A_Leak, which LoggerStateIsNotATestLeak covered only for the pass.
+    /// </summary>
+    [Test]
+    procedure LoggerStateCannotHideARealLeak;
+    /// <summary>
+    ///   Proves that what Status makes a logger keep (50 simulated bytes per message) is not a leak in a
+    ///   test with setup and teardown around it, whose leak is measured as one span, and that a real 32-byte leak
+    ///   beside it is still reported exactly.  Upstream #578's Logging_Is_Not_A_Leak; LeakCheckCountsOnlyTheTestsOwnGrowth
+    ///   covers logging only in a fixture with no setup or teardown.
+    /// </summary>
+    [Test]
+    procedure LoggingIsNotALeakAcrossSetupAndTearDown;
+    /// <summary>
     ///   Proves that TNameFilter (the command line's --run) matches a fixture name only as a whole name segment:
     ///   naming Unit.TCustomer does not select Unit.TCustomerOrder, and naming a test method selects its test cases,
     ///   including one named from its values (Method(1,2), with no '.').
@@ -631,6 +647,44 @@ type
     [Test]
     procedure TearDownErrorAfterARuntimeIgnoreIsReported;
   end;
+
+  /// <summary>
+  ///   Upstream #568's cases, ported as guards: a fixture whose constructor raises, or ignores the fixture, is
+  ///   contained to its own fixture.  Upstream's parallel case (-m:4) is not ported: this fork has no parallel fixture
+  ///   runner.
+  /// </summary>
+  [TestFixture]
+  TFixtureConstructorTests = class
+  public
+    /// <summary>
+    ///   Proves that, beside a fixture that passes in the same run, a fixture whose constructor raises has each of its
+    ///   tests reported as an error of the constructor's exception class and message, and that none of its tests,
+    ///   [Setup], [TearDown] or [TearDownFixture] runs, while the other fixture's test passes.  Unlike upstream, the
+    ///   runner constructs the fixture again before running it, so the constructor runs twice: once as the fixture
+    ///   list is built, once as the fixture runs.
+    /// </summary>
+    [Test]
+    procedure A_Raising_Constructor_Errors_Its_Own_Tests_And_The_Others_Run;
+    /// <summary>
+    ///   Proves that a constructor that calls Assert.Ignore reports its fixture's test ignored with the reason, while
+    ///   another fixture in the same run passes.
+    /// </summary>
+    [Test]
+    procedure A_Constructor_That_Ignores_Gives_Ignored_Tests;
+    /// <summary>
+    ///   Proves that a fixture whose constructor raises still reports an [Ignore]d test as ignored with its own reason,
+    ///   not as an error of the constructor.
+    /// </summary>
+    [Test]
+    procedure A_Raising_Constructor_Leaves_Ignored_Tests_Ignored;
+    /// <summary>
+    ///   Proves that when a fixture whose constructor raised is run again (as the GUI runner does) and its constructor
+    ///   now succeeds, its tests, [Setup], [TearDown] and [TearDownFixture] all run on the new instance: they were bound
+    ///   when no instance existed.
+    /// </summary>
+    [Test]
+    procedure The_Fixture_Runs_On_Its_Instance_Once_Its_Constructor_Succeeds;
+  end;
 {$M-}
 
 implementation
@@ -641,6 +695,7 @@ uses
   System.SysUtils,
   System.Rtti,
   System.Generics.Collections,
+  System.TypInfo,
   DUnitX.Types,
   DUnitX.Extensibility,
   DUnitX.InternalInterfaces,
@@ -930,6 +985,18 @@ var
   GRepeatSetups : Integer;
   /// <summary>Number of times the [TearDown] of a repeat fixture of #479 ran.</summary>
   GRepeatTearDowns : Integer;
+  /// <summary>TRunnerConstructorToggles raises in its constructor while this is true.</summary>
+  GConstructorRaises : boolean;
+  /// <summary>Number of times TRunnerConstructorToggles's constructor ran.</summary>
+  GConstructorCalls : Integer;
+  /// <summary>Number of times TRunnerConstructorToggles's [Setup] ran on a constructed instance.</summary>
+  GConstructorSetups : Integer;
+  /// <summary>Number of times TRunnerConstructorToggles's [TearDown] ran on a constructed instance.</summary>
+  GConstructorTearDowns : Integer;
+  /// <summary>Number of times TRunnerConstructorToggles's [TearDownFixture] ran on a constructed instance.</summary>
+  GConstructorTearDownFixtures : Integer;
+  /// <summary>Number of times a test of TRunnerConstructorToggles ran.</summary>
+  GConstructorTestsRun : Integer;
 
 type
 {$M+}
@@ -1202,6 +1269,101 @@ type
     /// </summary>
     [Test]
     procedure NeverRuns;
+  end;
+
+  /// <summary>
+  ///   Exception TRunnerConstructorToggles's constructor raises, so a result can be checked to carry its class.
+  /// </summary>
+  EFixtureConstructorFailed = class(Exception);
+
+  /// <summary>
+  ///   Runner fixture whose constructor raises EFixtureConstructorFailed while GConstructorRaises is true.  Its
+  ///   [Setup], [TearDown] and [TearDownFixture] count themselves only when run on a constructed instance (they read a
+  ///   field, so one bound to no instance does not count, or fails), and its tests count every run.
+  /// </summary>
+  TRunnerConstructorToggles = class
+  private
+    /// <summary>Set by the constructor once it has not raised.</summary>
+    FCreated : boolean;
+  public
+    /// <summary>
+    ///   Counts the call in GConstructorCalls, and raises while GConstructorRaises is true.
+    /// </summary>
+    /// <exception cref="EFixtureConstructorFailed">
+    ///   While GConstructorRaises is true.
+    /// </exception>
+    constructor Create;
+    /// <summary>Counts in GConstructorSetups when run on a constructed instance.</summary>
+    [Setup]
+    procedure Setup;
+    /// <summary>Counts in GConstructorTearDowns when run on a constructed instance.</summary>
+    [TearDown]
+    procedure TearDown;
+    /// <summary>Counts in GConstructorTearDownFixtures when run on a constructed instance.</summary>
+    [TearDownFixture]
+    procedure TearDownFixture;
+    /// <summary>
+    ///   Counts in GConstructorTestsRun; fails unless it runs on a constructed instance.
+    /// </summary>
+    [Test]
+    procedure One;
+    /// <summary>
+    ///   Counts in GConstructorTestsRun; fails unless it runs on a constructed instance.
+    /// </summary>
+    [Test]
+    procedure Two;
+  end;
+
+  /// <summary>
+  ///   Raises in its constructor as TRunnerConstructorToggles does, and adds an [Ignore]d test; the tests run on it
+  ///   disable the inherited ones, as a filter would.
+  /// </summary>
+  TRunnerConstructorTogglesIgnored = class(TRunnerConstructorToggles)
+  public
+    /// <summary>
+    ///   Ignored ('not today'); fails if it runs.
+    /// </summary>
+    [Test]
+    [Ignore('not today')]
+    procedure Ignored;
+  end;
+
+  /// <summary>
+  ///   Runner fixture with an ordinary constructor and one passing test, run beside a fixture whose constructor
+  ///   raises or ignores.
+  /// </summary>
+  TRunnerConstructorSucceeds = class
+  public
+    /// <summary>Passes (empty body).</summary>
+    [Test]
+    procedure Passes;
+  end;
+
+  /// <summary>
+  ///   Runner fixture with a [Setup] and [TearDown] (both empty), so each test's leak is measured as one span across
+  ///   the three phases, for upstream #578's logger and logging cases.
+  /// </summary>
+  TRunnerPhasedLeakChecks = class
+  public
+    /// <summary>Empty per-test setup.</summary>
+    [Setup]
+    procedure Setup;
+    /// <summary>Empty per-test teardown.</summary>
+    [TearDown]
+    procedure TearDown;
+    /// <summary>Passes (empty body).</summary>
+    [Test]
+    procedure Passes;
+    /// <summary>
+    ///   Logs a status line, whose storage in the runner's log and the logger must not count as a leak.
+    /// </summary>
+    [Test]
+    procedure LogsWhileRunning;
+    /// <summary>
+    ///   Allocates 32 simulated bytes and keeps them; must be reported as a leak.
+    /// </summary>
+    [Test]
+    procedure LeaksForReal;
   end;
 
   /// <summary>
@@ -1846,6 +2008,44 @@ type
   end;
 
   /// <summary>
+  ///   Keeps per-test state in its callbacks and frees some of it again, as upstream #578's TStateKeepingLogger does:
+  ///   40 simulated bytes as setup ends, 40 more as the test starts, and those 40 freed as teardown starts.
+  /// </summary>
+  TStateFreeingLogger = class(TDUnitXNullLogger)
+  protected
+    /// <summary>
+    ///   Adds 40 to GFakeAllocated at the end of setup.
+    /// </summary>
+    /// <param name="threadId">
+    ///   The running thread.
+    /// </param>
+    /// <param name="Test">
+    ///   The test whose setup ended.
+    /// </param>
+    procedure OnEndSetupTest(const threadId : TThreadID; const Test : ITestInfo); override;
+    /// <summary>
+    ///   Adds 40 to GFakeAllocated as the test starts.
+    /// </summary>
+    /// <param name="threadId">
+    ///   The running thread.
+    /// </param>
+    /// <param name="Test">
+    ///   The test starting.
+    /// </param>
+    procedure OnExecuteTest(const threadId : TThreadID; const Test : ITestInfo); override;
+    /// <summary>
+    ///   Frees the 40 it kept as the test started, as teardown starts.
+    /// </summary>
+    /// <param name="threadId">
+    ///   The running thread.
+    /// </param>
+    /// <param name="Test">
+    ///   The test being torn down.
+    /// </param>
+    procedure OnTeardownTest(const threadId : TThreadID; const Test : ITestInfo); override;
+  end;
+
+  /// <summary>
   ///   Cracker class exposing TDUnitXTestRunner's protected ExecuteFixtures to RunFixture.
   /// </summary>
   TRunnerAccess = class(TDUnitXTestRunner);
@@ -1994,6 +2194,76 @@ end;
 procedure TRunnerConstructorRaises.NeverRuns;
 begin
   GBodyRan := true;
+end;
+
+constructor TRunnerConstructorToggles.Create;
+begin
+  inherited Create;
+  Inc(GConstructorCalls);
+  if GConstructorRaises then
+    raise EFixtureConstructorFailed.Create('the fixture constructor failed');
+  FCreated := true;
+end;
+
+procedure TRunnerConstructorToggles.Setup;
+begin
+  if FCreated then
+    Inc(GConstructorSetups);
+end;
+
+procedure TRunnerConstructorToggles.TearDown;
+begin
+  if FCreated then
+    Inc(GConstructorTearDowns);
+end;
+
+procedure TRunnerConstructorToggles.TearDownFixture;
+begin
+  if FCreated then
+    Inc(GConstructorTearDownFixtures);
+end;
+
+procedure TRunnerConstructorToggles.One;
+begin
+  Inc(GConstructorTestsRun);
+  Assert.IsTrue(FCreated, 'the test runs on the fixture''s instance');
+end;
+
+procedure TRunnerConstructorToggles.Two;
+begin
+  Inc(GConstructorTestsRun);
+  Assert.IsTrue(FCreated, 'the test runs on the fixture''s instance');
+end;
+
+procedure TRunnerConstructorTogglesIgnored.Ignored;
+begin
+  Assert.Fail('an ignored test ran');
+end;
+
+procedure TRunnerConstructorSucceeds.Passes;
+begin
+end;
+
+procedure TRunnerPhasedLeakChecks.Setup;
+begin
+end;
+
+procedure TRunnerPhasedLeakChecks.TearDown;
+begin
+end;
+
+procedure TRunnerPhasedLeakChecks.Passes;
+begin
+end;
+
+procedure TRunnerPhasedLeakChecks.LogsWhileRunning;
+begin
+  TDUnitX.CurrentRunner.Status('a status line');
+end;
+
+procedure TRunnerPhasedLeakChecks.LeaksForReal;
+begin
+  Inc(GFakeAllocated, 32);
 end;
 
 constructor TRunnerConstructorAndSetupFixture.Create;
@@ -2396,6 +2666,21 @@ begin
   GTestGapFree := 0;
 end;
 
+procedure TStateFreeingLogger.OnEndSetupTest(const threadId : TThreadID; const Test : ITestInfo);
+begin
+  Inc(GFakeAllocated, 40);
+end;
+
+procedure TStateFreeingLogger.OnExecuteTest(const threadId : TThreadID; const Test : ITestInfo);
+begin
+  Inc(GFakeAllocated, 40);
+end;
+
+procedure TStateFreeingLogger.OnTeardownTest(const threadId : TThreadID; const Test : ITestInfo);
+begin
+  Dec(GFakeAllocated, 40);
+end;
+
 //Builds a fixture for AClass the way the fixture provider does.
 function BuildFixture(const AClass : TClass) : ITestFixture;
 var
@@ -2408,22 +2693,49 @@ begin
   TProviderAccess(provider).GenerateTests(nil, Result);
 end;
 
-//Runs one fixture through a private runner, which stands in for the suite's runner on this thread meanwhile.
-function RunFixture(const AFixture : ITestFixture; const ALogger : ITestLogger = nil) : IRunResults;
+//Runs the fixtures, in order, in one run through a private runner, which stands in for the suite's runner on this
+//thread meanwhile.
+function RunFixtures(const AFixtures : array of ITestFixture; const ALogger : ITestLogger = nil) : IRunResults;
 var
   runner : TDUnitXTestRunner;
   runnerIntf : ITestRunner;
   fixtures : ITestFixtureList;
+  fixture : ITestFixture;
   context : ITestExecuteContext;
 begin
   runner := TDUnitXTestRunner.Create(ALogger);
   runnerIntf := runner;
   fixtures := TTestFixtureList.Create;
-  fixtures.Add(AFixture);
+  for fixture in AFixtures do
+    fixtures.Add(fixture);
   Result := TDUnitXRunResults.Create;
   context := Result as ITestExecuteContext;
   TRunnerAccess(runner).ExecuteFixtures(nil, context, TThread.CurrentThread.ThreadID, fixtures);
   context.RollupResults;
+end;
+
+//Runs one fixture through a private runner, which stands in for the suite's runner on this thread meanwhile.
+function RunFixture(const AFixture : ITestFixture; const ALogger : ITestLogger = nil) : IRunResults;
+begin
+  Result := RunFixtures([AFixture], ALogger);
+end;
+
+//Every result of the run, in order, as 'Fixture.Test=ResultType ExceptionClass: Message;' (the class only for an
+//error), so a test can compare a whole run at once.
+function ResultsText(const AResults : IRunResults) : string;
+var
+  testResult : ITestResult;
+  testError : ITestError;
+begin
+  Result := '';
+  for testResult in AResults.GetAllTestResults do
+  begin
+    Result := Result + testResult.Test.Fixture.Name + '.' + testResult.Test.Name + '=' +
+      GetEnumName(TypeInfo(TTestResultType), Ord(testResult.ResultType));
+    if Supports(testResult, ITestError, testError) then
+      Result := Result + ' ' + testError.ExceptionClass.ClassName;
+    Result := Result + ': ' + testResult.Message + ';';
+  end;
 end;
 
 function FindResult(const AResults : IRunResults; const ATestName : string) : ITestResult;
@@ -3070,6 +3382,60 @@ begin
   CheckResult(results, 'Passes', TTestResultType.Pass);
 end;
 
+//Runs TRunnerPhasedLeakChecks with the tests named in ATests only, measured by TFakeLeakMonitor over a fresh
+//GFakeAllocated, with ALogger attached.
+function RunPhasedLeakChecks(const ATests : array of string; const ALogger : ITestLogger) : IRunResults;
+var
+  fixture : ITestFixture;
+  test : ITest;
+  testName : string;
+begin
+  GFakeAllocated := 0;
+  fixture := BuildFixture(TRunnerPhasedLeakChecks);
+  for test in fixture.Tests do
+  begin
+    test.Enabled := false;
+    for testName in ATests do
+      if test.Name = testName then
+        test.Enabled := true;
+  end;
+  TDUnitXServiceLocator.DefaultContainer.RegisterType<IMemoryLeakMonitor>(
+    function : IMemoryLeakMonitor
+    begin
+      Result := TFakeLeakMonitor.Create;
+    end);
+  try
+    Result := RunFixture(fixture, ALogger);
+  finally
+    //The suite runs with the default monitor; put it back.
+    DUnitX.MemoryLeakMonitor.Default.RegisterDefaultProvider;
+  end;
+end;
+
+procedure TRunnerBehaviourTests.LoggerStateCannotHideARealLeak;
+var
+  results : IRunResults;
+begin
+  results := RunPhasedLeakChecks(['Passes', 'LeaksForReal'], TStateFreeingLogger.Create);
+  Assert.AreEqual(
+    'TRunnerPhasedLeakChecks.Passes=Pass: ;' +
+    'TRunnerPhasedLeakChecks.LeaksForReal=MemoryLeak: 32 bytes were leaked in the test method;', ResultsText(results),
+    False, 'the results');
+end;
+
+procedure TRunnerBehaviourTests.LoggingIsNotALeakAcrossSetupAndTearDown;
+var
+  results : IRunResults;
+begin
+  results := RunPhasedLeakChecks(['LogsWhileRunning', 'LeaksForReal'], TFakeAllocatingLogger.Create);
+  CheckResult(results, 'LogsWhileRunning', TTestResultType.Pass);
+  Assert.AreEqual('a status line' + sLineBreak, FindResult(results, 'LogsWhileRunning').Message, False,
+    'LogsWhileRunning message: its log, once');
+  CheckResult(results, 'LeaksForReal', TTestResultType.MemoryLeak);
+  Assert.AreEqual('32 bytes were leaked in the test method', FindResult(results, 'LeaksForReal').Message, False,
+    'LeaksForReal message');
+end;
+
 procedure TRunnerBehaviourTests.NameFilterMatchesWholeNameSegments;
 var
   Context : TRttiContext;
@@ -3664,6 +4030,97 @@ begin
   CheckInterrupted(results, elapsed);
 end;
 
+{ TFixtureConstructorTests }
+
+//Clears what TRunnerConstructorToggles counts, and sets whether its constructor raises.
+procedure ResetConstructorToggles(const ARaises : boolean);
+begin
+  GConstructorRaises := ARaises;
+  GConstructorCalls := 0;
+  GConstructorSetups := 0;
+  GConstructorTearDowns := 0;
+  GConstructorTearDownFixtures := 0;
+  GConstructorTestsRun := 0;
+end;
+
+procedure TFixtureConstructorTests.A_Raising_Constructor_Errors_Its_Own_Tests_And_The_Others_Run;
+var
+  raising : ITestFixture;
+  succeeding : ITestFixture;
+  results : IRunResults;
+begin
+  ResetConstructorToggles(true);
+  Assert.WillNotRaiseAny(
+    procedure
+    begin
+      raising := BuildFixture(TRunnerConstructorToggles);
+      succeeding := BuildFixture(TRunnerConstructorSucceeds);
+    end, 'building the fixtures');
+  results := RunFixtures([raising, succeeding]);
+  GConstructorRaises := false;
+  Assert.AreEqual(
+    'TRunnerConstructorToggles.One=Error EFixtureConstructorFailed: the fixture constructor failed;' +
+    'TRunnerConstructorToggles.Two=Error EFixtureConstructorFailed: the fixture constructor failed;' +
+    'TRunnerConstructorSucceeds.Passes=Pass: ;', ResultsText(results), False, 'the results');
+  //Deliberately unlike upstream (once): the runner constructs a fixture with no instance again before running it.
+  Assert.AreEqual(2, GConstructorCalls, 'the constructor runs as the fixture is built and again as it runs');
+  Assert.AreEqual(0, GConstructorTestsRun, 'the tests of a fixture that has no instance ran');
+  Assert.AreEqual(0, GConstructorSetups, 'the [Setup] of a fixture that has no instance ran');
+  Assert.AreEqual(0, GConstructorTearDowns, 'the [TearDown] of a fixture that has no instance ran');
+  Assert.AreEqual(0, GConstructorTearDownFixtures, 'the [TearDownFixture] of a fixture that has no instance ran');
+end;
+
+procedure TFixtureConstructorTests.A_Constructor_That_Ignores_Gives_Ignored_Tests;
+var
+  results : IRunResults;
+begin
+  GBodyRan := false;
+  results := RunFixtures([BuildFixture(TRunnerConstructorIgnores), BuildFixture(TRunnerConstructorSucceeds)]);
+  Assert.AreEqual(
+    'TRunnerConstructorIgnores.NeverRuns=Ignored: constructor ignores the fixture;' +
+    'TRunnerConstructorSucceeds.Passes=Pass: ;', ResultsText(results), False, 'the results');
+  Assert.IsFalse(GBodyRan, 'the ignored fixture''s test ran');
+end;
+
+procedure TFixtureConstructorTests.A_Raising_Constructor_Leaves_Ignored_Tests_Ignored;
+var
+  raising : ITestFixture;
+  test : ITest;
+  results : IRunResults;
+begin
+  ResetConstructorToggles(true);
+  raising := BuildFixture(TRunnerConstructorTogglesIgnored);
+  //The inherited tests are left out, as a filter leaves them out.
+  for test in raising.Tests do
+    if test.Name <> 'Ignored' then
+      test.Enabled := false;
+  results := RunFixtures([raising, BuildFixture(TRunnerConstructorSucceeds)]);
+  GConstructorRaises := false;
+  Assert.AreEqual(
+    'TRunnerConstructorTogglesIgnored.Ignored=Ignored: not today;' +
+    'TRunnerConstructorSucceeds.Passes=Pass: ;', ResultsText(results), False, 'the results');
+end;
+
+procedure TFixtureConstructorTests.The_Fixture_Runs_On_Its_Instance_Once_Its_Constructor_Succeeds;
+var
+  fixture : ITestFixture;
+  results : IRunResults;
+begin
+  ResetConstructorToggles(true);
+  fixture := BuildFixture(TRunnerConstructorToggles);
+  results := RunFixture(fixture);
+  Assert.AreEqual(2, results.ErrorCount, 'the first run, whose constructor raised');
+  ResetConstructorToggles(false);
+  results := RunFixture(fixture);
+  Assert.AreEqual('TRunnerConstructorToggles.One=Pass: ;TRunnerConstructorToggles.Two=Pass: ;', ResultsText(results),
+    False, 'the results of the second run');
+  Assert.AreEqual(1, GConstructorCalls, 'the constructor calls of the second run');
+  Assert.AreEqual(2, GConstructorTestsRun, 'the tests that ran');
+  Assert.AreEqual(2, GConstructorSetups, 'the [Setup]s that ran on an instance');
+  Assert.AreEqual(2, GConstructorTearDowns, 'the [TearDown]s that ran on an instance');
+  Assert.AreEqual(1, GConstructorTearDownFixtures, 'the [TearDownFixture]s that ran on an instance');
+end;
+
 initialization
   TDUnitX.RegisterTestFixture(TTestClassWithNonPublicSetup);
   TDUnitX.RegisterTestFixture(TTestClassWithTestSource);
@@ -3672,6 +4129,7 @@ initialization
   TDUnitX.RegisterTestFixture(TMaxTimeInterruptTests);
   TDUnitX.RegisterTestFixture(TDUnitXTestFixtureTests);
   TDUnitX.RegisterTestFixture(TRunnerBehaviourTests);
+  TDUnitX.RegisterTestFixture(TFixtureConstructorTests);
   TestDataProviderManager.RegisterProvider('DUnitX.Tests.EmptyProvider', TEmptyTestCaseProvider);
 
 end.
