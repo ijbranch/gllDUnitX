@@ -659,10 +659,12 @@ begin
   result := false;
   //A name selects whatever it names whole: a namespace, a fixture, a test, or a method's test cases. It matches only
   //at a '.' boundary, so Unit.TCustomer does not also select Unit.TCustomerOrder.  A case named from its values follows
-  //its method's name without a '.', as Unit.TFix.Add(1,2), so a '(' is a boundary too.
+  //its method's name without a '.', as Unit.TFix.Add(1,2), so a '(' is a boundary too, and so is the '<' before a
+  //generic fixture's type arguments, as Unit.TFoo<System.Integer> (upstream #562).
   for name in FNames do
   begin
-    result := SameText(name, test.Fixture.FullName) or StartsText(name + '.', test.FullName) or StartsText(name + '(', test.FullName);
+    result := SameText(name, test.Fixture.FullName) or StartsText(name + '.', test.FullName)
+      or StartsText(name + '(', test.FullName) or StartsText(name + '<', test.FullName);
     if result then
       exit;
   end;

@@ -527,6 +527,14 @@ type
     [Test]
     procedure NameFilterMatchesWholeNameSegments;
     /// <summary>
+    ///   Proves that naming a generic fixture without its type arguments (Unit.TFoo) selects its instances
+    ///   (Unit.TFoo&lt;System.Integer&gt;, whose full name carries them) but not another generic fixture whose name only
+    ///   starts with it (Unit.TFooBar&lt;System.Integer&gt;), and that the full instance name still selects it.  Upstream
+    ///   #562 treats '&lt;' as the end of a name segment.
+    /// </summary>
+    [Test]
+    procedure NameFilterSelectsTheInstancesOfANamedGenericFixture;
+    /// <summary>
     ///   Proves the fixture list the runner sorts is ordered by full name at every level, children included. Sort
     ///   reached the generic list's default comparer, which orders interface pointers, so the run order followed
     ///   heap addresses.
@@ -2819,6 +2827,40 @@ begin
     orderTest := nil;
     customer := nil;
     customerOrder := nil;
+    Context.Free;
+  end;
+end;
+
+procedure TRunnerBehaviourTests.NameFilterSelectsTheInstancesOfANamedGenericFixture;
+var
+  Context : TRttiContext;
+  MyMethod : TRttiMethod;
+  foo : ITestFixture;
+  fooBar : ITestFixture;
+  fooTest : ITest;
+  fooBarTest : ITest;
+  filter : ITestFilter;
+begin
+  Context := TRttiContext.Create;
+  try
+    MyMethod := Context.GetType(TTestCaseAttribute).GetMethod('ProcedureWithTwoParameters');
+    //A generic fixture is named from its class name, type arguments included.
+    foo := TDUnitXTestFixture.Create('Unit.TFoo<System.Integer>', EmptyStr, TTestCaseAttribute, 'AUnit') as ITestFixture;
+    fooBar := TDUnitXTestFixture.Create('Unit.TFooBar<System.Integer>', EmptyStr, TTestCaseAttribute, 'AUnit') as ITestFixture;
+    fooTest := foo.AddTest(MyMethod.Name, nil, 'Test1', '', MyMethod);
+    fooBarTest := fooBar.AddTest(MyMethod.Name, nil, 'Test1', '', MyMethod);
+
+    filter := TNameFilter.Create('Unit.TFoo');
+    Assert.IsTrue(filter.Match(fooTest), 'an instance of the named generic fixture');
+    Assert.IsFalse(filter.Match(fooBarTest), 'an instance of a generic fixture whose name only starts with the named one');
+    filter := TNameFilter.Create('Unit.TFoo<System.Integer>');
+    Assert.IsTrue(filter.Match(fooTest), 'the named instance');
+  finally
+    filter := nil;
+    fooTest := nil;
+    fooBarTest := nil;
+    foo := nil;
+    fooBar := nil;
     Context.Free;
   end;
 end;

@@ -228,7 +228,7 @@ The runtime package is `packages\RAD Studio 13.0\VSoft.DUnitXWinR.dpk` (`require
 
 `DUnitX.Loggers.GUI.VCL` (`TGUIVCLTestRunner`, with a `Run` procedure; its behaviour is in the Users Guide) and the FastMM5/stack-trace units are **not** in the package `contains` clause and are compiled into the consuming project.
 
-`DUnitX.Filters` gained `TFullNameFilter` on 2026-10-12: it selects tests by exact, case-sensitive full name. `TNameFilter` (what `--run` uses) matches a name as a whole leading part of a fixture's or test's full name, at a `.` boundary (since 2026-10-13; before, a bare prefix), so it suits command lines but not an exact selection.
+`DUnitX.Filters` gained `TFullNameFilter` on 2026-10-12: it selects tests by exact, case-sensitive full name. `TNameFilter` (what `--run` uses) matches a name as a whole leading part of a fixture's or test's full name, at a `.` boundary (since 2026-10-13; before, a bare prefix), a `(` (a case named from its values) or a `<` (a generic fixture's type arguments, since 2026-11-02, as upstream #562 has it: `--run:Unit.TFoo` selects `Unit.TFoo<System.Integer>`; where a unit has both `TFoo` and `TFoo<T>` fixtures, it selects both, and a case named `x<y` or `x(y` is selected by `--run:...M.x` too), so it suits command lines but not an exact selection.
 
 ### The GITLAK suite runner: `Source\Gll` (fork addition, 2026-10-22)
 
