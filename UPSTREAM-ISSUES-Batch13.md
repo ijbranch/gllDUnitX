@@ -6,8 +6,10 @@ Two follow-ups, built on `master` @ `cc247a9` (every batch 11 and 12 PR merged),
 
 | # | Defect | Issue | PR | Branch | Head | Merged |
 |---|---|---|---|---|---|---|
-| 1 | A 64-bit hex `[TestCase]` value converts to an `Integer` or smaller type (`ConvStr2Int` has the flaws #551 fixed for `Int64`) | [#564](https://github.com/VSoftTechnologies/DUnitX/issues/564) | [#565](https://github.com/VSoftTechnologies/DUnitX/pull/565) | `fix/testcase-integer-hex-64bit` | `c8e2a4b` | |
-| 2 | `Assert.IsType<T>` always fails (option 2 of question #558, Vincent: "Lets go with option 2") | [#558](https://github.com/VSoftTechnologies/DUnitX/issues/558) | [#566](https://github.com/VSoftTechnologies/DUnitX/pull/566) | `fix/istype-always-fails` | `d8a6061` | |
+| 1 | A 64-bit hex `[TestCase]` value converts to an `Integer` or smaller type (`ConvStr2Int` has the flaws #551 fixed for `Int64`) | [#564](https://github.com/VSoftTechnologies/DUnitX/issues/564) | [#565](https://github.com/VSoftTechnologies/DUnitX/pull/565) | `fix/testcase-integer-hex-64bit` | `c8e2a4b` | 2026-11-02 `f5ab75a` |
+| 2 | `Assert.IsType<T>` always fails (option 2 of question #558, Vincent: "Lets go with option 2") | [#558](https://github.com/VSoftTechnologies/DUnitX/issues/558) | [#566](https://github.com/VSoftTechnologies/DUnitX/pull/566) | `fix/istype-always-fails` | `d8a6061` | 2026-11-02 `3a77a5b` |
+
+**Outcome (2026-11-02):** both merged within the hour, each unchanged (`git patch-id` equal to its branch).  This fork took #566's caller message in `5599dac`.
 
 ## How this batch was built
 
