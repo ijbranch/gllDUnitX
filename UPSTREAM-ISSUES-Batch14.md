@@ -1,4 +1,4 @@
-# DUnitX upstream: batch 14 (posted 2026-11-02)
+# DUnitX upstream: batch 14 (posted 2026-11-02; item 8 on 2026-11-04)
 
 The runner changes from the #398 list ("happy for all of the above to be addressed"), one PR at a time, each on the `master` of the day, pushed to [`ijbranch/gllDUnitX`](https://github.com/ijbranch/gllDUnitX).
 
