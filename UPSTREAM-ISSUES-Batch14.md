@@ -11,6 +11,7 @@ The runner changes from the #398 list ("happy for all of the above to be address
 | 5 | Cancel on the save prompt still creates the project; nil active project (report 5.2, 5.3) | [#571](https://github.com/VSoftTechnologies/DUnitX/issues/571) | [#576](https://github.com/VSoftTechnologies/DUnitX/pull/576) | `fix/expert-cancel-save` | `078d681` | 2026-11-02 `a87c1c6` |
 | 6 | Fixture class names that do not compile are accepted (report 5.4) | [#572](https://github.com/VSoftTechnologies/DUnitX/issues/572) | [#577](https://github.com/VSoftTechnologies/DUnitX/pull/577) | `fix/expert-fixture-name-ident` | `079f481` | 2026-11-02 `f4b9811` |
 | 7 | `Assert.AreSame` / `AreNotSame(TObject)` call `Equals`, not identity (#414, re-offered; #415 was closed in batch 2) | [#414](https://github.com/VSoftTechnologies/DUnitX/issues/414) | [#579](https://github.com/VSoftTechnologies/DUnitX/pull/579) | `fix/aresame-identity-2` | `0521642` | 2026-11-02 `f3f9373` |
+| 8 | The #453 NUnit logger test builds its expected `time` with the locale's decimal separator, so it fails on a German machine (reported by luebbe) | [#580](https://github.com/VSoftTechnologies/DUnitX/issues/580) | [#581](https://github.com/VSoftTechnologies/DUnitX/pull/581) | `fix/nunit-time-locale` | `242727d` | 2026-11-03 `8626022` |
 
 ## 1. A raising fixture constructor (posted 16:25 +11, Ian: "Approved to publish")
 
@@ -42,6 +43,12 @@ Built on `f5ab75a` (touch only `Expert\`; clean on `8224015` and with each other
 #414 was still open (batch 2's record said closed; corrected).  #415 had been closed after Vincent's "This is a behavior change - not sure about this"; with 2.0.0 collecting behaviour changes it went again on `2299609` with a `BREAKINGCHANGES.md` section.  The `TObject` overloads compare references; a nil shows as `nil` in the message instead of an access violation.  Seven tests red on `2299609`; four mutants killed; review 4 findings, all fixed (doc accuracy, a nil-message test).  Not changed, reported: the DUnit-compatibility `CheckSame(TObject)` goes through `AreEqual<TObject>` (so `Equals`), the same flaw; this fork fixed its own copy in October.
 
 **#579 merged 2026-11-02** as `f3f9373` (tree identical to `0521642`); #414 closed with it.  Nothing to port: this fork has compared references since October.
+
+## 8. NUnit `time` test and the locale (posted 2026-11-04 06:10 +11, Ian: "Approved to publish")
+
+luebbe reported (#580) that our #453 test formatted the expected `time` attribute with the machine's settings, so a German locale expected `0,000` where the logger rightly writes `0.000`.  Test-only fix on `f3f9373`: the expected value is built with a `'.'` decimal separator.  Red with `','` forced as the separator, green after; 547 passed.  Review: no findings.
+
+**#581 merged 2026-11-03** (21:30 UTC) as `8626022` (tree identical to `242727d`); #580 closed with it.  Nothing to port: this fork has no such test.
 
 ## This fork
 

@@ -389,7 +389,7 @@ Batch 13 merged on 2026-11-02.  **Batch 14**, the runner changes, one PR at a ti
 | 5.4 fixture class names that do not compile | [#572](https://github.com/VSoftTechnologies/DUnitX/issues/572) | [#577](https://github.com/VSoftTechnologies/DUnitX/pull/577) |
 | 3.3 `AreSame(TObject)` uses `Equals` (re-offered for 2.0.0; merged `f3f9373`) | [#414](https://github.com/VSoftTechnologies/DUnitX/issues/414) | [#579](https://github.com/VSoftTechnologies/DUnitX/pull/579) |
 
-All of batch 14 merged on 2026-11-02, #579 last; every item on the #398 list has been sent and merged.
+All of batch 14 merged on 2026-11-02, #579 last; every item on the #398 list has been sent and merged.  A later test-only fix for #580 (our #453 test was locale-dependent) went as #581 and merged 2026-11-03 (`8626022`).
 
 **Outside the batches: [#372](https://github.com/VSoftTechnologies/DUnitX/issues/372) (bitmask exit codes) ->
 [PR #411](https://github.com/VSoftTechnologies/DUnitX/pull/411)**, branch `feature/bitmask-exit-codes`, posted
