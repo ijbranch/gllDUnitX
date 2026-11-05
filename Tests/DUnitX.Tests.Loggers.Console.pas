@@ -60,6 +60,9 @@ type
     property Text : string read FText;
   end;
 
+  /// <summary>A console writer class, to make again the one registered before a test ( upstream #584 ).</summary>
+  TConsoleWriterClass = class of TDUnitXConsoleWriterBase;
+
 {$M+}
   /// <summary>
   ///   Tests for <c>TDUnitXConsoleLogger</c>'s quiet mode with a row width (upstream #582): the progress marks wrap
@@ -72,6 +75,8 @@ type
     FWriter : TCapturingConsoleWriter;
     /// <summary>Holds the capturing writer's reference count for the test's lifetime.</summary>
     FWriterRef : IDUnitXConsoleWriter;
+    /// <summary>The console writer class registered before the test, which TearDown registers again.</summary>
+    FSavedWriterClass : TConsoleWriterClass;
     /// <summary>
     ///   Creates a quiet-mode logger, drives it through every call that writes a progress mark, and returns what it
     ///   wrote.
@@ -131,8 +136,7 @@ uses
   DUnitX.Loggers.Console,
   DUnitX.ResStrs,
   DUnitX.RunResults,
-  DUnitX.ServiceLocator,
-  DUnitX.Windows.Console;
+  DUnitX.ServiceLocator;
 
 { TCapturingConsoleWriter }
 
@@ -182,7 +186,14 @@ end;
 { TDUnitX_ConsoleLoggerTests }
 
 procedure TDUnitX_ConsoleLoggerTests.Setup;
+var
+  current : IDUnitXConsoleWriter;
 begin
+  //Remember the platform's console writer so TearDown can put it back.
+  current := TDUnitXServiceLocator.DefaultContainer.Resolve<IDUnitXConsoleWriter>();
+  FSavedWriterClass := TConsoleWriterClass((current as TObject).ClassType);
+  current := nil;
+
   FWriter := TCapturingConsoleWriter.Create;
   FWriterRef := FWriter;
   TDUnitXServiceLocator.DefaultContainer.RegisterType<IDUnitXConsoleWriter>(
@@ -193,8 +204,15 @@ begin
 end;
 
 procedure TDUnitX_ConsoleLoggerTests.TearDown;
+var
+  writerClass : TConsoleWriterClass;
 begin
-  TDUnitXServiceLocator.DefaultContainer.RegisterType<IDUnitXConsoleWriter, TDUnitXWindowsConsoleWriter>;
+  writerClass := FSavedWriterClass;
+  TDUnitXServiceLocator.DefaultContainer.RegisterType<IDUnitXConsoleWriter>(
+    function : IDUnitXConsoleWriter
+    begin
+      Result := writerClass.Create;
+    end);
   FWriter := nil;
   FWriterRef := nil;
 end;

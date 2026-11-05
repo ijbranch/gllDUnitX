@@ -46,13 +46,13 @@ type
     FConsoleWriter : IDUnitXConsoleWriter;
     /// <summary>True for terse one-character-per-test output instead of the full indented log.</summary>
     FQuietMode : boolean;
+    /// <summary>The number of progress marks written on the current quiet-mode row.</summary>
+    FQuietModeDotCounter: Integer;
     /// <summary>
-    ///   Quiet mode's row width in characters: after this many progress marks the row ends.  Zero or less (the
+    ///   Quiet mode's row width in characters: after this many progress marks the row ends.  Less than 1 (the
     ///   default, -1) never ends a row, as before upstream #582.
     /// </summary>
-    FQuietRowWidth : Integer;
-    /// <summary>The number of progress marks written on the current quiet-mode row.</summary>
-    FQuietColumn : Integer;
+    FQuietModeMaxRowWidth: Integer;
     /// <summary>
     ///   Writes one quiet-mode progress mark and, when a row width is set and the row is now full, ends the row.
     /// </summary>
@@ -204,8 +204,8 @@ uses
 constructor TDUnitXConsoleLogger.Create(const quietMode : boolean = false; const AQuietRowWidth : Integer = -1);
 begin
   FQuietMode := quietMode;
-  FQuietRowWidth := AQuietRowWidth;
-  FQuietColumn := 0;
+  FQuietModeDotCounter := 0;
+  FQuietModeMaxRowWidth := AQuietRowWidth;
   FConsoleWriter := TDUnitXServiceLocator.DefaultContainer.Resolve<IDUnitXConsoleWriter>();
   if FConsoleWriter = nil then
     raise Exception.Create(SNoConsoleWriterClassRegistered);
@@ -220,11 +220,11 @@ end;
 procedure TDUnitXConsoleLogger.WriteQuietMark(const AMark : Char);
 begin
   FConsoleWriter.Write(AMark);
-  Inc(FQuietColumn);
-  if (FQuietRowWidth > 0) and (FQuietColumn >= FQuietRowWidth) then
+  Inc(FQuietModeDotCounter);
+  if (FQuietModeMaxRowWidth >= 1) and (FQuietModeDotCounter >= FQuietModeMaxRowWidth) then
   begin
     FConsoleWriter.WriteLn;
-    FQuietColumn := 0;
+    FQuietModeDotCounter := 0;
   end;
 end;
 
@@ -276,10 +276,12 @@ begin
 end;
 
 procedure TDUnitXConsoleLogger.OnExecuteTest(const threadId : TThreadID; const Test : ITestInfo);
+const
+  QUIETMODE_DOT = '.';
 begin
   if FQuietMode then
   begin
-    WriteQuietMark('.');
+    WriteQuietMark(QUIETMODE_DOT);
     exit;
   end;
 
@@ -429,7 +431,7 @@ begin
   begin
     // A row the width has just ended needs no line end of its own; otherwise the summary would follow a second
     // blank line.  Without a width the marks' row is always open, as before.
-    if (FQuietRowWidth <= 0) or (FQuietColumn > 0) then
+    if (FQuietModeMaxRowWidth < 1) or (FQuietModeDotCounter > 0) then
       FConsoleWriter.WriteLn;
     FConsoleWriter.WriteLn;
   end
