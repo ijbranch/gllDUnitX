@@ -78,8 +78,8 @@
     <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
         <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
-        <VerInfo_Build>246</VerInfo_Build>
-        <VerInfo_Keys>CompanyName=;FileDescription=DUnitXTest_D13;FileVersion=1.0.0.246;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=DUnitXTest_D13;ProductVersion=1.0.0.246;Comments=</VerInfo_Keys>
+        <VerInfo_Build>261</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=;FileDescription=DUnitXTest_D13;FileVersion=1.0.0.261;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=DUnitXTest_D13;ProductVersion=1.0.0.261;Comments=</VerInfo_Keys>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
@@ -88,8 +88,8 @@
     <PropertyGroup Condition="'$(Cfg_2_Win64)'!=''">
         <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
-        <VerInfo_Build>47</VerInfo_Build>
-        <VerInfo_Keys>CompanyName=;FileDescription=DUnitXTest_D13;FileVersion=1.0.0.47;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=DUnitXTest_D13;ProductVersion=1.0.0.47;Comments=</VerInfo_Keys>
+        <VerInfo_Build>48</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=;FileDescription=DUnitXTest_D13;FileVersion=1.0.0.48;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=DUnitXTest_D13;ProductVersion=1.0.0.48;Comments=</VerInfo_Keys>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
@@ -116,6 +116,7 @@
         <DCCReference Include="DUnitX.Tests.Utils.pas"/>
         <DCCReference Include="DUnitX.Tests.UtilsHelpers.pas"/>
         <DCCReference Include="DUnitX.Tests.Loggers.XML.JUnit.pas"/>
+        <DCCReference Include="DUnitX.Tests.Loggers.Console.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

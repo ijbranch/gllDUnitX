@@ -389,7 +389,7 @@ Batch 13 merged on 2026-11-02.  **Batch 14**, the runner changes, one PR at a ti
 | 5.4 fixture class names that do not compile | [#572](https://github.com/VSoftTechnologies/DUnitX/issues/572) | [#577](https://github.com/VSoftTechnologies/DUnitX/pull/577) |
 | 3.3 `AreSame(TObject)` uses `Equals` (re-offered for 2.0.0; merged `f3f9373`) | [#414](https://github.com/VSoftTechnologies/DUnitX/issues/414) | [#579](https://github.com/VSoftTechnologies/DUnitX/pull/579) |
 
-All of batch 14 merged on 2026-11-02, #579 last; every item on the #398 list has been sent and merged.  A later test-only fix for #580 (our #453 test was locale-dependent) went as #581 and merged 2026-11-03 (`8626022`).
+All of batch 14 merged on 2026-11-02, #579 last; every item on the #398 list has been sent and merged.  A later test-only fix for #580 (our #453 test was locale-dependent) went as #581 and merged 2026-11-03 (`8626022`).  Upstream's next commit, #582 (Tommi Prami: quiet mode's row width, `2ea0069`, 2026-11-04), was hand-ported on 2026-11-06 with three fixes (every mark counts, a row is exactly the width, no second blank line before the summary) and absorbed by `merge -s ours`; its counting defect has not been reported upstream.
 
 **Outside the batches: [#372](https://github.com/VSoftTechnologies/DUnitX/issues/372) (bitmask exit codes) ->
 [PR #411](https://github.com/VSoftTechnologies/DUnitX/pull/411)**, branch `feature/bitmask-exit-codes`, posted

@@ -244,7 +244,9 @@ end;
 ```
 MyTests.exe                                   verbose console, dunitx-results.xml beside the exe
 MyTests.exe -xml:MyTests-results.xml          name the XML explicitly
-MyTests.exe -cm:Quiet                         quiet console
+MyTests.exe -cm:Quiet                         quiet console (one mark per event; for a CI log that shows progress
+                                              line by line, create the logger with a row width:
+                                              TDUnitXConsoleLogger.Create( True, 80 ) ends a row every 80 marks)
 MyTests.exe -r:MyFixture.TMathFixture.AddingTwoNumbers  one test (full name: unit, fixture, test)
 MyTests.exe -i:fast                           only the 'fast' category
 MyTests.exe -e:slow -dsi                      everything but 'slow', hiding ignored tests

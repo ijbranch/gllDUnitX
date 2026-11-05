@@ -41,7 +41,8 @@ uses
   DUnitX.Tests.IgnoreFixture in 'DUnitX.Tests.IgnoreFixture.pas',
   DUnitX.Tests.Utils in 'DUnitX.Tests.Utils.pas',
   DUnitX.Tests.UtilsHelpers in 'DUnitX.Tests.UtilsHelpers.pas',
-  DUnitX.Tests.Loggers.XML.JUnit in 'DUnitX.Tests.Loggers.XML.JUnit.pas';
+  DUnitX.Tests.Loggers.XML.JUnit in 'DUnitX.Tests.Loggers.XML.JUnit.pas',
+  DUnitX.Tests.Loggers.Console in 'DUnitX.Tests.Loggers.Console.pas';
 
 // Named explicitly: this file is DUnitXTestProject.dpr, but the version resource is generated beside the .dproj as
 // DUnitXTest_D13.res, so {$R *.res} would look for a DUnitXTestProject.res that does not exist.
