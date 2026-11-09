@@ -275,6 +275,9 @@ NUnit XML suits Continua CI, JUnit XML suits GitLab CI. A VCL GUI runner exists 
 - The summary shows **Warnings** (tests that made no assertion) separately from Failed, and the memory-leak group shows its count.
 - **Settings** (which tests are ticked) are kept in `%LOCALAPPDATA%\DUnitX\<exe name>.ini`. An old INI beside the exe is read once as a fallback. A settings file that cannot be written never stops the window closing.
 - **Find Result in Text** is now **Alt+T** (Alt+F belongs to the Filter box).
+- **Ctrl+A** selects the whole Filter box, with or without Windows themes (upstream #589).
+- A test passed with `Assert.Pass( 'message' )` shows its message under its result, as a failure does (upstream #590).
+- The splitter stops when either pane would go under 300 pixels, and shrinking the window narrows the results pane first; dragging the splitter no longer widens the window (upstream #588).
 - **Compare** looks for Beyond Compare through its registry install path and both Program Files folders, and does not freeze the runner while it is open.
 
 ---

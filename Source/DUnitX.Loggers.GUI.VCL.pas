@@ -317,9 +317,12 @@ type
     /// <summary>Clears the filter and reloads the test tree; ignored during a run.</summary>
     /// <param name="Sender">The filter edit.</param>
     procedure edtFilterRightButtonClick(Sender : TObject);
-    /// <summary>On Enter, applies the filter by reloading the test tree (not during a run) and swallows the key.</summary>
+    /// <summary>
+    ///   On Enter, applies the filter by reloading the test tree (not during a run); on Ctrl+A selects the whole
+    ///   filter, which the edit control ignores without runtime themes.  Either key is swallowed.
+    /// </summary>
     /// <param name="Sender">The filter edit.</param>
-    /// <param name="Key">The key pressed; set to #0 when it is Enter.</param>
+    /// <param name="Key">The key pressed; set to #0 when it is Enter or Ctrl+A.</param>
     procedure edtFilterKeyPress(Sender : TObject; var Key : Char);
     /// <summary>
     ///   Sizes the form to the monitor's work area, creates the lists and maps, takes the command-line filter, reads
@@ -333,6 +336,12 @@ type
     /// <param name="Key">The key pressed; cleared when Esc stops a run.</param>
     /// <param name="Shift">The modifier keys held.</param>
     procedure FormKeyDown(Sender : TObject; var Key : Word; Shift : TShiftState);
+    /// <summary>
+    ///   Narrows the results pane rather than squeeze the tests pane below the splitter's minimum.  A minimum width
+    ///   on the tests pane itself made the VCL widen the window whenever the splitter left it narrower.
+    /// </summary>
+    /// <param name="Sender">The form.</param>
+    procedure FormResize(Sender : TObject);
     /// <summary>Splits the panes evenly and, the first time only, posts <c>WM_LOAD_TESTS</c> to load the tests.</summary>
     /// <param name="Sender">The form.</param>
     procedure FormShow(Sender : TObject);
@@ -1176,7 +1185,8 @@ var
   LogMessageNode : TTreeNode;
   ParentNode : TTreeNode;
 begin
-  if Test.ResultType = TTestResultType.Pass then
+  //A pass shows its message too, when Assert.Pass gave one.
+  if (Test.ResultType = TTestResultType.Pass) and (Test.Message = '') then
     ParentNode := ResultNode
   else
   begin
@@ -1818,7 +1828,13 @@ end;
 
 procedure TGUIVCLTestRunner.edtFilterKeyPress(Sender : TObject; var Key : Char);
 begin
-  if Key = #13 then
+  if Key = #1 then //Ctrl+A
+  begin
+    //Without runtime themes the edit control ignores Ctrl+A.
+    edtFilter.SelectAll;
+    Key := #0;
+  end
+  else if Key = #13 then
   begin
     if not FRunning then
       TryLoadTests;
@@ -1838,6 +1854,15 @@ begin
     StopRun;
     Key := 0;
   end;
+end;
+
+procedure TGUIVCLTestRunner.FormResize(Sender : TObject);
+var
+  MaxResultsWidth : integer;
+begin
+  MaxResultsWidth := pnlClient.ClientWidth - splMain.Width - splMain.MinSize;
+  if pnlResults.Width > MaxResultsWidth then
+    pnlResults.Width := Max(MaxResultsWidth, pnlResults.Constraints.MinWidth);
 end;
 
 procedure TGUIVCLTestRunner.FormShow(Sender : TObject);

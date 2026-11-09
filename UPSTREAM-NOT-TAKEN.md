@@ -5,6 +5,11 @@ changelog entries. Keep them so the same reviews are not re-derived later.
 
 ## Reviewed and deliberately NOT taken from upstream, so they are not re-derived later
 
+- **Upstream `master` @ `db59aa3` (2026-11-09): #588-#595, PhilBarwood's GUI-runner fixes; three taken, five not.**
+  Taken: #590, #589 and #588's splitter half (see `CHANGELOG.md` Fixed).  **Already here:** #592 and #595 (this fork
+  keeps unticked test names as ini VALUES, so trailing spaces and `=` never reach a key) and #594 (the Space handler
+  already checks `tvwTests.Selected`).  **Not taken:** #588's window sizing (this fork sizes the form from
+  `Monitor.WorkareaRect` and the estate is DPI-unaware) and #585/#586 (the FMX runner, removed here 2026-08-24).
 - **Upstream `master` @ `6af7aeb` (2026-10-13): #405-#410 already here, #411 NOT taken.** The seven commits since
   `1bdc297` are our own batch 1 PRs. #405, #406, #409 and #410 are the same fixes as ours; #407 and #408 are
   deliberately narrower versions of ours (see `UPSTREAM-REPORT-Defects-2026-10-12.md` §9), so nothing is to be
