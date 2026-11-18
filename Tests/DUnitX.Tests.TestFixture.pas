@@ -502,6 +502,16 @@ type
     [Test]
     procedure LeakCheckIgnoresMemoryFreedBetweenPhases;
     /// <summary>
+    ///   Proves that a registered leak monitor that fails a test from its PostTest (upstream #597: one that fails a
+    ///   test which showed a dialog) cannot take the run down when the fixture has a [TearDown].  The leak span's own
+    ///   copy of the monitor raised outside the runner's exception handling (in Log and RecordResult), so the
+    ///   exception left the run: the failing test and every later one had no result and [TearDownFixture] never ran.
+    ///   Each test must now have its result (the failing one Failure, the next one Pass) and [TearDownFixture] must
+    ///   run.
+    /// </summary>
+    [Test]
+    procedure LeakMonitorThatFailsATestDoesNotEscapeTheRun;
+    /// <summary>
     ///   Proves that SuccessRate is a percentage (3 of 4 passing is 75), not 0 or 100.
     /// </summary>
     [Test]
@@ -963,6 +973,10 @@ var
   GSetupGapFree : Int64;
   /// <summary>What the test allocated that TGapFreeingLogger frees before teardown starts.</summary>
   GTestGapFree : Int64;
+  /// <summary>Events counted by TRunnerMonitorFailsTest's tests; TEventFailingLeakMonitor fails a test that adds one.</summary>
+  GMonitorEvents : Integer;
+  /// <summary>Set when TRunnerMonitorFailsTest's [TearDownFixture] ran.</summary>
+  GMonitorTearDownFixtureRan : boolean;
   /// <summary>Set if TRunnerConstructorAndSetupFixture's suppressed [SetupFixture] ran.</summary>
   GSetupFixtureRan : boolean;
   /// <summary>Set if TRunnerSetupFails's TearDown ran after its failed Setup.</summary>
@@ -1549,6 +1563,38 @@ type
   end;
 
   /// <summary>
+  ///   Runner fixture for upstream #597: run with TEventFailingLeakMonitor registered, its first test adds an event (so
+  ///   the monitor fails it) and fails itself, and its second passes.  The [TearDown] is what let the monitor's
+  ///   exception escape the run.
+  /// </summary>
+  TRunnerMonitorFailsTest = class
+  public
+    /// <summary>
+    ///   Empty; its presence is the condition of the defect.
+    /// </summary>
+    [TearDown]
+    procedure TearDown;
+    /// <summary>
+    ///   Sets GMonitorTearDownFixtureRan.
+    /// </summary>
+    [TearDownFixture]
+    procedure TearDownFixture;
+    /// <summary>
+    ///   Adds an event to GMonitorEvents and fails.
+    /// </summary>
+    /// <exception cref="ETestFailure">
+    ///   Always ('Own failure').
+    /// </exception>
+    [Test]
+    procedure Test1;
+    /// <summary>
+    ///   Passes.
+    /// </summary>
+    [Test]
+    procedure Test2;
+  end;
+
+  /// <summary>
   ///   Runner fixture with three passing tests and one failing, for the SuccessRate percentage.
   /// </summary>
   TRunnerThreeOfFourPass = class
@@ -1904,6 +1950,41 @@ type
     /// <returns>
     ///   Post-test minus pre-test simulated bytes.
     /// </returns>
+    function TestMemoryAllocated : Int64;
+  end;
+
+  /// <summary>
+  ///   Leak monitor that fails a test, from PostTest, when GMonitorEvents grew since PreTest (as upstream #597's monitor
+  ///   fails a test that showed a dialog).  It measures no memory.
+  /// </summary>
+  TEventFailingLeakMonitor = class(TInterfacedObject, IMemoryLeakMonitor)
+  private
+    /// <summary>GMonitorEvents at PreTest.</summary>
+    FStart : Integer;
+  public
+    /// <summary>Does nothing.</summary>
+    procedure PreSetup;
+    /// <summary>Does nothing.</summary>
+    procedure PostSetUp;
+    /// <summary>Records GMonitorEvents.</summary>
+    procedure PreTest;
+    /// <summary>Fails the test if GMonitorEvents grew since PreTest.</summary>
+    /// <exception cref="ETestFailure">
+    ///   When an event happened during the test.
+    /// </exception>
+    procedure PostTest;
+    /// <summary>Does nothing.</summary>
+    procedure PreTearDown;
+    /// <summary>Does nothing.</summary>
+    procedure PostTearDown;
+    /// <summary>No memory is measured.</summary>
+    /// <returns>Always 0.</returns>
+    function SetUpMemoryAllocated : Int64;
+    /// <summary>No memory is measured.</summary>
+    /// <returns>Always 0.</returns>
+    function TearDownMemoryAllocated : Int64;
+    /// <summary>No memory is measured.</summary>
+    /// <returns>Always 0.</returns>
     function TestMemoryAllocated : Int64;
   end;
 
@@ -2399,6 +2480,68 @@ end;
 procedure TRunnerGapLeakChecks.LeaksForReal;
 begin
   Inc(GFakeAllocated, 32);
+end;
+
+procedure TRunnerMonitorFailsTest.TearDown;
+begin
+end;
+
+procedure TRunnerMonitorFailsTest.TearDownFixture;
+begin
+  GMonitorTearDownFixtureRan := True;
+end;
+
+procedure TRunnerMonitorFailsTest.Test1;
+begin
+  Inc(GMonitorEvents);
+  Assert.Fail('Own failure');
+end;
+
+procedure TRunnerMonitorFailsTest.Test2;
+begin
+  Assert.Pass;
+end;
+
+procedure TEventFailingLeakMonitor.PreSetup;
+begin
+end;
+
+procedure TEventFailingLeakMonitor.PostSetUp;
+begin
+end;
+
+procedure TEventFailingLeakMonitor.PreTest;
+begin
+  FStart := GMonitorEvents;
+end;
+
+procedure TEventFailingLeakMonitor.PostTest;
+begin
+  if GMonitorEvents > FStart then
+    Assert.Fail('Event during test');
+end;
+
+procedure TEventFailingLeakMonitor.PreTearDown;
+begin
+end;
+
+procedure TEventFailingLeakMonitor.PostTearDown;
+begin
+end;
+
+function TEventFailingLeakMonitor.SetUpMemoryAllocated : Int64;
+begin
+  Result := 0;
+end;
+
+function TEventFailingLeakMonitor.TearDownMemoryAllocated : Int64;
+begin
+  Result := 0;
+end;
+
+function TEventFailingLeakMonitor.TestMemoryAllocated : Int64;
+begin
+  Result := 0;
 end;
 
 procedure TRunnerThreeOfFourPass.PassOne;
@@ -3178,6 +3321,36 @@ begin
   CheckResult(results, 'LeaksForReal', TTestResultType.MemoryLeak);
   //The figure starts the message; setup's 500, freed before the test, is not in it.
   Assert.StartsWith('32 bytes', FindResult(results, 'LeaksForReal').Message, False, 'LeaksForReal message');
+end;
+
+procedure TRunnerBehaviourTests.LeakMonitorThatFailsATestDoesNotEscapeTheRun;
+var
+  results : IRunResults;
+  escaped : string;
+begin
+  GMonitorEvents := 0;
+  GMonitorTearDownFixtureRan := False;
+  escaped := '';
+  TDUnitXServiceLocator.DefaultContainer.RegisterType<IMemoryLeakMonitor>(
+    function : IMemoryLeakMonitor
+    begin
+      Result := TEventFailingLeakMonitor.Create;
+    end);
+  try
+    try
+      results := RunFixture(BuildFixture(TRunnerMonitorFailsTest), TDUnitXNullLogger.Create);
+    except
+      on E : Exception do
+        escaped := E.ClassName + ': ' + E.Message;
+    end;
+  finally
+    //The suite runs with the default monitor; put it back.
+    DUnitX.MemoryLeakMonitor.Default.RegisterDefaultProvider;
+  end;
+  Assert.AreEqual('', escaped, False, 'exception that escaped the run');
+  CheckResult(results, 'Test1', TTestResultType.Failure);
+  CheckResult(results, 'Test2', TTestResultType.Pass);
+  Assert.IsTrue(GMonitorTearDownFixtureRan, '[TearDownFixture] ran');
 end;
 
 procedure TRunnerBehaviourTests.SuccessRateIsAPercentage;
