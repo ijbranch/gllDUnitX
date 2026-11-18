@@ -51,6 +51,8 @@ resourcestring
   SUnexpectedErrorStream = 'Streams are not equal %s';
   /// <summary>Message of ETestFailureStrCompare: strings differ. Args: expected, actual, message.</summary>
   SNotEqualErrorStr = 'Expected [%s] but got [%s] %s';
+  /// <summary>Assert failure: a member of two records or arrays differs. Args: expected, actual, member path, message.</summary>
+  SNotEqualAtErrorStr = 'Expected [%s] but got [%s] at %s %s';
   /// <summary>Assert failure prefix: two memory blocks differ.</summary>
   SMemoryValuesNotEqual = 'Memory values are not equal. ';
   /// <summary>Assert failure: a file expected to exist does not. Arg: file name.</summary>

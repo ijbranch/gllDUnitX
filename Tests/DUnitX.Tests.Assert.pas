@@ -439,6 +439,23 @@ type
     procedure AreEqual_T_Throws_ETestFailure_When_Objects_Are_Nil;
 
     /// <summary>
+    ///   Proves AreEqual&lt;T&gt; compares records member by member (upstream #167): equal strings in different heap
+    ///   blocks, different padding bytes between fields, a nested record holding a dynamic array, a static array of
+    ///   strings and 0 against -0 all compare equal; and that AreNotEqual, Contains and DoesNotContain agree with it.
+    ///   Under the default comparer, which compares a record's bytes, each of these was reported unequal.
+    /// </summary>
+    [Test]
+    procedure AreEqual_T_Compares_Records_Member_By_Member;
+
+    /// <summary>
+    ///   Proves AreEqual&lt;T&gt; on two records that differ fails naming the member and both values (here a string in
+    ///   a nested record's dynamic array, '.Inner.Items[1]'), not '(record)' against '(record)'; and that a class
+    ///   field is still compared by identity, so two distinct objects make records differ.
+    /// </summary>
+    [Test]
+    procedure AreEqual_T_Names_The_Record_Member_That_Differs;
+
+    /// <summary>
     ///   Proves AreEqual&lt;T&gt;( TArray ) passes for string and real arrays with the same elements in the same
     ///   order.
     /// </summary>
@@ -2148,6 +2165,160 @@ begin
   finally
     FreeAndNil(mock);
     FreeAndNil(mock2);
+  end;
+end;
+
+type
+  TInnerWithArray = record
+    Name : string;
+    Items : TArray<string>;
+  end;
+
+  TOuterRecord = record
+    Id : Integer;
+    Inner : TInnerWithArray;
+    Fixed : array[0..1] of string;
+    Amount : Double;
+  end;
+
+  TPaddedRecord = record
+    Flag : Byte;
+    Value : Integer;
+  end;
+
+  TRecordWithObject = record
+    Id : Integer;
+    Owner : TObject;
+  end;
+
+  TRecordWithDouble = record
+    Value : Double;
+  end;
+
+{$RTTI EXPLICIT FIELDS([])}
+  //Its fields are not in RTTI, so it can only be compared by its bytes.
+  TRecordWithoutFieldRtti = record
+    A : Integer;
+    B : Integer;
+  end;
+{$RTTI EXPLICIT METHODS([vcPublic, vcPublished]) FIELDS([vcPrivate, vcProtected, vcPublic, vcPublished]) PROPERTIES([vcPublic, vcPublished])}
+
+//Two equal TOuterRecords whose strings are distinct heap blocks.
+procedure MakeOuterPair(out a, b : TOuterRecord);
+begin
+  a.Id := 7;
+  a.Inner.Name := 'inner';
+  a.Inner.Items := ['x', 'y'];
+  a.Fixed[0] := 'f0';
+  a.Fixed[1] := 'f1';
+  a.Amount := 0;
+  b.Id := 7;
+  b.Inner.Name := Copy('-inner', 2, MaxInt);
+  b.Inner.Items := [Copy('-x', 2, 1), Copy('-y', 2, 1)];
+  b.Fixed[0] := Copy('-f0', 2, 2);
+  b.Fixed[1] := Copy('-f1', 2, 2);
+  //-0: the sign bit alone, set directly so no constant folding can turn it into +0.
+  PUInt64(@b.Amount)^ := UInt64($8000000000000000);
+  if PUInt64(@a.Amount)^ = PUInt64(@b.Amount)^ then
+    raise Exception.Create('test setup: Amount must be 0 against -0');
+  if Pointer(a.Inner.Name) = Pointer(b.Inner.Name) then
+    raise Exception.Create('test setup: the strings must be distinct heap blocks');
+end;
+
+procedure TTestsAssert.AreEqual_T_Compares_Records_Member_By_Member;
+var
+  a, b : TOuterRecord;
+  padA, padB : TPaddedRecord;
+  nanRecord : TRecordWithDouble;
+  hiddenA, hiddenB : TRecordWithoutFieldRtti;
+begin
+  //A NaN field equals itself bit for bit, as the record's bytes did.
+  nanRecord.Value := NaN;
+  Assert.WillNotRaiseAny(
+    procedure
+    begin
+      Assert.AreEqual<TRecordWithDouble>(nanRecord, nanRecord);
+    end, 'a record holding a NaN equals itself');
+  //Fields hidden from RTTI: compared by bytes, so different records still differ.
+  hiddenA.A := 1;
+  hiddenA.B := 2;
+  hiddenB.A := 1;
+  hiddenB.B := 3;
+  Assert.WillRaise(
+    procedure
+    begin
+      Assert.AreEqual<TRecordWithoutFieldRtti>(hiddenA, hiddenB);
+    end, ETestFailure, 'records whose fields RTTI does not list');
+  MakeOuterPair(a, b);
+  FillChar(padA, SizeOf(padA), $00);
+  FillChar(padB, SizeOf(padB), $FF);
+  padA.Flag := 1;
+  padA.Value := 2;
+  padB.Flag := 1;
+  padB.Value := 2;
+  Assert.WillNotRaiseAny(
+    procedure
+    begin
+      Assert.AreEqual<TOuterRecord>(a, b);
+    end, 'records with strings in distinct heap blocks');
+  Assert.WillNotRaiseAny(
+    procedure
+    begin
+      Assert.AreEqual<TPaddedRecord>(padA, padB);
+    end, 'records whose padding bytes differ');
+  Assert.WillRaise(
+    procedure
+    begin
+      Assert.AreNotEqual<TOuterRecord>(a, b);
+    end, ETestFailure, 'AreNotEqual agrees');
+  Assert.WillNotRaiseAny(
+    procedure
+    begin
+      Assert.Contains<TOuterRecord>([a], b);
+    end, 'Contains agrees');
+  Assert.WillRaise(
+    procedure
+    begin
+      Assert.DoesNotContain<TOuterRecord>([a], b);
+    end, ETestFailure, 'DoesNotContain agrees');
+end;
+
+procedure TTestsAssert.AreEqual_T_Names_The_Record_Member_That_Differs;
+var
+  a, b : TOuterRecord;
+  ra, rb : TRecordWithObject;
+  failure : string;
+begin
+  MakeOuterPair(a, b);
+  b.Inner.Items[1] := 'z';
+  failure := '';
+  try
+    Assert.AreEqual<TOuterRecord>(a, b, 'my message');
+  except
+    on E : ETestFailure do
+      failure := E.Message;
+  end;
+  Assert.AreEqual('Expected [y] but got [z] at .Inner.Items[1] my message', failure, False);
+
+  ra.Id := 1;
+  ra.Owner := TObject.Create;
+  rb.Id := 1;
+  rb.Owner := TObject.Create;
+  try
+    Assert.WillRaise(
+      procedure
+      begin
+        Assert.AreEqual<TRecordWithObject>(ra, rb);
+      end, ETestFailure, 'distinct objects make the records differ');
+    rb.Owner.Free;
+    rb.Owner := ra.Owner;
+    Assert.WillNotRaiseAny(
+      procedure
+      begin
+        Assert.AreEqual<TRecordWithObject>(ra, rb);
+      end, 'the same object');
+  finally
+    ra.Owner.Free;
   end;
 end;
 

@@ -210,6 +210,8 @@ Assert.WillRaiseWithMessageRegex( procedure begin Parse( '' ) end, EParseError, 
 
 One Delphi 13 wrinkle: `TList<T>.Count` is a `NativeInt`. Since 2026-10-10 this fork has `Assert.AreEqual( Integer, Int64 )` and `( Int64, Integer )` on Win64 (upstream #397), so `Assert.AreEqual( 3, List.Count )` compiles; before that it failed with `E2532`, and the `Assert.AreEqual<NativeInt>( 3, List.Count )` form written to work around it is still valid.
 
+**Records compare member by member** (since 2026-11-19, upstream #167).  `Assert.AreEqual<T>`, `AreNotEqual<T>`, `Contains<T>` and `DoesNotContain<T>` compare a record or static array field by field: strings by text, floats by value, nested records and dynamic arrays recursively, objects and interfaces by identity.  Before, they compared the record's bytes, so two equal records holding strings, or with different padding between fields, failed with `Expected [(record)] but got [(record)]`.  A failure now names the field: `Expected [y] but got [z] at .Inner.Items[1]`.  A float field compares equal when bit-identical or equal in value (0 and -0); a record whose fields RTTI does not list is compared by its bytes, as before.
+
 ---
 
 ## 6. Skipping a test honestly
@@ -280,7 +282,7 @@ NUnit XML suits Continua CI, JUnit XML suits GitLab CI. A VCL GUI runner exists 
 - **Settings** (which tests are ticked) are kept in `%LOCALAPPDATA%\DUnitX\<exe name>.ini`. An old INI beside the exe is read once as a fallback. A settings file that cannot be written never stops the window closing.
 - **Find Result in Text** is now **Alt+T** (Alt+F belongs to the Filter box).
 - **Ctrl+A** selects the whole Filter box, with or without Windows themes (upstream #589).
-- A test passed with `Assert.Pass( 'message' )` shows its message under its result, as a failure does (upstream #590).
+- A test passed with `Assert.Pass( 'message' )` shows its message under its result, as a failure does (upstream #590).  The NUnit XML carries it too since 2026-11-19, as a `<reason><message>` in the test-case, as NUnit 2.x writes it (upstream #162).
 - The splitter stops when either pane would go under 300 pixels, and shrinking the window narrows the results pane first; dragging the splitter no longer widens the window (upstream #588).
 - **Compare** looks for Beyond Compare through its registry install path and both Program Files folders, and does not freeze the runner while it is open.
 

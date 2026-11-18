@@ -74,6 +74,12 @@ type
     /// <param name="ACategoryList">The categories of a fixture or test.</param>
     procedure WriteCategoryNodes(const ACategoryList : TList<string>);
     /// <summary>
+    ///   Writes a <c>reason</c> element holding <paramref name="AMessage"/>, as NUnit 2.x does for an ignored test and
+    ///   for a passed test with a message, one level deeper than the test-case; the caller writes the closing tag.
+    /// </summary>
+    /// <param name="AMessage">The message to write.</param>
+    procedure WriteReason(const AMessage : string);
+    /// <summary>
     ///   Writes a fixture as a <c>test-suite</c> element (type <c>Fixture</c> for a real test class, <c>Namespace</c>
     ///   for a grouping node), recursing into its tests and child fixtures. A real fixture with no results is skipped.
     /// </summary>
@@ -347,7 +353,8 @@ begin
   try
     sTime := Format('%.3f', [testResult.Duration.TotalSeconds]);
     sResult := ResultTypeToString(testResult.ResultType);
-    if (testResult.ResultType = TTestResultType.Pass) and (testResult.Test.Categories.Count = 0) then
+    //A passed test is a self-closed element unless it has categories or a message to write (upstream #162).
+    if (testResult.ResultType = TTestResultType.Pass) and (testResult.Test.Categories.Count = 0) and (testResult.Message = '') then
       sLineEnd := '/';
     sExecuted := BoolToStr(testResult.ResultType <> TTestResultType.Ignored, true);
 
@@ -388,25 +395,16 @@ begin
           WriteXMLLine('</failure>');
         end;
       TTestResultType.Ignored :
-        begin
-          Indent;
-          WriteXMLLine('<reason>');
-          Indent;
-          WriteXMLLine('<message>');
-          Indent;
-          WriteXMLLine(Format('<![CDATA[ %s ]]>', [EscapeForXML(testResult.Message, False, True)]));
-          Outdent;
-          WriteXMLLine('</message>');
-          Outdent;
-          WriteXMLLine('</reason>');
-        end;
+        WriteReason(testResult.Message);
       TTestResultType.Pass :
         begin
-          if testResult.Test.Categories.Count = 0 then
-          begin
-            exit;
-          end;
-          Indent;
+          //Its message (Assert.Pass's, or what it logged) as NUnit 2.x writes one for a passed test.
+          if testResult.Message <> '' then
+            WriteReason(testResult.Message)
+          else if testResult.Test.Categories.Count = 0 then
+            exit
+          else
+            Indent;
         end;
     end;
     Outdent;
@@ -415,6 +413,21 @@ begin
   finally
     Outdent;
   end;
+end;
+
+procedure TDUnitXXMLNUnitLogger.WriteReason(const AMessage : string);
+begin
+  Indent;
+  WriteXMLLine('<reason>');
+  Indent;
+  WriteXMLLine('<message>');
+  Indent;
+  //The logger's own Format, with its invariant format settings.
+  WriteXMLLine(Self.Format('<![CDATA[ %s ]]>', [EscapeForXML(AMessage, False, True)]));
+  Outdent;
+  WriteXMLLine('</message>');
+  Outdent;
+  WriteXMLLine('</reason>');
 end;
 
 procedure TDUnitXXMLNUnitLogger.WriteCategoryNodes(const ACategoryList : TList<string>);

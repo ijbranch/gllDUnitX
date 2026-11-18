@@ -158,6 +158,29 @@ type
     /// </returns>
     class function AddLineBreak(const msg : string) : string;
     /// <summary>
+    ///   Compares two values of one record or static array type member by member: a record field by field, an array
+    ///   element by element, a string by its text, a float by its value.  So equal strings held in different heap
+    ///   blocks, and the padding bytes between fields, no longer make two records differ, as they did under the
+    ///   default comparer, which compares their bytes (upstream #167).  A class, interface or pointer member is
+    ///   compared by identity, as before.
+    /// </summary>
+    /// <param name="typeInfo">The values' type information, a <c>PTypeInfo</c>.</param>
+    /// <param name="left">The first value.</param>
+    /// <param name="right">The second value.</param>
+    /// <param name="path">On a difference, the member that differs, as <c>.Field[2].Inner</c>; empty when equal.</param>
+    /// <param name="leftText">On a difference, that member of <paramref name="left" /> as text.</param>
+    /// <param name="rightText">On a difference, that member of <paramref name="right" /> as text.</param>
+    /// <returns>True when every member is equal.</returns>
+    class function StructuredEquals(typeInfo : Pointer; left, right : Pointer; out path, leftText, rightText : string) : boolean;
+    /// <summary>
+    ///   Whether two values are equal: <see cref="StructuredEquals" /> for a record or static array type, the RTL's
+    ///   default equality comparer for any other.  What every generic equality assertion uses, so they agree.
+    /// </summary>
+    /// <param name="left">The first value.</param>
+    /// <param name="right">The second value.</param>
+    /// <returns>True when the values are equal.</returns>
+    class function ValuesEqual<T>(const left, right : T) : boolean;
+    /// <summary>
     ///   Calls <c>OnAssert</c>, if assigned, to record that an assertion was made.
     /// </summary>
     class procedure DoAssert; inline;
@@ -2073,26 +2096,157 @@ begin
     Fail(msg, ReturnAddress);
   end;
 end;
+class function Assert.StructuredEquals(typeInfo : Pointer; left, right : Pointer; out path, leftText, rightText : string) : boolean;
+
+  //The values' bytes, as the default comparer compares them.
+  function SameBytes(const a, b : TValue; const at : string) : boolean;
+  begin
+    Result := (a.DataSize = b.DataSize) and CompareMem(a.GetReferenceToRawData, b.GetReferenceToRawData, a.DataSize);
+    if not Result then
+    begin
+      path := at;
+      leftText := a.ToString;
+      rightText := b.ToString;
+    end;
+  end;
+
+  function Same(const a, b : TValue; const at : string) : boolean;
+  var
+    ctx : TRttiContext;
+    rttiType : TRttiType;
+    fields : TArray<TRttiField>;
+    field : TRttiField;
+    elementType : TRttiType;
+    i : Integer;
+  begin
+    case a.Kind of
+      tkRecord, tkMRecord :
+        begin
+          rttiType := ctx.GetType(a.TypeInfo);
+          fields := rttiType.GetFields;
+          //A record whose fields RTTI does not list ({$RTTI EXPLICIT FIELDS([])}), or a field whose type has no RTTI,
+          //cannot be compared member by member: compare the record's bytes, as before.
+          if (Length(fields) = 0) and (a.DataSize > 0) then
+            Exit(SameBytes(a, b, at));
+          for field in fields do
+            if field.FieldType = nil then
+              Exit(SameBytes(a, b, at));
+          for field in fields do
+            if not Same(field.GetValue(a.GetReferenceToRawData), field.GetValue(b.GetReferenceToRawData), at + '.' + field.Name) then
+              Exit(False);
+          Result := True;
+        end;
+      tkArray :
+        begin
+          //A static array of plain values (or of a type without RTTI) is one block of bytes: compare it in one go.
+          elementType := (ctx.GetType(a.TypeInfo) as TRttiArrayType).ElementType;
+          if (elementType = nil)
+            or (elementType.TypeKind in [tkInteger, tkChar, tkWChar, tkEnumeration, tkInt64, tkSet, tkPointer]) then
+            Exit(SameBytes(a, b, at));
+          for i := 0 to a.GetArrayLength - 1 do
+            if not Same(a.GetArrayElement(i), b.GetArrayElement(i), Format('%s[%d]', [at, i])) then
+              Exit(False);
+          Result := True;
+        end;
+      tkDynArray :
+        begin
+          if a.GetArrayLength <> b.GetArrayLength then
+          begin
+            path := at;
+            leftText := Format('length %d', [a.GetArrayLength]);
+            rightText := Format('length %d', [b.GetArrayLength]);
+            Exit(False);
+          end;
+          for i := 0 to a.GetArrayLength - 1 do
+            if not Same(a.GetArrayElement(i), b.GetArrayElement(i), Format('%s[%d]', [at, i])) then
+              Exit(False);
+          Result := True;
+        end;
+    else
+      begin
+        case a.Kind of
+          tkString, tkLString, tkWString, tkUString :
+            Result := a.AsString = b.AsString;
+          tkFloat :
+            //Bit-identical first: a NaN equals itself here, as the record's bytes did (an unused variant arm can hold
+            //one); then by value, so 0 equals -0.
+            Result := ((a.DataSize = b.DataSize) and CompareMem(a.GetReferenceToRawData, b.GetReferenceToRawData, a.DataSize))
+              or (a.AsExtended = b.AsExtended);
+          tkVariant :
+            try
+              Result := VarSameValue(a.AsVariant, b.AsVariant);
+            except
+              //Variants that cannot be compared (a string against an array) are not equal.
+              on EVariantError do
+                Result := False;
+            end;
+          tkUnknown :
+            Result := True;
+        else
+          Result := (a.DataSize = b.DataSize) and CompareMem(a.GetReferenceToRawData, b.GetReferenceToRawData, a.DataSize);
+        end;
+        if not Result then
+        begin
+          path := at;
+          leftText := a.ToString;
+          rightText := b.ToString;
+        end;
+      end;
+    end;
+  end;
+
+var
+  leftValue, rightValue : TValue;
+begin
+  path := '';
+  leftText := '';
+  rightText := '';
+  TValue.Make(left, PTypeInfo(typeInfo), leftValue);
+  TValue.Make(right, PTypeInfo(typeInfo), rightValue);
+  Result := Same(leftValue, rightValue, '');
+  //A difference in the value as a whole (a record compared by its bytes) is named by its type.
+  if (not Result) and (path = '') then
+  begin
+    path := string(PTypeInfo(typeInfo).Name);
+    //An anonymous type ('array[0..1] of string' declared inline) may have no usable name.
+    if path = '' then
+      path := '(the value)';
+  end;
+end;
+
+class function Assert.ValuesEqual<T>(const left, right : T) : boolean;
+var
+  info : PTypeInfo;
+  path, leftText, rightText : string;
+begin
+  info := System.TypeInfo(T);
+  // An equality comparer, not TComparer: TComparer<Double> reports NaN as equal to everything.
+  if (info <> nil) and (info.Kind in [tkRecord, tkMRecord, tkArray]) then
+    Result := StructuredEquals(info, @left, @right, path, leftText, rightText)
+  else
+    Result := TEqualityComparer<T>.Default.Equals(left, right);
+end;
+
 class procedure Assert.AreEqual<T>(const expected, actual : T; const message : string);
 var
-  comparer : IEqualityComparer<T>;
-  expectedValue, actualValue : TValue;
+  info : PTypeInfo;
+  path, expectedText, actualText : string;
 begin
   DoAssert;
-  // An equality comparer, not TComparer: TComparer<Double> reports NaN as equal to everything.
-  comparer := TEqualityComparer<T>.Default;
-  if not comparer.Equals(actual, expected) then
+  info := System.TypeInfo(T);
+  if (info <> nil) and (info.Kind in [tkRecord, tkMRecord, tkArray]) then
   begin
-    expectedValue := TValue.From<T>(expected);
-    actualValue := TValue.From<T>(actual);
-    FailFmt(SNotEqualErrorStr, [expectedValue.ToString, actualValue.ToString, message], ReturnAddress);
-  end;
+    //The member that differs is named, rather than '(record)' against '(record)'.
+    if not StructuredEquals(info, @expected, @actual, path, expectedText, actualText) then
+      FailFmt(SNotEqualAtErrorStr, [expectedText, actualText, path, message], ReturnAddress);
+  end
+  else if not TEqualityComparer<T>.Default.Equals(actual, expected) then
+    FailFmt(SNotEqualErrorStr, [TValue.From<T>(expected).ToString, TValue.From<T>(actual).ToString, message], ReturnAddress);
 end;
 
 class procedure Assert.AreEqual<T>(const expected, actual : TArray<T>; const message : string = '');
 var
   i : integer;
-  comparer : IEqualityComparer<T>;
   expectedValue, actualValue : TValue;
 begin
   DoAssert;
@@ -2100,10 +2254,9 @@ begin
     FailFmt(SArraysHaveDifferentLength, [Length(expected), Length(actual), message], ReturnAddress)
   else
   begin
-    comparer := TEqualityComparer<T>.Default;
     for i := 0 to High(expected) do
     begin
-      if not comparer.Equals(expected[i], actual[i]) then
+      if not ValuesEqual<T>(expected[i], actual[i]) then
       begin
         expectedValue := TValue.From<T>(expected[i]);
         actualValue := TValue.From<T>(actual[i]);
@@ -2256,12 +2409,10 @@ begin
 end;
 class procedure Assert.AreNotEqual<T>(const expected, actual : T; const message : string);
 var
-  comparer : IEqualityComparer<T>;
   expectedValue, actualValue : TValue;
 begin
   DoAssert;
-  comparer := TEqualityComparer<T>.Default;
-  if comparer.Equals(actual, expected) then
+  if ValuesEqual<T>(actual, expected) then
   begin
     expectedValue := TValue.From<T>(expected);
     actualValue := TValue.From<T>(actual);
@@ -2348,13 +2499,11 @@ end;
 class procedure Assert.Contains<T>(const list : IEnumerable<T>; const value : T; const message : string);
 var
   o : T;
-  comparer : IEqualityComparer<T>;
 begin
   DoAssert;
-  comparer := TEqualityComparer<T>.Default;
   for o in list do
   begin
-    if comparer.Equals(o, value) then
+    if ValuesEqual<T>(o, value) then
       exit;
   end;
 
@@ -2364,13 +2513,11 @@ end;
 class procedure Assert.Contains<T>(const arr : array of T; const value : T; const message : string = '');
 var
   o : T;
-  comparer : IEqualityComparer<T>;
 begin
   DoAssert;
-  comparer := TEqualityComparer<T>.Default;
   for o in arr do
   begin
-    if comparer.Equals(o, value) then
+    if ValuesEqual<T>(o, value) then
       exit;
   end;
 
@@ -2379,13 +2526,11 @@ end;
 class procedure Assert.DoesNotContain<T>(const list : IEnumerable<T>; const value : T; const message : string);
 var
   o : T;
-  comparer : IEqualityComparer<T>;
 begin
   DoAssert;
-  comparer := TEqualityComparer<T>.Default;
   for o in list do
   begin
-    if comparer.Equals(o, value) then
+    if ValuesEqual<T>(o, value) then
       FailFmt(SValueInList, [TValue.From<T>(value).ToString, message], ReturnAddress);
   end;
 end;
@@ -2393,13 +2538,11 @@ end;
 class procedure Assert.DoesNotContain<T>(const arr : array of T; const value : T; const message : string = '');
 var
   o : T;
-  comparer : IEqualityComparer<T>;
 begin
   DoAssert;
-  comparer := TEqualityComparer<T>.Default;
   for o in arr do
   begin
-    if comparer.Equals(o, value) then
+    if ValuesEqual<T>(o, value) then
       FailFmt(SValueInList, [TValue.From<T>(value).ToString, message], ReturnAddress);
   end;
 end;

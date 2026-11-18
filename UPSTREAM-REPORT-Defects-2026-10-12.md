@@ -402,6 +402,35 @@ Boolean, enum, integer and date parameters.  We confirmed it with measurements i
 (Ian, 2026-11-19); this fork fixed it itself (`3cdf915`, spaces only, a tab still fails).  Compare upstream's fix
 with ours when it lands.
 
+**Every open upstream issue, triaged against this fork (2026-11-19).**  Ian asked for all of them to be reviewed for
+this fork and fixed here where appropriate.  The claims were checked in this fork's code or with a probe program
+(plain DUnitX with its FastMM5 monitor and a control test that really leaks, so a silent monitor could not pass;
+Win64 and Win32; a real console for #330), not taken from the issue text.
+
+| Issue | Claim | Here | Action |
+|---|---|---|---|
+| #10 | console colours assume a black background | default text uses the console's own colours, and every coloured line is written on black | none: readable on any background |
+| #59 | more logger verbosity control | feature | declined: not needed here |
+| #122 | separate tests from examples | housekeeping upstream | declined |
+| #127 | file assertions | feature (`FileExists` etc. exist) | declined: no need here |
+| #139 | tests with the same name | `[TestCase]` is named `Method(values)` since #533, duplicates numbered | already fixed |
+| #149 | fail a whole fixture from `[SetupFixture]` | a failing `[SetupFixture]` fails its tests, none run (`AfterSetupFixtureFailsNothingRunsAndIgnoredStayIgnored`) | already fixed |
+| #150 | stop a runner gracefully | feature | declined: `test_run` has timeouts; `[MaxTime]` interrupts a test |
+| #162 | `Assert.Pass` message not shown | console and GUI showed it; the NUnit XML did not | **fixed here** (Fixed) |
+| #167 | `AreEqual<T>` compares records by their bytes | reproduced: equal records with strings failed, `(record)` message | **fixed here** (Fixed) |
+| #170 | `Warning` result type not handled | documented as never produced by the runner | declined: kept for compatibility |
+| #204 | traceability extension | feature | declined |
+| #206 | `[WillRaise]` leaks | fixed by batch 6 (#467) | already fixed |
+| #252 | `TWideStrings` assertions | feature | declined: not used here |
+| #267 | exclude tests by name | feature (categories exclude) | declined |
+| #269 | text file logger not implemented | `TDunitXTextFileLogger` is implemented (#388) | already fixed |
+| #315 | `[SetupFixture]` skipped with `[RepeatTest]` + `[TestCase]` | probe: setup and teardown fixture ran once each, 4 runs | already fixed (#561) |
+| #324 | I/O error 105 in 11.2 | upstream could not reproduce; our runners run daily redirected (`test_run`) and in consoles | declined: not reproducible; not tested in a process with no console at all |
+| #327 | Android32 `TestCase` floats | Android is out of scope | declined |
+| #330 | `WriteLn` in a test reports a leak (FastMM5) | probe: no leak, Win64 and Win32, real console; control leak reported | not reproducible here |
+| #343 | per-test elapsed time in console | feature; the XML carries each test's time | declined |
+| #373 | first `resourcestring` load reports a leak | probe: no leak; `RunGllSuite`'s warm-up pass also absorbs first-use caches | not reproducible here |
+
 **Outside the batches: [#372](https://github.com/VSoftTechnologies/DUnitX/issues/372) (bitmask exit codes) ->
 [PR #411](https://github.com/VSoftTechnologies/DUnitX/pull/411)**, branch `feature/bitmask-exit-codes`, posted
 2026-10-12 after a reviewer pointed at it from #404. It is someone else's feature request, which upstream had

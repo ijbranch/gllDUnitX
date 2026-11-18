@@ -66,6 +66,13 @@ type
     /// </summary>
     [Test]
     procedure OnTestingEnds_Reports_Errors_And_Leaks_Consistently;
+    /// <summary>
+    ///   Proves a passed test with a message (Assert.Pass's, or what it logged) carries it in the XML as NUnit 2.x
+    ///   writes it, a &lt;reason&gt;&lt;message&gt; inside its test-case, while a passed test without one stays a
+    ///   self-closed element.  The message was dropped, so only the console and GUI runners showed it (upstream #162).
+    /// </summary>
+    [Test]
+    procedure OnTestingEnds_Writes_The_Message_Of_A_Passed_Test;
   end;
 
   /// <summary>
@@ -286,6 +293,87 @@ begin
     logger := nil;
     stream.Free;
     categories.Free;
+  end;
+end;
+
+procedure TDUnitX_LoggerXMLNUnitTests.OnTestingEnds_Writes_The_Message_Of_A_Passed_Test;
+var
+  logger : ITestLogger;
+  stream : TStringStream;
+  noCategories : TList<string>;
+  mockFixture : TMock<ITestFixtureInfo>;
+  mockTestA : TMock<ITestInfo>;
+  mockTestB : TMock<ITestInfo>;
+  mockPassA : TMock<ITestResult>;
+  mockPassB : TMock<ITestResult>;
+  runResults : TDUnitXRunResults;
+  runResultsIntf : IRunResults;
+  context : ITestExecuteContext;
+  fixtureResult : IFixtureResult;
+  xml : string;
+  caseA : string;
+  caseB : string;
+begin
+  noCategories := TList<string>.Create;
+  stream := TStringStream.Create('', TEncoding.UTF8);
+  try
+    mockFixture := TMock<ITestFixtureInfo>.Create;
+    mockFixture.Setup.WillReturn('PassFixture').When.Name;
+    mockFixture.Setup.WillReturn('My.Namespace').When.NameSpace;
+    mockFixture.Setup.WillReturn('My.Namespace.PassFixture').When.FullName;
+    mockFixture.Setup.WillReturn(TValue.From<TClass>(TStringList)).When.TestClass;
+    mockFixture.Setup.WillReturn(TValue.From<TList<string>>(noCategories)).When.Categories;
+
+    mockTestA := TMock<ITestInfo>.Create;
+    mockTestA.Setup.WillReturn('PassWithMessage').When.Name;
+    mockTestA.Setup.WillReturn('My.Namespace.PassFixture.PassWithMessage').When.FullName;
+    mockTestA.Setup.WillReturn(TValue.From<TList<string>>(noCategories)).When.Categories;
+    mockTestA.Setup.WillReturn(mockFixture.InstanceAsValue).When.Fixture;
+    mockTestB := TMock<ITestInfo>.Create;
+    mockTestB.Setup.WillReturn('PassQuietly').When.Name;
+    mockTestB.Setup.WillReturn('My.Namespace.PassFixture.PassQuietly').When.FullName;
+    mockTestB.Setup.WillReturn(TValue.From<TList<string>>(noCategories)).When.Categories;
+    mockTestB.Setup.WillReturn(mockFixture.InstanceAsValue).When.Fixture;
+
+    mockPassA := TMock<ITestResult>.Create;
+    mockPassA.Setup.WillReturn(TValue.From<TTestResultType>(TTestResultType.Pass)).When.ResultType;
+    mockPassA.Setup.WillReturn(mockTestA.InstanceAsValue).When.Test;
+    mockPassA.Setup.WillReturn(TValue.From<TTimeSpan>(TTimeSpan.FromMilliseconds(0))).When.Duration;
+    mockPassA.Setup.WillReturn('passed with a message').When.Message;
+    mockPassA.Setup.WillReturn('').When.StackTrace;
+    mockPassB := TMock<ITestResult>.Create;
+    mockPassB.Setup.WillReturn(TValue.From<TTestResultType>(TTestResultType.Pass)).When.ResultType;
+    mockPassB.Setup.WillReturn(mockTestB.InstanceAsValue).When.Test;
+    mockPassB.Setup.WillReturn(TValue.From<TTimeSpan>(TTimeSpan.FromMilliseconds(0))).When.Duration;
+    mockPassB.Setup.WillReturn('').When.Message;
+    mockPassB.Setup.WillReturn('').When.StackTrace;
+
+    runResults := TDUnitXRunResults.Create;
+    runResultsIntf := runResults;
+    context := runResults;
+    fixtureResult := TDUnitXFixtureResult.Create(nil, mockFixture.Instance);
+    context.RecordFixture(fixtureResult);
+    context.RecordResult(fixtureResult, mockPassA.Instance);
+    context.RecordResult(fixtureResult, mockPassB.Instance);
+    context.RollupResults;
+
+    logger := TDUnitXXMLNUnitLogger.Create(stream);
+    logger.OnTestingEnds(runResultsIntf);
+    xml := stream.DataString;
+
+    caseA := Copy(xml, Pos('<test-case name="PassWithMessage"', xml), MaxInt);
+    caseA := Copy(caseA, 1, Pos('</test-case>', caseA));
+    Assert.Contains(caseA, '<reason>', False, 'the passed test with a message has a reason: ' + caseA);
+    Assert.Contains(caseA, 'passed with a message', False, 'its message: ' + caseA);
+    Assert.Contains(xml, 'name="PassQuietly" executed="True" result="Success" success="True"', False, 'the quiet pass');
+    //The quiet pass's own element ends its line self-closed, whatever order the results are written in.
+    caseB := Copy(xml, Pos('<test-case name="PassQuietly"', xml), MaxInt);
+    caseB := Copy(caseB, 1, Pos('>', caseB));
+    Assert.EndsWith('/>', caseB, False, 'the quiet pass is self-closed: ' + caseB);
+  finally
+    logger := nil;
+    stream.Free;
+    noCategories.Free;
   end;
 end;
 
