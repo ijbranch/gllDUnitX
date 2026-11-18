@@ -2124,12 +2124,13 @@ class function Assert.StructuredEquals(typeInfo : Pointer; left, right : Pointer
         begin
           rttiType := ctx.GetType(a.TypeInfo);
           fields := rttiType.GetFields;
-          //A record whose fields RTTI does not list ({$RTTI EXPLICIT FIELDS([])}), or a field whose type has no RTTI,
-          //cannot be compared member by member: compare the record's bytes, as before.
+          //A record whose fields RTTI does not list ({$RTTI EXPLICIT FIELDS([])}), or a field whose type has no RTTI or
+          //cannot be boxed, cannot be compared member by member: compare the record's bytes, as before.  A field that
+          //{$RTTI} hides while others stay listed cannot be detected, so it is not compared.
           if (Length(fields) = 0) and (a.DataSize > 0) then
             Exit(SameBytes(a, b, at));
           for field in fields do
-            if field.FieldType = nil then
+            if (field.FieldType = nil) or (field.FieldType.TypeKind = tkUnknown) then
               Exit(SameBytes(a, b, at));
           for field in fields do
             if not Same(field.GetValue(a.GetReferenceToRawData), field.GetValue(b.GetReferenceToRawData), at + '.' + field.Name) then
@@ -2174,7 +2175,8 @@ class function Assert.StructuredEquals(typeInfo : Pointer; left, right : Pointer
               or (a.AsExtended = b.AsExtended);
           tkVariant :
             try
-              Result := VarSameValue(a.AsVariant, b.AsVariant);
+              //The same variant type as well as the same value: '1' is not 1.
+              Result := (VarType(a.AsVariant) = VarType(b.AsVariant)) and VarSameValue(a.AsVariant, b.AsVariant);
             except
               //Variants that cannot be compared (a string against an array) are not equal.
               on EVariantError do

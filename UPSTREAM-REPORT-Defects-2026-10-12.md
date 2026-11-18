@@ -417,8 +417,8 @@ Win64 and Win32; a real console for #330), not taken from the issue text.
 | #139 | tests with the same name | `[TestCase]` is named `Method(values)` since #533, duplicates numbered | already fixed |
 | #149 | fail a whole fixture from `[SetupFixture]` | a failing `[SetupFixture]` fails its tests, none run (`AfterSetupFixtureFailsNothingRunsAndIgnoredStayIgnored`) | already fixed |
 | #150 | stop a runner gracefully | feature | declined: `test_run` has timeouts; `[MaxTime]` interrupts a test |
-| #162 | `Assert.Pass` message not shown | console and GUI showed it; the NUnit XML did not | **fixed here** (Fixed) |
-| #167 | `AreEqual<T>` compares records by their bytes | reproduced: equal records with strings failed, `(record)` message | **fixed here** (Fixed) |
+| #162 | `Assert.Pass` message not shown | console and GUI showed it; the NUnit XML did not | **fixed here** (Fixed); offered as [PR #600](https://github.com/VSoftTechnologies/DUnitX/pull/600) |
+| #167 | `AreEqual<T>` compares records by their bytes | reproduced: equal records with strings failed, `(record)` message | **fixed here** (Fixed); offered as [PR #601](https://github.com/VSoftTechnologies/DUnitX/pull/601) |
 | #170 | `Warning` result type not handled | documented as never produced by the runner | declined: kept for compatibility |
 | #204 | traceability extension | feature | declined |
 | #206 | `[WillRaise]` leaks | fixed by batch 6 (#467) | already fixed |

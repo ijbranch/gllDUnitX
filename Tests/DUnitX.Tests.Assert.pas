@@ -441,7 +441,9 @@ type
     /// <summary>
     ///   Proves AreEqual&lt;T&gt; compares records member by member (upstream #167): equal strings in different heap
     ///   blocks, different padding bytes between fields, a nested record holding a dynamic array, a static array of
-    ///   strings and 0 against -0 all compare equal; and that AreNotEqual, Contains and DoesNotContain agree with it.
+    ///   strings and 0 against -0 all compare equal; a NaN field equals itself but not a number; a Variant string
+    ///   equals the same text but not the integer 1; a record whose fields RTTI hides is compared by its bytes; and
+    ///   that AreNotEqual, Contains and DoesNotContain agree with it.
     ///   Under the default comparer, which compares a record's bytes, each of these was reported unequal.
     /// </summary>
     [Test]
@@ -2195,6 +2197,10 @@ type
     Value : Double;
   end;
 
+  TRecordWithVariant = record
+    Value : Variant;
+  end;
+
 {$RTTI EXPLICIT FIELDS([])}
   //Its fields are not in RTTI, so it can only be compared by its bytes.
   TRecordWithoutFieldRtti = record
@@ -2230,10 +2236,34 @@ var
   a, b : TOuterRecord;
   padA, padB : TPaddedRecord;
   nanRecord : TRecordWithDouble;
+  numberRecord : TRecordWithDouble;
   hiddenA, hiddenB : TRecordWithoutFieldRtti;
+  varA, varB : TRecordWithVariant;
 begin
   //A NaN field equals itself bit for bit, as the record's bytes did.
   nanRecord.Value := NaN;
+  //A NaN against a number fails as a test failure (measured: no EInvalidOp on Win32 or Win64).
+  numberRecord.Value := 1;
+  Assert.WillRaise(
+    procedure
+    begin
+      Assert.AreEqual<TRecordWithDouble>(nanRecord, numberRecord);
+    end, ETestFailure, 'a NaN field against a number');
+  //Variants: equal text in different heap blocks is equal; '1' against 1 is not.
+  varA.Value := 'abc';
+  varB.Value := Copy('xabc', 2, 3);
+  Assert.WillNotRaiseAny(
+    procedure
+    begin
+      Assert.AreEqual<TRecordWithVariant>(varA, varB);
+    end, 'variant strings with the same text');
+  varA.Value := '1';
+  varB.Value := 1;
+  Assert.WillRaise(
+    procedure
+    begin
+      Assert.AreEqual<TRecordWithVariant>(varA, varB);
+    end, ETestFailure, 'a string variant against an integer variant');
   Assert.WillNotRaiseAny(
     procedure
     begin
