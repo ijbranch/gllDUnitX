@@ -2414,14 +2414,22 @@ begin
   end;
 end;
 
+//A [TestCase] value without the spaces around it: 'True, False' passes ' False' (upstream #596).  Only spaces: a tab or
+//other control character still makes the value fail, as it did (upstream #551).
+function TrimPadding(const AText : string) : string;
+begin
+  Result := AText.Trim([' ']);
+end;
+
 function ConvStr2Enum(const ASource : TValue; ATarget : PTypeInfo; out AResult : TValue) : Boolean;
 var
   LTypeData : PTypeData;
   LValue : Integer;
 begin
-  // GetEnumValue returns -1 for an unknown name (and raises for a non-numeric ByteBool/WordBool/LongBool name).
+  // GetEnumValue returns -1 for an unknown name (and raises for a non-numeric ByteBool/WordBool/LongBool name).  A name
+  // has no spaces, so padding is trimmed: [TestCase('True, False')] passes ' False' (upstream #596).
   try
-    LValue := GetEnumValue(ATarget, ASource.AsString);
+    LValue := GetEnumValue(ATarget, TrimPadding(ASource.AsString));
   except
     on EConvertError do
       Exit(False);
@@ -2728,7 +2736,8 @@ begin
   //than read as a decimal ('1,000' used to become 1.0).
   if IsAmbiguousDecimalComma(Trim(ASource.AsString)) then
     Exit(False);
-  lValue := StringReplace(ASource.AsString, ',', '.', [rfReplaceAll]);
+  //Padding is trimmed, as TryStrToFloat already did for a number; the date readers did not (upstream #596).
+  lValue := StringReplace(TrimPadding(ASource.AsString), ',', '.', [rfReplaceAll]);
 
   if ATarget = TypeInfo(TDate) then
     Result := Str2DateValue(lValue, AResult)
@@ -2763,16 +2772,17 @@ var
   LBits : Integer;
   LText : string;
 begin
+  // Padding is trimmed on both sides; StrToInt64 skipped only a leading space (upstream #596).
+  LText := TrimPadding(ASource.AsString);
   try
     if ATarget = TypeInfo(TAlphaColor) then
-      LValue := StringToAlphaColor(ASource.AsString)
+      LValue := StringToAlphaColor(LText)
     else if ATarget = TypeInfo(TColor) then
-      LValue := StringToColor(ASource.AsString)
+      LValue := StringToColor(LText)
     else
     begin
-      if not TryStrToInt64(ASource.AsString, LValue) then
+      if not TryStrToInt64(LText, LValue) then
         Exit(False);
-      LText := Trim(ASource.AsString);
       // TryStrToInt64 reads a hex value with bit 63 set as a negative bit pattern ('$FFFFFFFFFFFFFFFF' is -1), and
       // negates a hex value without checking the sign ('-$FFFFFFFFFFFFFFFF' is +1).  Either is 64 bits wide, more than
       // any type converted here, but the result could fit, so it is refused (as upstream #551 does for Int64).
@@ -2797,7 +2807,7 @@ begin
   end;
   if (LBits > 0) and (LTypeData.MinValue = -(Int64(1) shl (LBits - 1)))
     and (LTypeData.MaxValue = (Int64(1) shl (LBits - 1)) - 1) and (LValue > LTypeData.MaxValue)
-    and (LValue < (Int64(1) shl LBits)) and IsHexLiteral(ASource.AsString) then
+    and (LValue < (Int64(1) shl LBits)) and IsHexLiteral(LText) then
     LValue := LValue - (Int64(1) shl LBits);
   // Range-check before FromOrdinal, which would silently truncate ('300' -> Byte 44).
   if LTypeData.OrdType = otULong then
@@ -2816,17 +2826,18 @@ var
   LText : string;
 begin
   LTypeData := GetTypeData(ATarget);
+  // Padding is trimmed on both sides; StrToInt64 skipped only a leading space (upstream #596).
+  LText := TrimPadding(ASource.AsString);
   // An unsigned 64-bit type stores its range as signed values, so Min > Max.
   if LTypeData.MinInt64Value > LTypeData.MaxInt64Value then
   begin
-    Result := (not StartsStr('-', Trim(ASource.AsString))) and TryStrToUInt64(ASource.AsString, LUValue);
+    Result := (not StartsStr('-', LText)) and TryStrToUInt64(LText, LUValue);
     if Result then
       AResult := TValue.FromOrdinal(ATarget, Int64(LUValue));
     Exit;
   end;
-  if not TryStrToInt64(ASource.AsString, LValue) then
+  if not TryStrToInt64(LText, LValue) then
     Exit(False);
-  LText := Trim(ASource.AsString);
   // TryStrToInt64 negates a hex value without checking the sign: '-$FFFFFFFFFFFFFFFF' comes back as 1 (upstream #551).
   if (LValue > 0) and (LText <> '') and (LText[1] = '-') and IsHexLiteral(Copy(LText, 2, MaxInt)) then
     Exit(False);

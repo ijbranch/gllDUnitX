@@ -402,6 +402,23 @@ type
     procedure TryConvert_Fails_For_Values_That_Do_Not_Parse;
 
     /// <summary>
+    ///   Proves a padded [TestCase] value converts to a non-string type as the bare value does, whatever side the
+    ///   spaces are on, so [TestCase('True, False')] works as [TestCase('True,False')] does (upstream #596).  Before,
+    ///   Boolean, enum, ISO date and date-time failed with any padding, and the integer types with a trailing space,
+    ///   while Double, Currency, time and set accepted both.  Every row is checked and all failures are reported.
+    ///   Only spaces are padding: a tab still makes a Boolean or Integer value fail (upstream #551).
+    /// </summary>
+    [Test]
+    procedure Padded_Value_Converts_For_A_Non_String_Type;
+
+    /// <summary>
+    ///   Proves trimming stops at the non-string types: a string value keeps its spaces exactly, and a padded Char is
+    ///   not trimmed into one (' x' and 'x ' are two characters, so neither converts to a Char).
+    /// </summary>
+    [Test]
+    procedure String_And_Char_Values_Keep_Their_Spaces;
+
+    /// <summary>
     ///   Proves valid values still convert, whatever the machine's decimal separator (run under DE); a decimal comma
     ///   is accepted where it cannot be read as a thousands separator.
     /// </summary>
@@ -591,6 +608,60 @@ begin
   CheckFails('notadate', TypeInfo(TDateTime));
   CheckFails('notadate', TypeInfo(TDate));
   CheckFails('notatime', TypeInfo(TTime));
+end;
+
+procedure TValueHelperTests.Padded_Value_Converts_For_A_Non_String_Type;
+var
+  wrong : string;
+  converted : TValue;
+
+  procedure Check(const bare : string; const expected : string; const target : PTypeInfo);
+  var
+    text : string;
+    converted : TValue;
+  begin
+    for text in [bare, ' ' + bare, bare + ' ', '  ' + bare + '  '] do
+      if not TValue.From(text).TryConvert(target, converted) then
+        wrong := wrong + Format('[%s] -> %s did not convert; ', [text, string(target.Name)])
+      else if converted.ToString <> expected then
+        wrong := wrong + Format('[%s] -> %s gave %s, not %s; ', [text, string(target.Name), converted.ToString, expected]);
+  end;
+
+begin
+  wrong := '';
+  Check('False', 'False', TypeInfo(Boolean));
+  Check('True', 'True', TypeInfo(Boolean));
+  Check('cteTwo', 'cteTwo', TypeInfo(TConvTestEnum));
+  Check('12', '12', TypeInfo(Integer));
+  Check('-12', '-12', TypeInfo(Integer));
+  Check('$FF', '255', TypeInfo(Integer));
+  Check('200', '200', TypeInfo(Byte));
+  Check('12', '12', TypeInfo(Cardinal));
+  Check('12', '12', TypeInfo(Int64));
+  Check('12', '12', TypeInfo(UInt64));
+  //ToString writes the machine's decimal separator, so the expected text is built the same way.
+  Check('1.5', FloatToStr(1.5), TypeInfo(Double));
+  Check('1.5', FloatToStr(1.5), TypeInfo(Currency));
+  Check('clRed', '255', TypeInfo(TColor));
+  Check('2026-01-02', DateToStr(EncodeDate(2026, 1, 2)), TypeInfo(TDate));
+  Check('2026-01-02', DateToStr(EncodeDate(2026, 1, 2)), TypeInfo(TDateTime));
+  Check('2026-01-02T10:30:00', DateTimeToStr(EncodeDate(2026, 1, 2) + EncodeTime(10, 30, 0, 0)), TypeInfo(TDateTime));
+  Check('10:30', DateTimeToStr(EncodeTime(10, 30, 0, 0)), TypeInfo(TTime));
+  Check('[cteTwo]', '[cteTwo]', TypeInfo(TConvTestSet));
+  Assert.AreEqual('', wrong, False);
+  //Only spaces are padding: a tab still makes the value fail (upstream #551).
+  Assert.IsFalse(TValue.From(#9'False').TryConvert(TypeInfo(Boolean), converted), '#9''False'' to Boolean');
+  Assert.IsFalse(TValue.From('12'#9).TryConvert(TypeInfo(Integer), converted), '''12''#9 to Integer');
+end;
+
+procedure TValueHelperTests.String_And_Char_Values_Keep_Their_Spaces;
+var
+  converted : TValue;
+begin
+  Assert.IsTrue(TValue.From(' abc ').TryConvert(TypeInfo(string), converted), 'string converts');
+  Assert.AreEqual(' abc ', converted.AsString, False, 'string keeps its spaces');
+  Assert.IsFalse(TValue.From(' x').TryConvert(TypeInfo(Char), converted), '['' x''] is two characters, not a Char');
+  Assert.IsFalse(TValue.From('x ').TryConvert(TypeInfo(Char), converted), '[''x ''] is two characters, not a Char');
 end;
 
 procedure TValueHelperTests.TryConvert_Ordinal_Fails_When_Out_Of_Range;
