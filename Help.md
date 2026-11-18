@@ -215,7 +215,7 @@ The runtime package is `packages\RAD Studio 13.0\VSoft.DUnitXWinR.dpk` (`require
 | `DUnitX.TestFramework` | The one to `use`. Re-exports `Assert`, and declares `TDUnitX`, `ITestRunner`, `IRunResults`, `ITestLogger`, `TDUnitXOptions`, `EXIT_ERRORS`, and re-exports `DUnitX.Attributes` |
 | `DUnitX.Init` | Optional on Delphi 13. Its `initialization` wires `Assert.TestFailure`/`TestPass`/`TestIgnored` to the real exception classes and registers the fixture provider, but `DUnitX.TestFramework`'s own `initialization` already does both, so listing it is harmless and redundant |
 | `DUnitX.Loggers.Console` | `TDUnitXConsoleLogger.Create( quietMode : boolean = False; AQuietRowWidth : Integer = -1 )`: in quiet mode a row of progress marks ends after `AQuietRowWidth` marks (0 or less: one row) |
-| `DUnitX.Loggers.XML.NUnit` | `TDUnitXXMLNUnitFileLogger.Create( AFilename : string = '' )` — empty means `dunitx-results.xml` beside the exe; a bare file name means the current folder (it raised `EInOutError` before this fork's 2026-09-29 fix, and still does upstream). `TDUnitXXMLNUnitLogger` takes a stream |
+| `DUnitX.Loggers.XML.NUnit` | `TDUnitXXMLNUnitFileLogger.Create( AFilename : string = '' )` — empty means `dunitx-results.xml` beside the exe; a bare file name means the current folder (it raised `EInOutError` before this fork's 2026-09-29 fix, and still does upstream). `TDUnitXXMLNUnitLogger` takes a stream.  A passed test with a message (`Assert.Pass`s, or what it logged) is written with a `<reason><message>`, as NUnit 2.x does (since 2026-11-19, upstream #162) |
 | `DUnitX.Loggers.XML.JUnit` | `TDUnitXXMLJUnitFileLogger` / `TDUnitXXMLJUnitLogger`, same shape |
 | `DUnitX.Loggers.XML.xUnit` | **Empty** — an upstream placeholder with no declarations; there is no xUnit logger |
 | `DUnitX.Loggers.Text` | `TDunitXTextFileLogger.Create( fileName, overwrite, encoding )` |
@@ -264,7 +264,7 @@ Add `gllDUnitX\Source\Gll` to the unit search path, as for the suite runner.  It
 | Group | Members |
 |---|---|
 | Outcome | `Pass`, **`Ignore`** (fork-local, §1), `Fail( msg, errorAddrs )`, `FailFmt`, `NotImplemented` |
-| Equality | `AreEqual` for `string` (with optional `ignoreCase`), `Double`/`Extended` (with optional `tolerance`), `Currency`, `Integer`, `Int64`, `Cardinal`, `word`, `boolean`, `TGUID`, `TClass`, `TStream`, `TStrings` (with an `ignoreLines` array), `TArray<T>`, and generic `AreEqual<T>`; `AreEqualMemory`; the whole `AreNotEqual` mirror set |
+| Equality | `AreEqual` for `string` (with optional `ignoreCase`), `Double`/`Extended` (with optional `tolerance`), `Currency`, `Integer`, `Int64`, `Cardinal`, `word`, `boolean`, `TGUID`, `TClass`, `TStream`, `TStrings` (with an `ignoreLines` array), `TArray<T>`, and generic `AreEqual<T>`; `AreEqualMemory`; the whole `AreNotEqual` mirror set.  The generic forms (and `Contains<T>`, `DoesNotContain<T>`) compare a record or static array member by member since 2026-11-19 (upstream #167): strings by text, floats by bits or value, Variants by type and value, objects by identity; a failure names the member, `at .Inner.Items[1]` |
 | Identity | `AreSame` / `AreNotSame` for `TObject` and `IInterface` |
 | Nil and emptiness | `IsNull` / `IsNotNull` (`TObject`, `Pointer`, `IInterface`, `Variant`); `IsEmpty` / `IsNotEmpty` (`string`, `Variant`, `TStrings`, `TList`, `IInterfaceList`, `IEnumerable<T>`) |
 | Truth | `IsTrue`, `IsFalse` |
@@ -286,7 +286,7 @@ Declared in `DUnitX.Attributes`, re-exported by `DUnitX.TestFramework`.
 |---|---|
 | `[TestFixture]` | `Create`, `Create( AName )`, `Create( AName, ADescription )` |
 | `[Test]` | `Create`, or `Create( AEnabled : boolean )` to disable one without deleting it |
-| `[TestCase]` | `Create( AValues : string; ASeparator : string = ','; ATrimValues : boolean = False )` — **no case name since 2026-11-01**: the case is named `Method(values as written)`, duplicates numbered ` #2`, ` #3`.  A separator with an ASCII letter or digit errors the case (see *Breaking change* below) |
+| `[TestCase]` | `Create( AValues : string; ASeparator : string = ','; ATrimValues : boolean = False )` — **no case name since 2026-11-01**: the case is named `Method(values as written)`, duplicates numbered ` #2`, ` #3`.  A separator with an ASCII letter or digit errors the case (see *Breaking change* below).  Spaces around a value are ignored for every non-string parameter since 2026-11-19 (upstream #596: `True, False` works); a tab still errors, and string and Char values keep their spaces |
 | `[NamedTestCase]` | `Create( ACaseName, AValues : string; ASeparator : string = ','; ATrimValues : boolean = False )` — the old `[TestCase]`, name kept; any separator |
 | `[TestCaseSource]` | `Create( ASourceMethodName )` or `Create( ASourceClass : TClass; ASourceMethodName )` — cases from a public, parameterless class function returning one array element per case; each named from its values, as `Method(1, 2, 3)` |
 | `[AutoNameTestCase]` | **Deprecated** alias of `[TestCase]` (warns W1000); the fork itself no longer uses it |
