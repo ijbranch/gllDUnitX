@@ -399,8 +399,9 @@ leak span called the monitor from `Log` and `RecordResult`, outside the runner's
 handling, so it never had the defect; a guard test pins that.
 [#596](https://github.com/VSoftTechnologies/DUnitX/issues/596): padded `[TestCase]` values failed to convert to
 Boolean, enum, integer and date parameters.  We confirmed it with measurements in a comment and left the PR to Phil
-(Ian, 2026-11-19); this fork fixed it itself (`3cdf915`, spaces only, a tab still fails).  Compare upstream's fix
-with ours when it lands.
+(Ian, 2026-11-19); this fork fixed it itself (`3cdf915`, spaces only, a tab still fails).  Phil then declined to repeat
+our work and invited the PR: [PR #599](https://github.com/VSoftTechnologies/DUnitX/pull/599) (`90bf0a8`, branch
+`fix/596-padded-testcase-values`), the same fix as a plain loop for older compilers, open.
 
 **Every open upstream issue, triaged against this fork (2026-11-19).**  Ian asked for all of them to be reviewed for
 this fork and fixed here where appropriate.  The claims were checked in this fork's code or with a probe program

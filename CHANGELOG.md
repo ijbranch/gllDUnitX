@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 > Changes below are live as soon as the project is Release-built and installed - there is no separate release step, so there is no `[Unreleased]` backlog (Ian, 2026-10-19: "As soon as these are Release built they are Released").
 
 ### Added
+- (2026-11-19) **Upstream #596 answered with PR #599** — `UPSTREAM-REPORT-Defects-2026-10-12.md`, `CHANGELOG.md`.  Phil invited it after seeing this fork's fix; [PR #599](https://github.com/VSoftTechnologies/DUnitX/pull/599) (`90bf0a8`) ports `3cdf915` (spaces only, `TrimPadding` as a plain loop since upstream supports XE2), with the report's own `[TestCase('True, False')]` as a test, red first, Win64 and Win32 green.
 - (2026-11-19) **Every open upstream issue triaged against this fork (21, besides #596 and #597)** — `UPSTREAM-REPORT-Defects-2026-10-12.md`, `CHANGELOG.md`.  Claims checked by reading this fork's code or running a probe (FastMM5 monitor with a control leak, Win64 and Win32, a real console).  Fixed here: #167 and #162 (see Fixed).  Already fixed or not reproducible here: #10, #139, #149, #206, #269, #315, #330, #373.  Declined: #170, #324, #327 and the feature requests #59, #122, #127, #150, #204, #252, #267, #343.  Each with its reason in the report.
 - (2026-11-19) **Upstream #597 answered with PR #598; #596 answered without a PR** — `UPSTREAM-REPORT-Defects-2026-10-12.md`,
   `Users Guide.md`, `CHANGELOG.md`.  #597 (PhilBarwood): a registered leak monitor that fails a test escaped `Execute`
