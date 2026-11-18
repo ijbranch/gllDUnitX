@@ -391,6 +391,17 @@ Batch 13 merged on 2026-11-02.  **Batch 14**, the runner changes, one PR at a ti
 
 All of batch 14 merged on 2026-11-02, #579 last; every item on the #398 list has been sent and merged.  A later test-only fix for #580 (our #453 test was locale-dependent) went as #581 and merged 2026-11-03 (`8626022`).  Upstream's next commit, #582 (Tommi Prami: quiet mode's row width, `2ea0069`, 2026-11-04), was hand-ported on 2026-11-06 with three fixes (every mark counts, a row is exactly the width, no second blank line before the summary) and absorbed by `merge -s ours`; the three defects were reported upstream as [#583](https://github.com/VSoftTechnologies/DUnitX/issues/583) on 2026-11-06, with an offer of the fix as a PR; PR [#584](https://github.com/VSoftTechnologies/DUnitX/pull/584) opened 2026-11-06 (branch `fix/583-quiet-row-width`) and merged by Vincent the same day (`e06581e`, squashed), with a better TearDown than ours (it registers again the console writer that was there before the test, where ours named the Windows one); upstream's version taken and absorbed on 2026-11-06.
 
+**After the batches (2026-11-19), two reports from PhilBarwood.**  [#597](https://github.com/VSoftTechnologies/DUnitX/issues/597): a registered leak monitor that fails a test from
+`PostTest` made the exception leave `Execute` when the fixture had a `[TearDown]`, a regression from our #578 (its
+leak span called the monitor from `Log` and `RecordResult`, outside the runner's exception handling).  Fixed by
+[PR #598](https://github.com/VSoftTechnologies/DUnitX/pull/598) (`161edf0`, branch
+`fix/597-leak-span-monitor-exception`), open.  This fork's own leak span calls the monitor only inside the exception
+handling, so it never had the defect; a guard test pins that.
+[#596](https://github.com/VSoftTechnologies/DUnitX/issues/596): padded `[TestCase]` values failed to convert to
+Boolean, enum, integer and date parameters.  We confirmed it with measurements in a comment and left the PR to Phil
+(Ian, 2026-11-19); this fork fixed it itself (`3cdf915`, spaces only, a tab still fails).  Compare upstream's fix
+with ours when it lands.
+
 **Outside the batches: [#372](https://github.com/VSoftTechnologies/DUnitX/issues/372) (bitmask exit codes) ->
 [PR #411](https://github.com/VSoftTechnologies/DUnitX/pull/411)**, branch `feature/bitmask-exit-codes`, posted
 2026-10-12 after a reviewer pointed at it from #404. It is someone else's feature request, which upstream had
