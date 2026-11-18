@@ -419,6 +419,10 @@ type
 
 implementation
 
+uses
+  System.RTLConsts,
+  System.SysUtils;
+
 { TListFactory }
 
 { TDUnitList<T> }
@@ -496,6 +500,10 @@ end;
 
 procedure TDUnitXList<T>.Exchange(Index1, Index2 : Integer);
 begin
+  // TList<T>.Exchange does no range check: an index past Count moves an item into unused capacity, or writes
+  // outside the list's heap block.
+  if (Index1 < 0) or (Index1 >= FList.Count) or (Index2 < 0) or (Index2 >= FList.Count) then
+    raise EArgumentOutOfRangeException.CreateRes(@SArgumentOutOfRange);
   FList.Exchange(Index1, Index2);
 end;
 

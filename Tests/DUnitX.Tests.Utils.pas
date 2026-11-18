@@ -479,6 +479,15 @@ type
     /// </summary>
     [Test]
     procedure NonGeneric_Enumerator_Yields_Objects;
+
+    /// <summary>
+    ///   Proves Exchange refuses an index outside the list with EArgumentOutOfRangeException and still swaps valid
+    ///   ones. It passed both indexes straight to TList&lt;T&gt;.Exchange, which does no range check, so an index
+    ///   equal to Count silently moved an item into unused capacity (and one beyond Capacity wrote outside the heap
+    ///   block).
+    /// </summary>
+    [Test]
+    procedure Exchange_Refuses_Out_Of_Range_Index;
   end;
 
 
@@ -952,6 +961,42 @@ begin
   Assert.AreEqual(3, items[0]);
   Assert.AreEqual(1, items[1]);
   Assert.AreEqual(2, items[2]);
+end;
+
+procedure TDUnitXListTests.Exchange_Refuses_Out_Of_Range_Index;
+var
+  list : IList<Integer>;
+begin
+  list := TDUnitXList<Integer>.Create;
+  list.Add(10);
+  list.Add(20);
+  // Index Count must stay inside the allocated capacity, so the unchecked code cannot write outside the block.
+  Assert.IsTrue(list.Capacity > list.Count, 'Capacity');
+  Assert.WillRaise(
+    procedure
+    begin
+      list.Exchange(0, 2);
+    end, EArgumentOutOfRangeException);
+  Assert.WillRaise(
+    procedure
+    begin
+      list.Exchange(2, 0);
+    end, EArgumentOutOfRangeException);
+  Assert.WillRaise(
+    procedure
+    begin
+      list.Exchange(-1, 0);
+    end, EArgumentOutOfRangeException);
+  Assert.WillRaise(
+    procedure
+    begin
+      list.Exchange(0, -1);
+    end, EArgumentOutOfRangeException);
+  Assert.AreEqual(10, list[0]);
+  Assert.AreEqual(20, list[1]);
+  list.Exchange(0, 1);
+  Assert.AreEqual(20, list[0]);
+  Assert.AreEqual(10, list[1]);
 end;
 
 procedure TDUnitXListTests.NonGeneric_Enumerator_Yields_Objects;
