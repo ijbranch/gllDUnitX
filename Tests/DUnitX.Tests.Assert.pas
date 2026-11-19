@@ -458,6 +458,14 @@ type
     procedure AreEqual_T_Names_The_Record_Member_That_Differs;
 
     /// <summary>
+    ///   Proves AreEqual&lt;T&gt; on two static arrays of plain values (array[0..15] of Byte) that differ fails naming
+    ///   the first element that differs and both its values ('[5]'), not the array type alone; equal arrays still
+    ///   pass.  Upstream PR #601 review (luebbe).
+    /// </summary>
+    [Test]
+    procedure AreEqual_T_Names_The_Static_Array_Element_That_Differs;
+
+    /// <summary>
     ///   Proves AreEqual&lt;T&gt;( TArray ) passes for string and real arrays with the same elements in the same
     ///   order.
     /// </summary>
@@ -2201,6 +2209,9 @@ type
     Value : Variant;
   end;
 
+  //A static array of plain values: compared as one block of bytes.
+  TBytes16 = array[0..15] of Byte;
+
 {$RTTI EXPLICIT FIELDS([])}
   //Its fields are not in RTTI, so it can only be compared by its bytes.
   TRecordWithoutFieldRtti = record
@@ -2350,6 +2361,32 @@ begin
   finally
     ra.Owner.Free;
   end;
+end;
+
+procedure TTestsAssert.AreEqual_T_Names_The_Static_Array_Element_That_Differs;
+var
+  a, b : TBytes16;
+  i : Integer;
+  failure : string;
+begin
+  for i := Low(a) to High(a) do
+    a[i] := i;
+  b := a;
+  Assert.WillNotRaiseAny(
+    procedure
+    begin
+      Assert.AreEqual<TBytes16>(a, b);
+    end, 'equal arrays');
+  b[5] := 9;
+  b[7] := 1;
+  failure := '';
+  try
+    Assert.AreEqual<TBytes16>(a, b, 'my message');
+  except
+    on E : ETestFailure do
+      failure := E.Message;
+  end;
+  Assert.AreEqual('Expected [5] but got [9] at [5] my message', failure, False);
 end;
 
 procedure TTestsAssert.AreEqual_T_Throws_ETestFailure_When_Interfaces_Are_Nil;
