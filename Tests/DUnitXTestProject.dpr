@@ -13,6 +13,10 @@
 program DUnitXTest_D13;
 
 {$APPTYPE CONSOLE}
+
+// GITLAK ( 2026-11-19 ): deliberately NOT run through GllDUnitX.SuiteRunner, unlike the estate's other suites.  This
+// is the framework's own suite: DUnitX.Tests.MemoryLeaks leaks memory on purpose to test leak reporting, which the
+// per-test FastMM5 leak monitor would flag as failures, and the suite tests the runner machinery SuiteRunner is built on.
 {$STRONGLINKTYPES ON}
 
 uses
