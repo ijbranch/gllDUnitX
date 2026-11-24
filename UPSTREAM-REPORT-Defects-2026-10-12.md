@@ -418,7 +418,7 @@ Win64 and Win32; a real console for #330), not taken from the issue text.
 | #149 | fail a whole fixture from `[SetupFixture]` | a failing `[SetupFixture]` fails its tests, none run (`AfterSetupFixtureFailsNothingRunsAndIgnoredStayIgnored`) | already fixed |
 | #150 | stop a runner gracefully | feature | declined: `test_run` has timeouts; `[MaxTime]` interrupts a test |
 | #162 | `Assert.Pass` message not shown | console and GUI showed it; the NUnit XML did not | **fixed here** (Fixed); offered as [PR #600](https://github.com/VSoftTechnologies/DUnitX/pull/600), merged 2026-11-19 unchanged as `fca7cf1` |
-| #167 | `AreEqual<T>` compares records by their bytes | reproduced: equal records with strings failed, `(record)` message | **fixed here** (Fixed); offered as [PR #601](https://github.com/VSoftTechnologies/DUnitX/pull/601) |
+| #167 | `AreEqual<T>` compares records by their bytes | reproduced: equal records with strings failed, `(record)` message | **fixed here** (Fixed); offered as [PR #601](https://github.com/VSoftTechnologies/DUnitX/pull/601); open 2026-11-25, Vincent to test older compilers; luebbe's review answered (static-array mismatch position `17e2351`; loop bounds, comment only) |
 | #170 | `Warning` result type not handled | documented as never produced by the runner | declined: kept for compatibility |
 | #204 | traceability extension | feature | declined |
 | #206 | `[WillRaise]` leaks | fixed by batch 6 (#467) | already fixed |

@@ -2139,6 +2139,10 @@ class function Assert.StructuredEquals(typeInfo : Pointer; left, right : Pointer
         end;
       tkArray :
         begin
+          //a and b always share one static array type (built from one typeInfo, then the same field or element type on
+          //both sides), and a static array's length is part of its type, so both loops below may run to a's length.
+          //Never shorten them to the common length: that would pass arrays that differ only past it.
+          //
           //A static array of plain values (or of a type without RTTI) is one block of bytes: compare it in one go.
           elementType := (ctx.GetType(a.TypeInfo) as TRttiArrayType).ElementType;
           if (elementType = nil)
