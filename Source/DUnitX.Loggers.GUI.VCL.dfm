@@ -150,7 +150,7 @@ object GUIVCLTestRunner: TGUIVCLTestRunner
           Font.Charset = DEFAULT_CHARSET
           Font.Color = clWindowText
           Font.Height = -19
-          Font.Name = 'Calibri'
+          Font.Name = 'Tahoma'
           Font.Style = []
           ParentFont = False
         end
@@ -331,7 +331,7 @@ object GUIVCLTestRunner: TGUIVCLTestRunner
               Font.Charset = ANSI_CHARSET
               Font.Color = clWindowText
               Font.Height = -11
-              Font.Name = 'Courier New'
+              Font.Name = 'Tahoma'
               Font.Style = []
               ParentFont = False
               ReadOnly = True
@@ -364,7 +364,7 @@ object GUIVCLTestRunner: TGUIVCLTestRunner
           Font.Charset = DEFAULT_CHARSET
           Font.Color = clWindowText
           Font.Height = -19
-          Font.Name = 'Calibri'
+          Font.Name = 'Tahoma'
           Font.Style = []
           ParentFont = False
         end

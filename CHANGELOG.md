@@ -228,6 +228,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   **Why:** inherited from upstream - the D13 expert project had never been compiled against the Delphi 13 ToolsAPI.
 
 ### Changed
+- (2026-11-27) **Tahoma for form fonts** — `Source\DUnitX.Loggers.GUI.VCL.dfm`.  Form fonts that were Segoe UI, Calibri, Courier New or Consolas are now Tahoma, at the same sizes.  Demo, sample, test or tool forms only, so no version change.  Code-editor controls ( `TSynEdit`, its completion proposal and print preview, the terminal ) keep their fixed-width font, as do fonts set in code.  **Why:** Ian, 2026-11-27: "Do the same now for all our d:\gll* forks" ( the DBiWorkflow suite's Segoe UI, Calibri, Courier New and Consolas fonts were made Tahoma the same day ); demos included, code editors kept fixed-width ( Ian's choice ).  A local divergence from upstream: on a merge, keep ours.
 - (2026-11-03) **Build auto-increment works in every package** — `packages/RAD Studio 13.0/VSoft.DUnitXWinR.dproj`.  `VerInfo_AutoIncVersion` does nothing
   without the config-and-platform groups Delphi's `IncrementBuildNumber` writes into ( `standards\delphi-build.md` ),
   so the build number never moved.  Each `Cfg_1`/`Cfg_2` x `Win32`/`Win64` group now exists and carries
