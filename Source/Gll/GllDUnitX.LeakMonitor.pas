@@ -25,7 +25,7 @@
   Ian Branch - GITLAK Software.
 
   ***************************************************************************
-  File last update : 2026-10-31 09:30:00 (UTC+11:00 DST)
+  File last update : 2026-11-28 05:20:00 (UTC+11:00 DST)
   ***************************************************************************
 *)
 
@@ -54,9 +54,10 @@ uses
   System.SysUtils;
 
 /// <summary>
-///   Keeps <see cref="POOL_WORKERS"/> workers alive for the whole run in the RTL's <c>TThreadPool.Default</c>, and
-///   finds the RTL pool monitor's status field.  Call BEFORE the warm-up pass, so the workers it creates are the ones
-///   the measured pass uses and none is created or retired inside a measured test.  A suite using another pool pins
+///   Keeps <see cref="POOL_WORKERS"/> workers alive for the whole run in the RTL's <c>TThreadPool.Default</c>, fills
+///   the RTL's task-object and wait-object caches ( <c>GllDUnitX.RtlTaskCaches</c> ), and finds the RTL pool
+///   monitor's status field.  Call BEFORE the warm-up pass, so the workers it creates are the ones the measured pass
+///   uses and none is created or retired inside a measured test.  A suite using another pool pins
 ///   that pool itself, also before the warm-up.
 /// </summary>
 procedure StartSharedThreadPools;
@@ -113,7 +114,7 @@ implementation
 
 uses
   Winapi.Windows, System.Classes, System.Diagnostics, System.Threading, System.Rtti,
-  DUnitX.TestFramework, DUnitX.ServiceLocator, FastMM5;
+  DUnitX.TestFramework, DUnitX.ServiceLocator, FastMM5, GllDUnitX.RtlTaskCaches;
 
 var
   /// <summary>
@@ -315,6 +316,12 @@ begin
   // Process-lifetime: the RTL pool keeps the workers it creates, so the warm-up pass creates them and none retires
   // and is re-created inside a test.
   TThreadPool.Default.SetMinWorkerThreads( POOL_WORKERS );
+
+  // The RTL caches freed task objects and TMonitor wait objects, growing each only at a new peak of use; full caches
+  // keep no new one ( bar a rare race in TObjectCache.Insert, see GllDUnitX.RtlTaskCaches ), so a TParallel.For
+  // reaching a new peak inside a measured test is not charged what a cache kept ( gllSynEdit, 2026-11-28 )
+  FillRtlTaskCaches;
+  FillRtlWaitObjectCache( RTL_WAIT_OBJECTS );
 
   // Found once, here, so the per-test check allocates nothing.  The set is 4 bytes ( ForceSize = 31 ).
   var lContext      := TRttiContext.Create;

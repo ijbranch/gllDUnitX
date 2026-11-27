@@ -47,7 +47,9 @@ uses
   DUnitX.Tests.UtilsHelpers in 'DUnitX.Tests.UtilsHelpers.pas',
   DUnitX.Tests.Loggers.XML.JUnit in 'DUnitX.Tests.Loggers.XML.JUnit.pas',
   DUnitX.Tests.Loggers.Console in 'DUnitX.Tests.Loggers.Console.pas',
-  DUnitX.Tests.Loggers.GUI.VCL in 'DUnitX.Tests.Loggers.GUI.VCL.pas';
+  DUnitX.Tests.Loggers.GUI.VCL in 'DUnitX.Tests.Loggers.GUI.VCL.pas',
+  GllDUnitX.RtlTaskCaches in '..\Source\Gll\GllDUnitX.RtlTaskCaches.pas',
+  GllDUnitX.Tests.RtlTaskCaches in 'GllDUnitX.Tests.RtlTaskCaches.pas';
 
 // Named explicitly: this file is DUnitXTestProject.dpr, but the version resource is generated beside the .dproj as
 // DUnitXTest_D13.res, so {$R *.res} would look for a DUnitXTestProject.res that does not exist.
